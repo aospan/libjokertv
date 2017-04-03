@@ -10,10 +10,12 @@ I have compiled driver for Joker TV card (https://tv.jokersys.com)  but this pro
 
 # Usage
 
-Make symlink for your Linux kernel sources first. It can be any version different from your running kernel. I'm working on 'https://github.com/aospan/old-linux-stable-netup-universal-dvb-1.4.git' branch 'joker' - so you can use this kernel sources too.
+Make symlink for your Linux kernel sources first. It can be any version different from your running kernel. I'm working on 'https://github.com/aospan/old-linux-stable-netup-universal-dvb-1.4.git' branch 'joker' - so you can use this kernel sources too:
 
 ```
-ln -s /usr/src/linux-stable linux
+git clone -b joker https://github.com/aospan/old-linux-stable-netup-universal-dvb-1.4.git
+ln -s old-linux-stable-netup-universal-dvb-1.4 linux
+(cd linux && make oldconfig && make prepare && make scripts)
 ```
 
 then compile:
