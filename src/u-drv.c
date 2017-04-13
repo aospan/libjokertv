@@ -296,7 +296,7 @@ int main ()
 	if (i2c_start())
 		return -1;
 
-#if 1
+#if 0
 	/* DVB-S/S2 */
 	fe = cxd2841er_attach_s(&demod_config, &i2c);
 	if (!fe) {
@@ -375,7 +375,7 @@ int main ()
 	}
 #endif
 
-#if 0
+#if 1
 	/* ATSC */
 	fe = lgdt3306a_attach(&lgdt3306a_config, &i2c);
 	if (!fe) {
@@ -397,7 +397,8 @@ int main ()
 
 	while (1) {
 		fe->ops.read_status(fe, &status);
-		printf("status=0x%x \n", status);
+		fe->ops.read_signal_strength(fe, &strength);
+		printf("status=0x%x strength=0x%x\n", status, strength);
 		sleep(1);
 		fflush(stdout);
 	}
