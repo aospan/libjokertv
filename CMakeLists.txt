@@ -23,6 +23,7 @@ add_definitions(-DCONFIG_DVB_HELENE)
 add_definitions(-DCONFIG_DVB_CXD2841ER)
 add_definitions(-DCONFIG_DVB_LGDT3306A)
 add_definitions(-DCONFIG_DVB_ATBM888x)
+add_definitions(-DCONFIG_DVB_TPS65233)
 add_definitions(-DCONFIG_DYNAMIC_DEBUG)
 add_definitions(-D_GCC_WRAP_STDINT_H)
 add_definitions(-DDEBUG)
@@ -44,6 +45,7 @@ add_library (libu-drv linux/drivers/media/dvb-frontends/helene.c
   linux/drivers/media/dvb-frontends/cxd2841er.c
   linux/drivers/media/dvb-frontends/lgdt3306a.c
   linux/drivers/media/dvb-frontends/atbm888x.c
+  linux/drivers/media/dvb-frontends/tps65233.c
   linux/drivers/media/v4l2-core/videobuf2-dvb.c
   linux/drivers/media/v4l2-core/videobuf2-core.c
   linux/drivers/media/dvb-core/dvb_demux.c

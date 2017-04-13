@@ -42,6 +42,7 @@ typedef unsigned int            uint32_t;
 #include <drivers/media/dvb-frontends/cxd2841er.h>
 #include <drivers/media/dvb-frontends/lgdt3306a.h>
 #include <drivers/media/dvb-frontends/atbm888x.h>
+#include <drivers/media/dvb-frontends/tps65233.h>
 #include <drivers/media/dvb-core/dvb_frontend.h>
 #include <drivers/media/pci/netup_unidvb/netup_unidvb.h>
 #include <linux/dvb/frontend.h>
@@ -51,6 +52,11 @@ typedef unsigned int            uint32_t;
 unsigned long phys_base = 0;
 static struct mpsse_context *i2c_h = NULL;
 const struct kernel_param_ops param_ops_int;
+
+static struct tps65233_config lnb_config = {
+	.i2c_address = 0x60,
+	.data2_config = 0
+};
 
 static struct cxd2841er_config demod_config = {
 	.i2c_addr = 0xc8,
@@ -280,13 +286,70 @@ int main ()
 	struct netup_unidvb_dev *ndev = NULL;
 	enum fe_status status;
 	unsigned int delay = 0;
+	int ret = 0;
+	u16 strength = 0;
+	struct dvb_diseqc_master_cmd dcmd = {
+		.msg = {0xFF},
+		.msg_len = 6
+	};
 
 	if (i2c_start())
 		return -1;
 
+#if 1
+	/* DVB-S/S2 */
+	fe = cxd2841er_attach_s(&demod_config, &i2c);
+	if (!fe) {
+		printf("can't attach DVB-S demod\n");
+		return -1;
+	}
+
+	helene_attach(fe, &helene_conf, &i2c);
+
+	fe->ops.init(fe);
+
+	/* set tune info */
+	fe->dtv_property_cache.delivery_system = SYS_DVBS;
+	fe->dtv_property_cache.frequency = 1310000000; /* freq in Hz */
+	fe->dtv_property_cache.bandwidth_hz = 0; /* 0 - AUTO */
+	fe->dtv_property_cache.symbol_rate = 22000000; /* symbols/sec */
+	fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
+	printf("status=0x%x \n", status);
+
+	/* enable LNB */
+	fe = tps65233_attach(fe, &lnb_config, &i2c);
+	if (!fe) {
+		printf("can't attach LNB\n");
+		return -1;
+	}
+
+	ret = fe->ops.set_voltage(fe, SEC_VOLTAGE_OFF);
+	printf("lnb status 0x%x \n", ret);
+	if (ret != 0x23 && ret != 0x21) {
+		printf("Failed to set LNB voltage !\n");
+		return -1;
+	}
+
+	while (1) {
+		fe->ops.read_status(fe, &status);
+		fe->ops.read_signal_strength(fe, &strength);
+		ret = fe->ops.set_voltage(fe, SEC_VOLTAGE_OFF);
+		printf("status=0x%x strength=0x%x LNB status=0x%x\n",
+				status, strength, ret);
+		sleep(1);
+	}
+#endif
+
+#if 0
+	/* DISEQC */
+	/* send diseqc message */
+	fe->ops.diseqc_send_master_cmd(fe, &dcmd);
+	/* set 22khz tone */
+	fe->ops.set_tone(fe, SEC_TONE_ON);
+#endif
+
 #if 0
 	/* DVB-C */
-	// fe = cxd2841er_attach_t_c(&demod_config, &i2c);
 	fe = cxd2841er_attach_c(&demod_config, &i2c);
 	if (!fe) {
 		printf("can't attach demod\n");
@@ -336,10 +399,11 @@ int main ()
 		fe->ops.read_status(fe, &status);
 		printf("status=0x%x \n", status);
 		sleep(1);
+		fflush(stdout);
 	}
 #endif
 
-#if 1
+#if 0
 	/* DTMB */
 	fe = atbm888x_attach(&atbm888x_config, &i2c);
 	if (!fe) {
@@ -348,7 +412,9 @@ int main ()
 	}
 
 	helene_attach(fe, &helene_conf, &i2c);
+#endif
 
+#if 0
 	// fe->ops.sleep(fe);
 	// fe->ops.init(fe);
 	/* set tune info */
@@ -371,4 +437,5 @@ int main ()
 
 	i2c_stop();
 	printf("done\n");
+	return 0;
 }
