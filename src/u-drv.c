@@ -60,6 +60,7 @@ static struct tps65233_config lnb_config = {
 
 static struct cxd2841er_config demod_config = {
 	.i2c_addr = 0xc8,
+	.ts_mode = SONY_TS_SERIAL,
 	.xtal = SONY_XTAL_24000
 };
 
@@ -296,7 +297,7 @@ int main ()
 	if (i2c_start())
 		return -1;
 
-#if 0
+#if 1
 	/* DVB-S/S2 */
 	fe = cxd2841er_attach_s(&demod_config, &i2c);
 	if (!fe) {
@@ -304,13 +305,13 @@ int main ()
 		return -1;
 	}
 
-	helene_attach(fe, &helene_conf, &i2c);
+	helene_attach_s(fe, &helene_conf, &i2c);
 
 	fe->ops.init(fe);
 
 	/* set tune info */
 	fe->dtv_property_cache.delivery_system = SYS_DVBS;
-	fe->dtv_property_cache.frequency = 1310000000; /* freq in Hz */
+	fe->dtv_property_cache.frequency = 1216000000; /* freq in Hz */
 	fe->dtv_property_cache.bandwidth_hz = 0; /* 0 - AUTO */
 	fe->dtv_property_cache.symbol_rate = 22000000; /* symbols/sec */
 	fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
@@ -375,7 +376,7 @@ int main ()
 	}
 #endif
 
-#if 1
+#if 0
 	/* ATSC */
 	fe = lgdt3306a_attach(&lgdt3306a_config, &i2c);
 	if (!fe) {
