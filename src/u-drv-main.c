@@ -37,8 +37,9 @@ typedef unsigned int            uint32_t;
 #include <linux/dvb/frontend.h>
 #include <linux/moduleparam.h>
 #include <linux/i2c.h>
-#include <oc_i2c.h>
+#include "oc_i2c.h"
 #include <time.h>
+#include "u-drv.h"
 
 unsigned long phys_base = 0;
 static struct libusb_device_handle *dev = NULL;
@@ -233,76 +234,47 @@ ssize_t __modver_version_show(struct module_attribute *mattr,
 	return snprintf(buf, PAGE_SIZE, "%s\n", "u-drv ver 0.1");
 }
 
-uint64_t getus() {
-	struct timeval tv;
-	gettimeofday(&tv,NULL);
-	return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
-}
-
-static int count = 0;
-static time_t start = 0, start_tr = 0;
-static int64_t delta = 0;
-
-void record_callback(struct libusb_transfer *transfer)
-{
-    int i;
-    FILE * out = (FILE *)transfer->user_data;
-    struct libusb_iso_packet_descriptor pkt = transfer->iso_packet_desc[0];
-
-    delta = getus() - start_tr;
-    if (delta > 1000)
-	    printf("delta=%lld usec \n", getus() - start_tr); 
-
-    start_tr = getus();
-
-    count++;
-    if ( !(count%10000) ){
-	    printf("ISO count=%d transfer/sec=%f us=%lld start=%lld\n", 
-			    count, (double)((int64_t)1000000*count)/(getus() - start), getus(), start);
-	    count = 0;
-	    start = getus();
-    }
-
-    if (pkt.status == LIBUSB_TRANSFER_COMPLETED) {
-	    // printf("ISO pkt length=%d status=%d \n",
-			    // pkt.actual_length, pkt.status);
-
-	    // printf("Record callback! %p index %d len %d status=%d\n", 
-	    // transfer, (int)transfer->user_data, transfer->length, transfer->status);
-
-	    // fwrite(transfer->buffer, transfer->length, 1, out);
-#if 0
-	    samples_captured += transfer->length / 4;
-
-	    float avg = 0;
-	    int16_t *bufz = (int16_t*)transfer->buffer;
-	    int items = transfer->length / 4;
-	    for (i = 0; i < items; i ++)
-	    {
-		    int16_t *buf = &bufz[i * 2];
-		    if (fabs(buf[0]) > avg)
-			    avg = fabs(buf[0]);
-		    if (fabs(buf[1]) > avg)
-			    avg = fabs(buf[1]);
-	    }
-	    if (avg)
-		    printf("%12.6f dBFS\r", 6 * log(avg / 32767 / items) / log(2.0));
-#endif
-    }else {
-	    // printf("ISO pkt length=%d status=%d \n",
-			    // pkt.actual_length, pkt.status);
-			    }
-    // usleep(50);
-    libusb_submit_transfer(transfer);
-}
-
-
-#define NUM_RECORD_BUFS 1
-#define NUM_REC_PACKETS 1
-#define REC_PACKET_SIZE 512
 static uint8_t *record_buffers[NUM_RECORD_BUFS];
 
-int main ()
+void process_ts(struct big_pool * bp) {
+	libusb_transfer_cb_fn cb = (libusb_transfer_cb_fn)bp->cb;
+	int transferred = 0;
+	int completed = 0;
+
+	while (1) {
+		// isochronous transfer
+		struct libusb_transfer *t;
+		int index = 0;
+
+		for (index = 0; index < NUM_RECORD_BUFS; index++) {
+			record_buffers[index] = (uint8_t*)malloc(NUM_REC_PACKETS * REC_PACKET_SIZE);
+			memset(record_buffers[index], 0, NUM_REC_PACKETS * REC_PACKET_SIZE);
+
+			t = libusb_alloc_transfer(NUM_REC_PACKETS);    
+			libusb_fill_iso_transfer(t, dev, USB_EP3_IN, record_buffers[index], NUM_REC_PACKETS * REC_PACKET_SIZE, NUM_REC_PACKETS, cb, (void *)bp, 1000);
+			libusb_set_iso_packet_lengths(t, REC_PACKET_SIZE);
+
+			if (libusb_submit_transfer(t)) {
+				printf("ERROR: libusb_submit_transfer failed\n");
+				exit(1);
+			}
+		}
+
+		struct sched_param p;
+		p.sched_priority = sched_get_priority_max(SCHED_FIFO) /* 10 */;
+		printf("sched prio=%d pthread_self=0x%x\n", p.sched_priority, pthread_self() );
+		sched_setscheduler(0, SCHED_FIFO, &p);
+		while(1) {
+			   struct timeval tv = {
+			   .tv_sec = 0,
+			   .tv_usec = 1000
+			   };
+			   libusb_handle_events_timeout_completed(NULL, &tv, &completed);
+		}
+	}
+}
+
+int u_drv_main (struct big_pool * bp)
 {
 	struct dvb_frontend *fe = NULL;
 	struct i2c_adapter i2c;
@@ -325,12 +297,6 @@ int main ()
 	if (i2c_start())
 		return -1;
 
-	FILE * out = fopen("out.ts", "w+");
-	if (!out){
-		fprintf(stderr, "Can't open out file \n");
-		return -1;
-	}
-
 	/* reset tuner and demods */
 	if (oc_i2c_write_off(dev, OC_I2C_RESET_CTRL, \
 				OC_I2C_RESET_GATE | OC_I2C_RESET_TPS_CI | OC_I2C_RESET_TPS | OC_I2C_RESET_USB))
@@ -340,7 +306,13 @@ int main ()
 
 	if (oc_i2c_write_off(dev, OC_I2C_RESET_CTRL, \
 				OC_I2C_RESET_GATE | OC_I2C_RESET_TPS_CI | OC_I2C_RESET_TPS | OC_I2C_RESET_USB | \
-				OC_I2C_RESET_TUNER | OC_I2C_RESET_DEMOD ))
+				OC_I2C_RESET_TUNER | OC_I2C_RESET_LG ))
+				// OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY ))
+		return -1;
+
+	/* choose TS input */
+	// if (oc_i2c_write_off(dev, OC_I2C_INSEL_CTRL, OC_I2C_INSEL_SONY ))
+	if (oc_i2c_write_off(dev, OC_I2C_INSEL_CTRL, OC_I2C_INSEL_LG))
 		return -1;
 
 #if 0
@@ -397,7 +369,7 @@ int main ()
 	fe->ops.set_tone(fe, SEC_TONE_ON);
 #endif
 
-#if 1
+#if 0
 	/* DVB-C */
 	fe = cxd2841er_attach_c(&demod_config, &i2c);
 	if (!fe) {
@@ -424,79 +396,12 @@ int main ()
 		fflush(stdout);
 
 		if (status == 0x1f) {
-			start = getus();
-			while (1) {
-				#if 0
-				// BULK IN TRANSFER 
-				// printf("Reading ... \n");
-				start_tr = getus();
-				ret = libusb_bulk_transfer(dev, USB_EP3_IN, buf, BUF_LEN, &transferred, 0);
-				if (ret < 0) {
-					printf("ERR READ ret=%d transferred=%d \n", ret, transferred );
-					return -1;
-				}
-				delta = getus() - start_tr;
-				if (delta < 250 || delta > 4000)
-					printf("delta=%lld usec \n", getus() - start_tr); 
-
-				// if (transferred != 512)
-					// printf("!! READ ret=%d transferred=%d \n", ret, transferred );
-				fwrite(&buf, transferred, 1, out);
-
-				count++;
-				if ( !(count%10000) ){
-					printf("BULK count=%d transfer/sec=%f us=%lld start=%lld\n", 
-						count, (double)((int64_t)1000000*count)/(getus() - start), getus(), start);
-					count = 0;
-					start = getus();
-				}
-				#endif
-
-				#if 1
-				// isochronous transfer (works !)
-				struct libusb_transfer *t;
-				int index = 0;
-
-				for (index = 0; index < NUM_RECORD_BUFS; index++) {
-					record_buffers[index] = (uint8_t*)malloc(NUM_REC_PACKETS * REC_PACKET_SIZE);
-					memset(record_buffers[index], 0, NUM_REC_PACKETS * REC_PACKET_SIZE);
-
-					t = libusb_alloc_transfer(NUM_REC_PACKETS);    
-					libusb_fill_iso_transfer(t, dev, USB_EP3_IN, record_buffers[index], NUM_REC_PACKETS * REC_PACKET_SIZE, NUM_REC_PACKETS, record_callback, (void *)out, 1000);
-					libusb_set_iso_packet_lengths(t, REC_PACKET_SIZE);
-
-					if (libusb_submit_transfer(t)) {
-						printf("ERROR: libusb_submit_transfer failed\n");
-						exit(1);
-					}
-				}
-
-
-				int max = libusb_get_max_iso_packet_size (dev, USB_EP3_IN);
-				printf("max=%d \n", max );
-
-				struct sched_param p;
-				p.sched_priority = 10;
-				sched_setscheduler(0, SCHED_FIFO, &p);
-				while(1) {
-					/* 
-					struct timeval tv = {
-						.tv_sec = 0,
-						.tv_usec = 100
-					};
-					libusb_handle_events_timeout(NULL, &tv);
-					*/
-					while (!completed) {
-						libusb_handle_events_completed(NULL, &completed);
-					}
-				}
-				#endif
-			}
+			process_ts(bp);
 		}
 	}
 #endif
 
-#if 0
+#if 1
 	/* ATSC */
 	fe = lgdt3306a_attach(&lgdt3306a_config, &i2c);
 	if (!fe) {
@@ -517,7 +422,7 @@ int main ()
 	fe->dtv_property_cache.modulation = VSB_8;
 	// fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
 	fe->ops.search(fe);
-	printf("status=0x%x \n", status);
+	printf("LG status=0x%x \n", status);
 	while (1) {
 		fe->ops.read_status(fe, &status);
 		fe->ops.read_signal_strength(fe, &strength);
@@ -526,16 +431,7 @@ int main ()
 		fflush(stdout);
 
 		if (status == 0x1f) {
-			while (1) {
-				// printf("Reading ... \n");
-				ret = libusb_bulk_transfer(dev, USB_EP3_IN, buf, BUF_LEN, &transferred, 0);
-				if (ret < 0) {
-					printf("ERR READ ret=%d transferred=%d \n", ret, transferred );
-					return -1;
-				}
-				// printf("READ ret=%d transferred=%d \n", ret, transferred );
-				fwrite(&buf, transferred, 1, out);
-			}
+			process_ts(bp);
 		}
 	}
 #endif

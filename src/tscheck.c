@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
   int nbytes = 0;
   int pid = 0;
   int64_t off = 0;
+  int tail = 0;
 
   while ((c = getopt (argc, argv, "f:")) != -1) {
 	  switch (c)
@@ -64,7 +65,11 @@ int main(int argc, char **argv) {
   if (ofd < 0)
 	  return -1;
 
-  while ( (nbytes = fread(pkt, 1, TS_SIZE_ONCE, ofd)) ) {
+  while ( (nbytes = fread(pkt + tail, 1, TS_SIZE_ONCE - tail, ofd)) ) {
+	  printf("read nbytes=%d tail=%d \n", nbytes, tail);
+	  nbytes += tail;
+	  tail = 0;
+
 	  // printf("%d read\n", nbytes);
 	  // find sync byte
 	for (i = 0; i < nbytes;) {
@@ -75,6 +80,12 @@ int main(int argc, char **argv) {
 				checkts(&pkt[i], off);
 			i += TS_SIZE;
 			off += TS_SIZE;
+		} else if ((i+TS_SIZE) > nbytes) {
+			tail = nbytes - i;
+			// save tail for later use
+			memmove(pkt, pkt + i, tail);
+			printf("tail=%d i=%d \n", tail, i);
+			i+= tail;
 		} else {
 			off++;
 			i++;

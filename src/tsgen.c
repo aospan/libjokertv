@@ -11,6 +11,7 @@ void help() {
 	printf("tsgen utility for TS stream generation (pattern)\n");
 	printf("Usage:\n");
 	printf("	-f filename	TS stream output file\n");
+	printf("	-s size		TS file size in bytes (default 54MB)\n");
 }
 
 int main(int argc, char **argv) {
@@ -21,10 +22,14 @@ int main(int argc, char **argv) {
   FILE * ofd;
   int c;
   char *filename = "tsgen.ts";
+  int size = TS_LIMIT;
 
-  while ((c = getopt (argc, argv, "f:")) != -1) {
+  while ((c = getopt (argc, argv, "f:s:")) != -1) {
 	  switch (c)
 	  {
+		  case 's':
+			  size = atoi(optarg)/TS_SIZE;
+			  break;
 		  case 'f':
 			  filename = optarg;
 			  break;
@@ -38,7 +43,11 @@ int main(int argc, char **argv) {
   if (ofd < 0)
 	  return -1;
 
-  for (i = 0; i < TS_LIMIT; i++) {
+  /* pattern should be rolled as 0x00 -> 0xff */
+  size = 256 * (size/256);
+  printf("ts pkt count=%d \n", size );
+
+  for (i = 0; i < size; i++) {
     pkt[0x00] = 0x47;
     pkt[0x01] = 0x01;
     pkt[0x02] = 0x77;

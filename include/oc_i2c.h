@@ -30,6 +30,7 @@ typedef unsigned int            uint32_t;
 #define OC_I2C_SR		(0x04) /* Read: status register */
 #define OC_I2C_SR_READ		(0x05) /* Trigger SR reading */
 #define OC_I2C_RESET_CTRL	(0x06) /* Control chips reset */
+#define OC_I2C_INSEL_CTRL	(0x07) /* Choose TS input */
 
 /* PRE registers bits */
 #define OC_I2C_100K		(0x63) /* 100kHz bus speed */
@@ -62,7 +63,12 @@ typedef unsigned int            uint32_t;
 #define OC_I2C_RESET_ATBM	1 << 3 /* Altobeam DTMB demod */ 
 #define OC_I2C_RESET_LG		1 << 2 /* LG ATSC demod */ 
 #define OC_I2C_RESET_TUNER	1 << 1 /* Sony Helene tuner */ 
-#define OC_I2C_RESET_DEMOD	1 << 0 /* Sony DVB demod */ 
+#define OC_I2C_RESET_SONY	1 << 0 /* Sony DVB demod */ 
+
+/* Choose TS input */
+#define OC_I2C_INSEL_SONY	(0x00)
+#define OC_I2C_INSEL_ATBM	(0x01)
+#define OC_I2C_INSEL_LG		(0x02)
 
 /* USB defines */
 #define	USB_EP1_IN		(0x81) /* i2c, etc */

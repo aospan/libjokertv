@@ -2,6 +2,18 @@ cmake_minimum_required (VERSION 2.8.11)
 project (u-drv)
 
 set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+
+# Search libusb
+find_package(PkgConfig)
+pkg_check_modules(PC_LIBUSB libusb-1.0)
+
+FIND_PATH(LIBUSB_INCLUDE_DIR libusb.h
+	    PATHS ${PC_LIBUSB_INCLUDEDIR} ${PC_LIBUSB_INCLUDE_DIRS})
+
+FIND_LIBRARY(LIBUSB_LIBRARIES NAMES usb-1.0
+	    PATHS ${PC_LIBUSB_LIBDIR} ${PC_LIBUSB_LIBRARY_DIRS})
 
 add_library (udrv linux/drivers/media/dvb-frontends/helene.c
   linux/drivers/media/dvb-frontends/cxd2841er.c
@@ -15,7 +27,8 @@ add_library (udrv linux/drivers/media/dvb-frontends/helene.c
   linux/drivers/media/dvb-core/dvb_frontend.c
   linux/drivers/media/dvb-core/dmxdev.c
   linux/drivers/media/dvb-core/dvb_net.c
-  linux/drivers/media/dvb-core/dvb_math.c)
+  linux/drivers/media/dvb-core/dvb_math.c
+  src/u-drv-main.c)
 
 # WARNING: Special properties to compile kernel sources in user level 
 set(KOPTIONS
@@ -43,6 +56,7 @@ set(KOPTIONS
 	-DCONFIG_DYNAMIC_DEBUG \
 	-D_GCC_WRAP_STDINT_H \
 	-DDEBUG \
+	-DCONFIG_SLOB \
 	-D_STDLIB_H \
 	-D_SYS_TYPES_H \
 	-D_STRUCT_TIMEVAL\
@@ -55,24 +69,17 @@ set(KOPTIONS
 	-D__timer_t_defined \
 	-include ./include/linux/kconfig.h")
 
-set_target_properties(udrv PROPERTIES COMPILE_FLAGS ${KOPTIONS})
+set(INCLUDE_USER "-I ${LIBUSB_INCLUDE_DIR} -I${CMAKE_SOURCE_DIR}/include")
 
-find_package(PkgConfig)
-pkg_check_modules(PC_LIBUSB libusb-1.0)
-
-FIND_PATH(LIBUSB_INCLUDE_DIR libusb.h
-	    PATHS ${PC_LIBUSB_INCLUDEDIR} ${PC_LIBUSB_INCLUDE_DIRS})
-
-FIND_LIBRARY(LIBUSB_LIBRARIES NAMES usb-1.0
-	    PATHS ${PC_LIBUSB_LIBDIR} ${PC_LIBUSB_LIBRARY_DIRS})
+set_target_properties(udrv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}")
 
 add_library (oc_i2c src/oc_i2c.c)
-set(INCLUDE_USER "-I ${LIBUSB_INCLUDE_DIR} -I${CMAKE_SOURCE_DIR}/include")
 set_target_properties(oc_i2c PROPERTIES COMPILE_FLAGS ${INCLUDE_USER})
 
-add_executable(u-drv src/u-drv.c)
-set_target_properties(u-drv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}")
-target_link_libraries(u-drv udrv oc_i2c ${LIBUSB_LIBRARIES})
+find_package( Threads )
+add_executable(joker-tv src/joker-tv.cc)
+set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
+target_link_libraries(joker-tv udrv oc_i2c "${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES}")
 
 add_executable(i2c-scan src/i2c-scan.c)
 set_target_properties(i2c-scan PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
