@@ -45,8 +45,31 @@ int main ()
 	if ((ret = joker_i2c_init(&joker)))
     return ret;
 
+#if 0
+  info.delivery_system = JOKER_SYS_ATSC;
+  info.bandwidth_hz = 6000000;
+  info.frequency = 575000000;
+  info.modulation = JOKER_VSB_8;
+#endif
+
+#if 0
+  info.delivery_system = JOKER_SYS_DVBS;
+  info.bandwidth_hz = 0;
+  info.frequency = 1402000000;
+  info.symbol_rate = 20000000;
+#endif
+
+#if 1
+  info.delivery_system = JOKER_SYS_DVBC_ANNEX_A;
+  info.bandwidth_hz = 8000000;
+  info.frequency = 150000000;
+#endif
+
   if (tune(&joker, &info))
     return -1;
+
+  status = read_status(&info);
+  printf("LOCK status=%d error=%s \n", status, strerror(status) );
 
   // bp = start_ts();
   while(1) {

@@ -11,9 +11,57 @@
 #ifndef _U_DRV_TUNE
 #define _U_DRV_TUNE	1
 
+/* constants copy from Linux: include/uapi/linux/dvb/frontend.h 
+ * do not change order !
+ */
+enum joker_fe_delivery_system {
+  JOKER_SYS_UNDEFINED,
+  JOKER_SYS_DVBC_ANNEX_A,
+  JOKER_SYS_DVBC_ANNEX_B,
+  JOKER_SYS_DVBT,
+  JOKER_SYS_DSS,
+  JOKER_SYS_DVBS,
+  JOKER_SYS_DVBS2,
+  JOKER_SYS_DVBH,
+  JOKER_SYS_ISDBT,
+  JOKER_SYS_ISDBS,
+  JOKER_SYS_ISDBC,
+  JOKER_SYS_ATSC,
+  JOKER_SYS_ATSCMH,
+  JOKER_SYS_DTMB,
+  JOKER_SYS_CMMB,
+  JOKER_SYS_DAB,
+  JOKER_SYS_DVBT2,
+  JOKER_SYS_TURBO,
+  JOKER_SYS_DVBC_ANNEX_C,
+};
+
+enum joker_fe_modulation {
+  JOKER_QPSK,
+  JOKER_QAM_16,
+  JOKER_QAM_32,
+  JOKER_QAM_64,
+  JOKER_QAM_128,
+  JOKER_QAM_256,
+  JOKER_QAM_AUTO,
+  JOKER_VSB_8,
+  JOKER_VSB_16,
+  JOKER_PSK_8,
+  JOKER_APSK_16,
+  JOKER_APSK_32,
+  JOKER_DQPSK,
+  JOKER_QAM_4_NR,
+};
+
 /* frontend parameters (standard, freq, etc)
+ * copy from Linux: drivers/media/dvb-core/dvb_frontend.h
  */
 struct tune_info_t {
+  enum joker_fe_delivery_system delivery_system;
+  enum joker_fe_modulation      modulation;
+  uint32_t                     frequency; /* in HZ */
+  uint32_t                     symbol_rate;
+  uint32_t                     bandwidth_hz;   /* 0 = AUTO */
   void * fe_opaque;
 };
 
