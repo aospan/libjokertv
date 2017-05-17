@@ -1,36 +1,37 @@
+/* 
+ * Scan I2C bus
+ * Joker Eco-system
+ * https://jokersys.com
+ * (c) Abylay Ospan, 2017
+ * aospan@jokersys.com
+ * GPLv2
+ */
+
 #include <stdio.h>
-#include <oc_i2c.h>
-
-static struct libusb_device_handle *dev = NULL;
-
-int i2c_start()
-{
-	if((dev = i2c_init()))
-	{
-		return 0;
-	} else {
-		printf("FAIL open I2C\n");
-		return -1;
-	}
-}
-
-int i2c_stop()
-{
-	i2c_close(dev);
-	return 0;
-}
+#include <errno.h>
+#include <string.h>
+#include <joker_tv.h>
+#include <joker_i2c.h>
 
 int main() {
 	int i = 0;
+  int ret = 0;
+  struct joker_t joker;
 
-	if (i2c_start())
-		return -1;
+	if ((ret = joker_open(&joker)))
+    return ret;
+
+	if ((ret = joker_i2c_init(&joker)))
+    return ret;
 
 	for(i = 0; i < 0x7F; i++) {
-		if ( !oc_i2c_ping(dev, i) ) {
+		if (!(ret = joker_i2c_ping(&joker, i))) {
 			printf("0x%x address ACKed on i2c bus\n", i );
-		}
+		} else {
+      //printf("0x%x address err=%d (%s)\n", i, ret, strerror(ret));
+    }
 	}
 
-	i2c_stop();
+  joker_i2c_close(&joker);
+  joker_close(&joker);
 }

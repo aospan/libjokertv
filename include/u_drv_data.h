@@ -2,10 +2,11 @@
  * https://jokersys.com
  * (c) Abylay Ospan, 2017
  * aospan@jokersys.com
+ * GPLv2
  */
 
-#ifndef _U_DRV
-#define _U_DRV	1
+#ifndef _U_DRV_DATA
+#define _U_DRV_DATA	1
 
 #define NUM_RECORD_BUFS 16
 #define NUM_REC_PACKETS 128
@@ -20,18 +21,28 @@ struct big_pool {
 	unsigned char * read_ptr;
 	unsigned char * write_ptr;
 	int size;
-	// pthread_mutex_lock mux;
-	// pthread_cond_t cond;
-
+  
 	/* callback for libusb */
-	void * cb;
+	// void * cb;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int u_drv_main (struct big_pool * bp);
+/* start TS processing thread 
+ */
+struct big_pool * start_ts();
+
+/* stop ts processing */
+int stop_ts(struct big_pool * bp);
+
+/* read TS into buf
+ * maximum available space in size bytes.
+ * opaque returned by start_ts
+ * return read bytes or negative error code if failed
+ * */
+ssize_t read_data(void * opaque, unsigned char *buf, size_t size);
 
 #ifdef __cplusplus
 }
