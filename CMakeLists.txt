@@ -75,7 +75,9 @@ set(KOPTIONS
 set(INCLUDE_USER "-I ${LIBUSB_INCLUDE_DIR} -I${CMAKE_SOURCE_DIR}/include")
 
 set_target_properties(udrv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}")
+#set_target_properties(udrv_data PROPERTIES INCLUDE_DIRECTORIES "${Qt5Core_INCLUDE_DIRS}")
 set_target_properties(udrv_data PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
+#set_property(TARGET udrv_data PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 #add_library (oc_i2c src/oc_i2c.c)
 #set_target_properties(oc_i2c PROPERTIES COMPILE_FLAGS ${INCLUDE_USER})
@@ -90,6 +92,7 @@ find_package( Threads )
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
 target_link_libraries(joker-tv udrv udrv_data joker_i2c joker_fpga "${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES}")
+#target_link_libraries(joker-tv udrv udrv_data joker_i2c joker_fpga Qt5::Core "${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES}")
 
 add_executable(i2c-scan src/i2c-scan.c)
 set_target_properties(i2c-scan PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")

@@ -8,22 +8,32 @@
 #ifndef _U_DRV_DATA
 #define _U_DRV_DATA	1
 
-#define NUM_RECORD_BUFS 16
-#define NUM_REC_PACKETS 128
-#define REC_PACKET_SIZE 512
+#define NUM_USB_BUFS 16
+#define NUM_USB_PACKETS 128
+#define USB_PACKET_SIZE 1024
+//#define USB_PACKET_SIZE 512
 
 #define BIG_POOL_GAIN	16
 
 /* ring buffer for TS data */
-struct big_pool {
+struct big_pool_t {
 	unsigned char * ptr;
 	unsigned char * ptr_end;
 	unsigned char * read_ptr;
 	unsigned char * write_ptr;
 	int size;
   
-	/* callback for libusb */
-	// void * cb;
+  uint8_t *usb_buffers[NUM_USB_BUFS];
+
+  /* threads stuff */
+	pthread_t thread;
+  pthread_cond_t cond;
+  pthread_mutex_t mux;
+
+  /* statistics */
+  int pkt_count;
+  int bytes;
+  uint64_t start_time;
 };
 
 #ifdef __cplusplus
@@ -32,17 +42,16 @@ extern "C" {
 
 /* start TS processing thread 
  */
-struct big_pool * start_ts();
+int start_ts(struct joker_t *joker, struct big_pool_t *pool);
 
 /* stop ts processing */
-int stop_ts(struct big_pool * bp);
+int stop_ts(struct joker_t *joker, struct big_pool_t * pool);
 
 /* read TS into buf
  * maximum available space in size bytes.
- * opaque returned by start_ts
  * return read bytes or negative error code if failed
  * */
-ssize_t read_data(void * opaque, unsigned char *buf, size_t size);
+ssize_t read_data(struct joker_t *joker, struct big_pool_t * pool, unsigned char *buf, size_t size);
 
 #ifdef __cplusplus
 }

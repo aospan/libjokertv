@@ -25,150 +25,58 @@
 #include <stdint.h>
 #include <libusb.h>
 #include <pthread.h>
-
+#include "joker_tv.h"
+#include "joker_fpga.h"
 #include "u_drv_data.h"
 
-static int count = 0;
-static time_t start = 0, start_tr = 0;
-static int64_t delta = 0;
-static int64_t total = 0;
-static int stop = 0;
-
-static pthread_cond_t cond;
-static pthread_mutex_t mux;
-
+/* helper func 
+ * get current time in usec */
 uint64_t getus() {
-	struct timeval tv;
-	gettimeofday(&tv,NULL);
-	return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
 }
 
-static uint8_t *record_buffers[NUM_RECORD_BUFS];
-
-/* start TS processing thread 
- */
-struct big_pool * start_ts()
-{
-  return NULL;
-}
-
-/* stop ts processing */
-int stop_ts(struct big_pool * bp)
-{
-  return 0;
-}
-
-/* read TS into buf
- * maximum available space in size bytes.
- * opaque returned by start_ts
- * return read bytes or negative error code if failed
+/* thread for 'kicking' libusb polling 
+ * TODO: not only default libusb context polling
  * */
-ssize_t read_data(void * opaque, unsigned char *buf, size_t size)
-{
-  return 0;
-}
-
-#if 0
-void process_ts(struct big_pool * bp) {
-	libusb_transfer_cb_fn cb = (libusb_transfer_cb_fn)bp->cb;
-	int transferred = 0;
+void* process_usb(void * data) {
 	int completed = 0;
 
-	while (1) {
-		// isochronous transfer
-		struct libusb_transfer *t;
-		int index = 0;
+  /* set FIFO schedule priority
+   * for faster USB ISOC transfer processing */
+  struct sched_param p;
+  p.sched_priority = sched_get_priority_max(SCHED_FIFO);
+  sched_setscheduler(0, SCHED_FIFO, &p);
 
-		for (index = 0; index < NUM_RECORD_BUFS; index++) {
-			record_buffers[index] = (uint8_t*)malloc(NUM_REC_PACKETS * REC_PACKET_SIZE);
-			memset(record_buffers[index], 0, NUM_REC_PACKETS * REC_PACKET_SIZE);
-
-			t = libusb_alloc_transfer(NUM_REC_PACKETS);    
-			libusb_fill_iso_transfer(t, dev, USB_EP3_IN, record_buffers[index], NUM_REC_PACKETS * REC_PACKET_SIZE, NUM_REC_PACKETS, cb, (void *)bp, 1000);
-			libusb_set_iso_packet_lengths(t, REC_PACKET_SIZE);
-
-			if (libusb_submit_transfer(t)) {
-				printf("ERROR: libusb_submit_transfer failed\n");
-				exit(1);
-			}
-		}
-
-		struct sched_param p;
-		p.sched_priority = sched_get_priority_max(SCHED_FIFO) /* 10 */;
-		printf("sched prio=%d pthread_self=0x%x\n", p.sched_priority, pthread_self() );
-		sched_setscheduler(0, SCHED_FIFO, &p);
-		while(1) {
-			   struct timeval tv = {
-			   .tv_sec = 0,
-			   .tv_usec = 1000
-			   };
-			   libusb_handle_events_timeout_completed(NULL, &tv, &completed);
-		}
-	}
+  while(1) {
+    struct timeval tv = {
+      .tv_sec = 0,
+      .tv_usec = 1000
+    };
+    libusb_handle_events_timeout_completed(NULL, &tv, &completed);
+  }
 }
 
-void* process_tr(void * data) {
-	struct libusb_transfer *transfer = NULL;
-	struct big_pool * bp = (struct big_pool *)data;
-	unsigned char * buf = 0;
-	int i = 0;
-	struct libusb_iso_packet_descriptor pkt;
-	time_t start_cb = getus();
-	int to_write = 0;
-
-	FILE * out = fopen("out.ts", "w+");
-	if (!out){
-		fprintf(stderr, "Can't open out file \n");
-		pthread_exit(NULL);
-	}
-
-	while(!stop) {
-		// just wait more data
-		pthread_mutex_lock(&mux);
-		if (bp->read_ptr == bp->write_ptr) // no new data in ring
-			pthread_cond_wait(&cond, &mux);  // just wait
-
-		pthread_mutex_unlock(&mux);
-
-		// process ring data
-		// without locking for faster USB ISOC release
-		// this can cause data loss/overwrite if we are too slow
-		// and write_ptr catch read_ptr !
-		if (bp->read_ptr != bp->write_ptr) {
-			/* some data in ringbuffer detected */
-			if (bp->read_ptr < bp->write_ptr) {
-				to_write = bp->write_ptr - bp->read_ptr;
-				fwrite(bp->read_ptr, to_write, 1, out);
-				bp->read_ptr += to_write;
-			} else if (bp->read_ptr > bp->write_ptr) {
-				/* ring rollover detected */
-				to_write = bp->ptr_end - bp->read_ptr;
-				fwrite(bp->read_ptr, to_write, 1, out);
-				bp->read_ptr = bp->ptr;
-				to_write = bp->write_ptr - bp->read_ptr;
-				fwrite(bp->read_ptr, to_write, 1, out);
-				bp->read_ptr += to_write;
-			}
-		}
-	}
-}
-
+/* callback called by libusb when USB ISOC transfer completed */
 void record_callback(struct libusb_transfer *transfer)
 {
-    int i;
     struct libusb_iso_packet_descriptor pkt;
-    time_t start_cb = getus();
+    struct big_pool_t * pool = (struct big_pool_t *)transfer->user_data;
+    int i;
     unsigned char * buf = 0;
-    struct big_pool * bp = (struct big_pool *)transfer->user_data;
     int remain = 0, to_write = 0;
     int err_counter = 0;
 
-    count++;
-    if ( !(count%500) ){
-	    printf("USB ISOC count=%d transfer/sec=%f \n", 
-			    count, (double)((int64_t)1000000*count)/(getus() - start));
-	    count = 0;
-	    start = getus();
+    /* update statistics */
+    pool->pkt_count++;
+    if ( !(pool->pkt_count%500) ){
+	    printf("USB ISOC: %f transfer/sec %f mbits/sec \n", 
+			    (double)((int64_t)1000000*pool->pkt_count)/(getus() - pool->start_time),
+			    (double)((int64_t)1000000*8*pool->bytes/1048576)/(getus() - pool->start_time));
+	    pool->pkt_count = 0;
+	    pool->bytes = 0;
+	    pool->start_time = getus();
     }
 
     // copy data and 
@@ -179,27 +87,26 @@ void record_callback(struct libusb_transfer *transfer)
 
 	    if (pkt.status == LIBUSB_TRANSFER_COMPLETED) {
 		    if (buf = libusb_get_iso_packet_buffer(transfer, i)) {
-			    total += transfer->iso_packet_desc[i].actual_length;
+          pool->bytes += transfer->iso_packet_desc[i].actual_length;
 			    remain = transfer->iso_packet_desc[i].actual_length;
 			    while(remain > 0) {
-				    pthread_mutex_lock(&mux);
-				    to_write = ((bp->write_ptr + remain) > bp->ptr_end) ? (bp->ptr_end - bp->write_ptr) : remain;
-				    memcpy(bp->write_ptr, buf, to_write);
-				    bp->write_ptr += to_write;
-				    if(bp->write_ptr >= bp->ptr_end) {
+				    pthread_mutex_lock(&pool->mux);
+				    to_write = ((pool->write_ptr + remain) > pool->ptr_end) ? (pool->ptr_end - pool->write_ptr) : remain;
+				    memcpy(pool->write_ptr, buf, to_write);
+				    pool->write_ptr += to_write;
+				    if(pool->write_ptr >= pool->ptr_end) {
 					    // rollover ring buffer
-					    bp->write_ptr = bp->ptr;
+					    pool->write_ptr = pool->ptr;
 				    }
 				    remain -= to_write;
-				    pthread_mutex_unlock(&mux);
+				    pthread_mutex_unlock(&pool->mux);
 			    }
-			    pthread_cond_signal(&cond); // wake processing thread
+			    pthread_cond_signal(&pool->cond); // wake processing thread
 		    }
-	    }
+      }
     }
 
     // return USB ISOC ASAP !
-
     while(1) {
 	    if (libusb_submit_transfer(transfer)) {
 		    if(!(err_counter%1000))
@@ -209,7 +116,7 @@ void record_callback(struct libusb_transfer *transfer)
 		    if (err_counter > 10000) {
 			    // TODO: reinit usb device
 			    printf("too much errors. exiting ... \n");
-			    exit(1);
+          return;
 		    }
 	    }else{
 		    break;
@@ -219,36 +126,122 @@ void record_callback(struct libusb_transfer *transfer)
 
 /* start TS processing thread 
  */
-struct big_pool * start_ts()
+int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 {
-	int rc = 0;
-	pthread_t thread;
-	struct big_pool bp;
-}
+	libusb_transfer_cb_fn cb = record_callback;
+  struct libusb_device_handle *dev = NULL;
+  struct libusb_transfer *t;
+  int index = 0;
+	int transferred = 0, rc = 0;
 
-int main ()
-{
-	int rc = 0;
-	pthread_t thread;
-	struct big_pool bp;
+  if (!joker || !pool)
+    return EINVAL;
 
-	bp.size = NUM_RECORD_BUFS * NUM_REC_PACKETS * REC_PACKET_SIZE * BIG_POOL_GAIN;
-	bp.ptr = (unsigned char*)malloc(bp.size);
-	if (!bp.ptr) {
+  dev = (struct libusb_device_handle *)joker->libusb_opaque;
+  if (!dev)
+    return EINVAL;
+  
+  /* set FIFO schedule priority
+   * for faster USB ISOC transfer processing */
+  struct sched_param p;
+  p.sched_priority = sched_get_priority_max(SCHED_FIFO);
+  sched_setscheduler(0, SCHED_FIFO, &p);
+
+  /* Allocate big pool memory 
+   * TS will be stored here
+   * TODO: dynamic allocation
+   * */
+	pool->size = NUM_USB_BUFS * NUM_USB_PACKETS * USB_PACKET_SIZE * BIG_POOL_GAIN;
+	pool->ptr = (unsigned char*)malloc(pool->size);
+	if (!pool->ptr) {
 		printf("ERROR:can't alloc memory to big pool \n");
-		return -1;
+		return ENOMEM;
 	}
-	bp.ptr_end = bp.ptr + bp.size;
-	bp.read_ptr = bp.ptr;
-	bp.write_ptr = bp.ptr;
-	bp.cb = (void*)record_callback;
+	pool->ptr_end = pool->ptr + pool->size;
+	pool->read_ptr = pool->ptr;
+	pool->write_ptr = pool->ptr;
 
-	rc = pthread_create(&thread, NULL, process_tr, (void *)&bp);
+  // create isochronous transfers
+  // USB isoc transfer should be delivered to Joker TV 
+  // every microframe (125usec)
+  // One isoc transfer size is 512 bytes (max 1024)
+  for (index = 0; index < NUM_USB_BUFS; index++) {
+    pool->usb_buffers[index] = (uint8_t*)malloc(NUM_USB_PACKETS * USB_PACKET_SIZE);
+    memset(pool->usb_buffers[index], 0, NUM_USB_PACKETS * USB_PACKET_SIZE);
+
+    t = libusb_alloc_transfer(NUM_USB_PACKETS);    
+    libusb_fill_iso_transfer(t, dev, USB_EP3_IN, pool->usb_buffers[index], NUM_USB_PACKETS * USB_PACKET_SIZE, NUM_USB_PACKETS, cb, (void *)pool, 1000);
+    libusb_set_iso_packet_lengths(t, USB_PACKET_SIZE);
+
+    if (libusb_submit_transfer(t)) {
+      printf("ERROR: libusb_submit_transfer failed\n");
+      return EIO;
+    }
+  }
+
+  // start ISOC USB transfers processing thread
+  pthread_mutex_init(&pool->mux, NULL);
+  pthread_cond_init(&pool->cond, NULL);
+  pool->pkt_count = 0;
+  pool->start_time = getus();
+	rc = pthread_create(&pool->thread, NULL, process_usb, (void *)&pool);
 	if (rc){
 		printf("ERROR; return code from pthread_create() is %d\n", rc);
-		exit(-1);
+    return rc;
 	}
-
-	u_drv_main(&bp);
 }
-#endif
+
+/* stop ts processing 
+ * TODO*/
+int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
+{
+  return 0;
+}
+
+/* read TS into buf
+ * maximum available space in size bytes.
+ * return read bytes or negative error code if failed
+ * */
+ssize_t read_data(struct joker_t *joker, struct big_pool_t * pool, unsigned char *buf, size_t size)
+{
+  int remain = size;
+	int to_write = 0, avail = 0;
+  unsigned char * ptr = buf;
+
+  while (remain > 0) {
+    // just wait more data
+    pthread_mutex_lock(&pool->mux);
+    if (pool->read_ptr == pool->write_ptr) // no new data in ring
+      pthread_cond_wait(&pool->cond, &pool->mux);  // just wait
+
+    pthread_mutex_unlock(&pool->mux);
+
+    // process ring data
+    // without locking for faster USB ISOC release
+    // this can cause data loss/overwrite if we are too slow
+    // and write_ptr catch read_ptr !
+    if (pool->read_ptr != pool->write_ptr) {
+      /* some data in ringbuffer detected */
+      if (pool->read_ptr < pool->write_ptr) {
+        avail = pool->write_ptr - pool->read_ptr;
+        to_write = (avail > remain) ? remain : avail;
+        memcpy(ptr, pool->read_ptr, to_write);
+        /* update pointers/sizes */
+        ptr += to_write;
+        pool->read_ptr += to_write;
+        remain -= to_write;
+      } else if (pool->read_ptr > pool->write_ptr) {
+        /* ring rollover detected */
+        avail = pool->ptr_end - pool->read_ptr;
+        to_write = (avail > remain) ? remain : avail;
+        memcpy(ptr, pool->read_ptr, to_write);
+        ptr += to_write;
+        if (to_write == avail)
+          pool->read_ptr = pool->ptr; /* ring end reached */
+        else
+          pool->read_ptr += to_write;
+        remain -= to_write;
+      }
+    }
+  }
+}

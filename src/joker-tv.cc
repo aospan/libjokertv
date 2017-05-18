@@ -1,5 +1,5 @@
 /* 
- * this file contains driver for Joker TV card
+ * Joker TV app
  * Supported standards:
  *
  * DVB-S/S2 – satellite, is found everywhere in the world
@@ -12,6 +12,7 @@
  * (c) Abylay Ospan <aospan@jokersys.com>, 2017
  * LICENSE: GPLv2
  * https://tv.jokersys.com
+ * GPLv2
  */
 
 #include <stdio.h>
@@ -34,9 +35,15 @@
 int main ()
 {
   struct tune_info_t info;
-  struct big_pool * bp = 0;
-  int status = 0, ret = 0;
+  struct big_pool_t pool;
+  int status = 0, ret = 0, rbytes = 0;
   struct joker_t joker;
+  unsigned char buf[512];
+	FILE * out = fopen("out.ts", "w+");
+	if (!out){
+		fprintf(stderr, "Can't open out file \n");
+		pthread_exit(NULL);
+	}
 
   /* open Joker TV on USB bus */
 	if ((ret = joker_open(&joker)))
@@ -65,21 +72,30 @@ int main ()
   info.frequency = 150000000;
 #endif
 
+  printf("TUNE start \n");
   if (tune(&joker, &info))
     return -1;
+  printf("TUNE done \n");
 
   status = read_status(&info);
   printf("LOCK status=%d error=%s \n", status, strerror(status) );
+  fflush(stdout);
 
-  // bp = start_ts();
+  start_ts(&joker, &pool);
   while(1) {
+    rbytes = read_data(&joker, &pool, &buf[0], 512);
+    fwrite(buf, 512, 1, out);
+    // printf("%d bytes read \n", rbytes );
+#if 0
+    sleep(1);
     status = read_status(&info);
     printf("LOCK status=%d error=%s \n", status, strerror(status) );
-    sleep (1);
+    // sleep (10);
 
     if (!status) {
       // LOCKED
     }
+#endif
   }
 
 }

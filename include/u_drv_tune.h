@@ -5,7 +5,6 @@
  * GPLv2
  */
 
-#include <u_drv_data.h>
 #include <joker_i2c.h>
 
 #ifndef _U_DRV_TUNE
