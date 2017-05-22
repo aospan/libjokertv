@@ -12,6 +12,14 @@
 #ifndef _JOKER_TV
 #define _JOKER_TV 1
 
+/* TODO: debug system */
+// #define DBG
+#ifdef DBG
+#define jdebug(...) printf(__VA_ARGS__);
+#else
+#define jdebug(...) {};
+#endif
+
 /* main pointer to Joker TV */
 struct joker_t {
   void * libusb_opaque;

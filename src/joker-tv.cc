@@ -29,6 +29,7 @@
 
 #include <queue>
 #include "joker_tv.h"
+#include "joker_fpga.h"
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 
@@ -39,6 +40,11 @@ int main ()
   int status = 0, ret = 0, rbytes = 0;
   struct joker_t joker;
   unsigned char buf[512];
+  int isoc_len = USB_PACKET_SIZE;
+  // int isoc_len = 2046;
+  // int isoc_len = 1024;
+  // int isoc_len = 512;
+
 	FILE * out = fopen("out.ts", "w+");
 	if (!out){
 		fprintf(stderr, "Can't open out file \n");
@@ -48,6 +54,10 @@ int main ()
   /* open Joker TV on USB bus */
 	if ((ret = joker_open(&joker)))
     return ret;
+
+  /* tune usb isoc transaction len */
+  // joker_write_off(&joker, JOKER_USB_ISOC_LEN_HI, ((isoc_len >> 8) & 0x7 ));
+  // joker_write_off(&joker, JOKER_USB_ISOC_LEN_LO, (isoc_len & 0xFF));
 
 	if ((ret = joker_i2c_init(&joker)))
     return ret;
@@ -77,9 +87,14 @@ int main ()
     return -1;
   printf("TUNE done \n");
 
-  status = read_status(&info);
-  printf("LOCK status=%d error=%s \n", status, strerror(status) );
-  fflush(stdout);
+  while (1) {
+    status = read_status(&info);
+    printf("LOCK status=%d error=%s \n", status, strerror(status) );
+    fflush(stdout);
+    if (!status)
+      break;
+    sleep(1);
+  }
 
   start_ts(&joker, &pool);
   while(1) {

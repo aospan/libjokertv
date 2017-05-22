@@ -69,23 +69,28 @@ void record_callback(struct libusb_transfer *transfer)
     int err_counter = 0;
 
     /* update statistics */
-    pool->pkt_count++;
-    if ( !(pool->pkt_count%500) ){
-	    printf("USB ISOC: %f transfer/sec %f mbits/sec \n", 
+    if ( !(pool->pkt_count%1000) ){
+	    printf("USB ISOC: all/complete=%f/%f transfer/sec %f mbits/sec \n", 
 			    (double)((int64_t)1000000*pool->pkt_count)/(getus() - pool->start_time),
+			    (double)((int64_t)1000000*pool->pkt_count_complete)/(getus() - pool->start_time),
 			    (double)((int64_t)1000000*8*pool->bytes/1048576)/(getus() - pool->start_time));
 	    pool->pkt_count = 0;
+	    pool->pkt_count_complete = 0;
 	    pool->bytes = 0;
 	    pool->start_time = getus();
     }
 
+    jdebug("NUM num_iso_packets=%d \n", transfer->num_iso_packets);
     // copy data and 
     // return USB ISOC ASAP (can't wait here) !
     // otherwise we loose ISOC synchronization and get buffer overrun on device !
     for(i = 0; i < transfer->num_iso_packets; i++) {
 	    pkt = transfer->iso_packet_desc[i];
+      pool->pkt_count++;
 
 	    if (pkt.status == LIBUSB_TRANSFER_COMPLETED) {
+        pool->pkt_count_complete++;
+        jdebug("ISOC size=%d \n", transfer->iso_packet_desc[i].actual_length );
 		    if (buf = libusb_get_iso_packet_buffer(transfer, i)) {
           pool->bytes += transfer->iso_packet_desc[i].actual_length;
 			    remain = transfer->iso_packet_desc[i].actual_length;
@@ -103,6 +108,8 @@ void record_callback(struct libusb_transfer *transfer)
 			    }
 			    pthread_cond_signal(&pool->cond); // wake processing thread
 		    }
+      } else {
+        jdebug("ISOC NOT COMPLETE. pkt.status=0x%x\n", pkt.status);
       }
     }
 
@@ -183,6 +190,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
   pthread_mutex_init(&pool->mux, NULL);
   pthread_cond_init(&pool->cond, NULL);
   pool->pkt_count = 0;
+  pool->pkt_count_complete = 0;
   pool->start_time = getus();
 	rc = pthread_create(&pool->thread, NULL, process_usb, (void *)&pool);
 	if (rc){

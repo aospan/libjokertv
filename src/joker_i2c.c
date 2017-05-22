@@ -16,14 +16,6 @@
 #include <joker_i2c.h>
 #include <joker_fpga.h>
 
-/* TODO: debug system */
-#define DBG
-#ifdef DBG
-#define jdebug(...) printf(__VA_ARGS__);
-#else
-#define jdebug(args) {};
-#endif
-
 #define CHECK_ACK 1
 #define DO_NOT_CHECK_ACK 0
 

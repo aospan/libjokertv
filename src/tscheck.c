@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 	  return -1;
 
   while ( (nbytes = fread(pkt + tail, 1, TS_SIZE_ONCE - tail, ofd)) ) {
-	  printf("read nbytes=%d tail=%d \n", nbytes, tail);
+	  // printf("read nbytes=%d tail=%d \n", nbytes, tail);
 	  nbytes += tail;
 	  tail = 0;
 
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 			tail = nbytes - i;
 			// save tail for later use
 			memmove(pkt, pkt + i, tail);
-			printf("tail=%d i=%d \n", tail, i);
+			// printf("tail=%d i=%d \n", tail, i);
 			i+= tail;
 		} else {
 			off++;
