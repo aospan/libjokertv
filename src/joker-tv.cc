@@ -56,8 +56,8 @@ int main ()
     return ret;
 
   /* tune usb isoc transaction len */
-  // joker_write_off(&joker, JOKER_USB_ISOC_LEN_HI, ((isoc_len >> 8) & 0x7 ));
-  // joker_write_off(&joker, JOKER_USB_ISOC_LEN_LO, (isoc_len & 0xFF));
+  joker_write_off(&joker, JOKER_USB_ISOC_LEN_HI, ((isoc_len >> 8) & 0x7 ));
+  joker_write_off(&joker, JOKER_USB_ISOC_LEN_LO, (isoc_len & 0xFF));
 
 	if ((ret = joker_i2c_init(&joker)))
     return ret;

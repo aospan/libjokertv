@@ -8,12 +8,9 @@
 #ifndef _U_DRV_DATA
 #define _U_DRV_DATA	1
 
-// #define NUM_USB_BUFS 8
 #define NUM_USB_BUFS 16
-// #define NUM_USB_PACKETS 64
 #define NUM_USB_PACKETS 128
-#define USB_PACKET_SIZE 512
-// #define USB_PACKET_SIZE 512
+#define USB_PACKET_SIZE 1023
 
 #define BIG_POOL_GAIN	16
 
