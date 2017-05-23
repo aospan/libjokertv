@@ -79,9 +79,6 @@ set_target_properties(udrv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}
 set_target_properties(udrv_data PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
 #set_property(TARGET udrv_data PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-#add_library (oc_i2c src/oc_i2c.c)
-#set_target_properties(oc_i2c PROPERTIES COMPILE_FLAGS ${INCLUDE_USER})
-
 add_library (joker_i2c src/joker_i2c.c)
 set_target_properties(joker_i2c PROPERTIES COMPILE_FLAGS ${INCLUDE_USER})
 
