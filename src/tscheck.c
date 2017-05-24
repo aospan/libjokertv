@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <string.h>
 
 #define TS_SIZE 188
 #define TS_SIZE_ONCE 188000
@@ -19,16 +20,20 @@ int last_pattern = 0;
 
 int checkts(unsigned char * pkt, int64_t off) {
 	int i = 0;
+  int64_t foff = 0;
 	unsigned char pattern = pkt[4]; /* first byte after TS header */
 
+  foff = off + i;
 	if (pattern != (last_pattern + 1)) 
-		printf("Prev pattern 0x%x mismatch with current 0x%x. file offset=%lld (0x%" PRIx64 ") \n",
-				last_pattern, pattern, (long long int)off + i, off + i );
+		printf("Prev pattern 0x%x mismatch with current 0x%x. file offset=%lld (0x%" PRIx64 " or %d MB) \n",
+				last_pattern, pattern, (long long int)foff, foff, (int)(foff/1024/1024));
 
 	for(i = 4; i < TS_SIZE; i++) {
-		if (pkt[i] != pattern) 
-			printf("Pattern 0x%x mismatch with byte 0x%x. file offset=%lld (0x%" PRIx64 ") \n",
-					pattern, pkt[i], (long long int)off + i, off + i );
+		if (pkt[i] != pattern) {
+      foff = off + i;
+			printf("Pattern 0x%x mismatch with byte 0x%x. file offset=%lld (0x%" PRIx64 " or %d MB) \n",
+					pattern, pkt[i], (long long int)foff, foff, (int)(foff/1024/1024));
+    }
 	}
 
 	last_pattern = pattern;
@@ -95,5 +100,5 @@ int main(int argc, char **argv) {
 
   fclose(ofd);
 
-  printf("TS stream validation done. %lld bytes processed \n", (long long int)off);
+  printf("TS stream validation done. %lld bytes (%d MB) processed \n", (long long int)off, (int)(off/1024/1024));
 }
