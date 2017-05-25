@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 2.8.12)
 project (u-drv)
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -38,8 +38,10 @@ set(KOPTIONS
 set(INCLUDE_USER "-I ${LIBUSB_INCLUDE_DIR} -I${CMAKE_SOURCE_DIR}/include")
 
 #combined shared lib
+set(CMAKE_MACOSX_RPATH 1)
 add_library (jokertv SHARED ${LINUX_SRC} ${JOKERTV_SRC})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}")
+target_link_libraries(jokertv ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES})
 
 #simple program: tune and save TS to file
 find_package( Threads )
