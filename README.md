@@ -1,24 +1,16 @@
-# u-drv project
+# libjokertv project
 
-Compile Linux kernel drivers inside user-level with different stubs (i2c, printk, kmalloc, etc).
-Now we can run and debug drivers as user-level process.
+User-level driver for Joker TV card (https://tv.jokersys.com) using libusb.
+Supported platforms: Linux, Mac OSx (more platforms coming soon ... )
+
+'linux' folder contains stripped Linux kernel header and Linux media subsystem
+drivers (cxd2841er, helene, etc).
 
 (c) Abylay Ospan <aospan@jokersys.com>, 2017
+https://jokersys.com
 LICENSE: GPLv2
 
-I have compiled driver for Joker TV card (https://tv.jokersys.com)  but this project can be used for any other drivers (check CMakeLists.txt and src/u-drv.c for details)
-
-# Usage
-
-Make symlink for your Linux kernel sources first. It can be any version different from your running kernel. I'm working on 'https://github.com/aospan/old-linux-stable-netup-universal-dvb-1.4.git' branch 'joker' - so you can use this kernel sources too:
-
-```
-git clone -b joker https://github.com/aospan/old-linux-stable-netup-universal-dvb-1.4.git
-ln -s old-linux-stable-netup-universal-dvb-1.4 linux
-(cd linux && make oldconfig && make prepare && make scripts)
-```
-
-then compile:
+# Compilation
 ```
 mkdir build
 cd build
@@ -28,26 +20,23 @@ make
 
 # Run
 ```
-./u-drv
+./joker-tv
 ```
 
 if everything is fine then you can see progress. Something like this:
 ```
-helene_set_params(): tune done
-atbm888x_write_reg: reg=0x0103, data=0x00
-Try 0
-atbm888x_read_reg: reg=0x030D, data=0x01
-ATBM888x locked!
+usb device found
+Sony HELENE Ter attached on addr=61 at I2C adapter 0x7fff5f915d78
+TUNE done
+WAITING LOCK. status=0 error=Undefined error: 0 
+USB ISOC: all/complete=7999.868002/2381.460706 transfer/sec 18.586992 mbits/sec 
+USB ISOC: all/complete=8000.020000/2369.505924 transfer/sec 18.493687 mbits/sec
+...
 ```
 
-## I2C adapter
-i2c adapter is FT232H based adapter:
-https://www.adafruit.com/product/2264
+resulting TS stream should apear in ./out.ts file.
 
-following packages should be installed:
+## I2C bus scan
 ```
-apt install libftdi-dev
+./i2c-scan
 ```
-
-and
-https://github.com/devttys0/libmpsse.git
