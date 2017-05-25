@@ -26,10 +26,11 @@ add_library (udrv_data
   src/u_drv_data.c)
 
 set(KOPTIONS
-	"-I ${CMAKE_SOURCE_DIR}/linux/include/ \
-	-I ${CMAKE_SOURCE_DIR}/linux/ \
+	"-I ${CMAKE_SOURCE_DIR}/linux/ \
+	-I ${CMAKE_SOURCE_DIR}/linux/include/ \
+	-I ${CMAKE_SOURCE_DIR}/linux/include/uapi \
 	-I ${CMAKE_SOURCE_DIR}/linux/include/uapi/linux/dvb/ \
-  -I ${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/ \
+	-I ${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/ \
 	-include ./include/linux/types.h")
 
 set(INCLUDE_USER "-I ${LIBUSB_INCLUDE_DIR} -I${CMAKE_SOURCE_DIR}/include")
@@ -46,7 +47,7 @@ set_target_properties(joker_fpga PROPERTIES COMPILE_FLAGS ${INCLUDE_USER})
 find_package( Threads )
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
-target_link_libraries(joker-tv udrv udrv_data joker_i2c joker_fpga "${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES}")
+target_link_libraries(joker-tv udrv udrv_data joker_i2c joker_fpga ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES})
 
 add_executable(i2c-scan src/i2c-scan.c)
 set_target_properties(i2c-scan PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")

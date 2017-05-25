@@ -39,7 +39,7 @@ int joker_open(struct joker_t *joker)
 		return ENODEV;
 	}
 
-	libusb_set_debug(NULL, 3);
+	libusb_set_debug(NULL, 1);
 	// libusb_set_debug(NULL, 4); // more debug !
 
 	usb_devs = libusb_get_device_list(ctx, &usb_list);
@@ -80,6 +80,7 @@ int joker_open(struct joker_t *joker)
 	}
 
   joker->libusb_opaque = (void *)devh;
+	printf("open:dev=%p \n", devh);
 
 	return 0;
 }
@@ -147,6 +148,7 @@ int joker_write_off(struct joker_t * joker, int offset, char data) {
 
 	buf[0] = offset;
 	buf[1] = data; 
+	// printf("addr buf=%p &buf=%p dev=%p \n", buf, &buf[0], dev );
 	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, buf, 2, &transferred, 0);
 
 	return ret;

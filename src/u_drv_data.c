@@ -43,11 +43,13 @@ uint64_t getus() {
 void* process_usb(void * data) {
 	int completed = 0;
 
+#ifdef __linux__ 
   /* set FIFO schedule priority
    * for faster USB ISOC transfer processing */
   struct sched_param p;
   p.sched_priority = sched_get_priority_max(SCHED_FIFO);
   sched_setscheduler(0, SCHED_FIFO, &p);
+#endif
 
   while(1) {
     struct timeval tv = {
@@ -86,13 +88,13 @@ void record_callback(struct libusb_transfer *transfer)
     // otherwise we loose ISOC synchronization and get buffer overrun on device !
     for(i = 0; i < transfer->num_iso_packets; i++) {
 	    pkt = transfer->iso_packet_desc[i];
-      pool->pkt_count++;
+	    pool->pkt_count++;
 
 	    if (pkt.status == LIBUSB_TRANSFER_COMPLETED) {
-        pool->pkt_count_complete++;
-        jdebug("ISOC size=%d \n", transfer->iso_packet_desc[i].actual_length );
+		    pool->pkt_count_complete++;
+		    jdebug("ISOC size=%d \n", transfer->iso_packet_desc[i].actual_length );
 		    if (buf = libusb_get_iso_packet_buffer(transfer, i)) {
-          pool->bytes += transfer->iso_packet_desc[i].actual_length;
+			    pool->bytes += transfer->iso_packet_desc[i].actual_length;
 			    remain = transfer->iso_packet_desc[i].actual_length;
 			    while(remain > 0) {
 				    pthread_mutex_lock(&pool->mux);
@@ -108,9 +110,9 @@ void record_callback(struct libusb_transfer *transfer)
 			    }
 			    pthread_cond_signal(&pool->cond); // wake processing thread
 		    }
-      } else {
-        jdebug("ISOC NOT COMPLETE. pkt.status=0x%x\n", pkt.status);
-      }
+	    } else {
+		    jdebug("ISOC NOT COMPLETE. pkt.status=0x%x\n", pkt.status);
+	    }
     }
 
     // return USB ISOC ASAP !
@@ -123,9 +125,10 @@ void record_callback(struct libusb_transfer *transfer)
 		    if (err_counter > 10000) {
 			    // TODO: reinit usb device
 			    printf("too much errors. exiting ... \n");
-          return;
+			    return;
 		    }
 	    }else{
+			// printf("transfer return back done \n");
 		    break;
 	    }
     }
@@ -148,11 +151,13 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
   if (!dev)
     return EINVAL;
   
+#ifdef __linux__ 
   /* set FIFO schedule priority
    * for faster USB ISOC transfer processing */
   struct sched_param p;
   p.sched_priority = sched_get_priority_max(SCHED_FIFO);
   sched_setscheduler(0, SCHED_FIFO, &p);
+#endif
 
   /* Allocate big pool memory 
    * TS will be stored here

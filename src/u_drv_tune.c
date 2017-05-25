@@ -106,7 +106,7 @@ void __dynamic_dev_dbg(struct _ddebug *descriptor,
 	va_start(args, fmt);
 	// vprintf( fmt, args );
 	va_end(args);
-	return 0;
+	return;
 }
 
 void *__kmalloc(size_t size, gfp_t flags)
@@ -130,7 +130,7 @@ void dev_err(const struct device *dev, const char *fmt, ...)
 	va_start(args, fmt);
 	vprintf( fmt, args );
 	va_end(args);
-	return 0;
+	return;
 }
 
 void dev_info(const struct device *dev, const char *fmt, ...)
@@ -139,7 +139,7 @@ void dev_info(const struct device *dev, const char *fmt, ...)
 	va_start(args, fmt);
 	vprintf( fmt, args );
 	va_end(args);
-	return 0;
+	return;
 }
 
 void dev_warn(const struct device *dev, const char *fmt, ...)
@@ -148,7 +148,7 @@ void dev_warn(const struct device *dev, const char *fmt, ...)
 	va_start(args, fmt);
 	vprintf( fmt, args );
 	va_end(args);
-	return 0;
+	return;
 }
 
 void warn_slowpath_null(const char *file, int line)
