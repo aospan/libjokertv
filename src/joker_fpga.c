@@ -30,8 +30,8 @@ int joker_open(struct joker_t *joker)
 	struct libusb_device_descriptor desc;
 	int usb_devs, i, r, ret;
 
-  if (!joker)
-    return EINVAL;
+	if (!joker)
+		return EINVAL;
 
 	ret = libusb_init(NULL);
 	if (ret < 0) {
@@ -48,7 +48,7 @@ int joker_open(struct joker_t *joker)
 		if(r < 0) {
 			fprintf(stderr, "couldn't get usb descriptor for dev #%d!\n", i);
 			fprintf(stderr, "desc.idVendor=0x%x desc.idProduct=0x%x\n",
-				desc.idVendor, desc.idProduct);
+					desc.idVendor, desc.idProduct);
 		}
 
 		if (desc.idVendor == NETUP_VID && desc.idProduct == JOKER_TV_PID)
@@ -79,7 +79,7 @@ int joker_open(struct joker_t *joker)
 		return EIO;
 	}
 
-  joker->libusb_opaque = (void *)devh;
+	joker->libusb_opaque = (void *)devh;
 	printf("open:dev=%p \n", devh);
 
 	return 0;
@@ -87,14 +87,14 @@ int joker_open(struct joker_t *joker)
 
 /* release usb device */
 int joker_close(struct joker_t * joker) {
-  struct libusb_device_handle *dev = NULL;
+	struct libusb_device_handle *dev = NULL;
 
-  if (!joker)
-    return EINVAL;
+	if (!joker)
+		return EINVAL;
 
-  dev = (struct libusb_device_handle *)joker->libusb_opaque;
+	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 
-  libusb_release_interface(dev, 0);
+	libusb_release_interface(dev, 0);
 	if(dev)
 		libusb_close(dev);
 	joker->libusb_opaque = NULL; /* dev not valid anymore */
@@ -105,30 +105,30 @@ int joker_close(struct joker_t * joker) {
  * resulting byte in *data
  */
 int joker_read_off(struct joker_t * joker, int offset, char *data) {
-  struct libusb_device_handle *dev = NULL;
+	struct libusb_device_handle *dev = NULL;
 	int cnt = 20 /* 200 msec timeout */, ret = -1, transferred = 0;
 	unsigned char buf[BUF_LEN];
 
-  if (!joker)
-    return EINVAL;
+	if (!joker)
+		return EINVAL;
 
-  dev = (struct libusb_device_handle *)joker->libusb_opaque;
+	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 
 	while ( cnt-- > 0) {
 		buf[0] = JOKER_READ; /* trigger read */
 		buf[1] = offset; 
 		ret = libusb_bulk_transfer(dev, USB_EP2_OUT, buf, 2, &transferred, 0);
 		if (ret < 0)
-      break;
+			break;
 
-    /* read collected data */
+		/* read collected data */
 		ret = libusb_bulk_transfer(dev, USB_EP1_IN, buf, 1, &transferred, 0);
 		if (ret < 0 || transferred != 1)
-      break;
+			break;
 
-    *data = buf[0];
-    return 0;
-  }
+		*data = buf[0];
+		return 0;
+	}
 
 	return ret;
 }
@@ -137,14 +137,14 @@ int joker_read_off(struct joker_t * joker, int offset, char *data) {
  * return 0 if success
  */
 int joker_write_off(struct joker_t * joker, int offset, char data) {
-  struct libusb_device_handle *dev = NULL;
+	struct libusb_device_handle *dev = NULL;
 	int ret = 0, transferred = 0;
 	unsigned char buf[BUF_LEN];
 
-  if (!joker)
-    return EINVAL;
+	if (!joker)
+		return EINVAL;
 
-  dev = (struct libusb_device_handle *)joker->libusb_opaque;
+	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 
 	buf[0] = offset;
 	buf[1] = data; 
@@ -153,4 +153,3 @@ int joker_write_off(struct joker_t * joker, int offset, char data) {
 
 	return ret;
 }
-

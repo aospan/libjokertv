@@ -26,38 +26,38 @@
  * */
 int joker_i2c_read_cycle(struct joker_t *joker, unsigned char * buf, int check_ack)
 {
-  int cnt = 1000; /* can't wait more */
-  int ret = 0;
+	int cnt = 1000; /* can't wait more */
+	int ret = 0;
 
-  while (cnt-- > 0) {
-    if ((ret = joker_read_off(joker, OC_I2C_SR, buf)))
-      return ret;
+	while (cnt-- > 0) {
+		if ((ret = joker_read_off(joker, OC_I2C_SR, buf)))
+			return ret;
 
-    /* TIP - transaction in progress */
-    if (!(buf[0] & OC_I2C_TIP))
-      break;
+		/* TIP - transaction in progress */
+		if (!(buf[0] & OC_I2C_TIP))
+			break;
 
-    cnt--;
-    usleep(1000);
-  }
+		cnt--;
+		usleep(1000);
+	}
 
-  /* no ACK received */
-  if (check_ack && (buf[0] & OC_I2C_ACK)) {
-    jdebug("no ack\n");
-    return ENODEV;
-  }
+	/* no ACK received */
+	if (check_ack && (buf[0] & OC_I2C_ACK)) {
+		jdebug("no ack\n");
+		return ENODEV;
+	}
 
-  if (buf[0] & OC_I2C_AL) {
-    jdebug("arbitration lost\n");
-    return EIO; 
-  }
+	if (buf[0] & OC_I2C_AL) {
+		jdebug("arbitration lost\n");
+		return EIO; 
+	}
 
-  if (cnt <= 0) {
-    jdebug("timeout\n");
-    return EIO; 
-  }
+	if (cnt <= 0) {
+		jdebug("timeout\n");
+		return EIO; 
+	}
 
-  return 0;
+	return 0;
 }
 
 /* write bytes to i2c chip
@@ -75,15 +75,15 @@ int joker_i2c_write(struct joker_t *joker, uint8_t chip, unsigned char * data, i
 	unsigned char buf[BUF_LEN];
 	unsigned char cmd;
 
-  if (!joker)
-    return EINVAL;
- 
+	if (!joker)
+		return EINVAL;
+
 	chip = chip << 1; /* convert i2c addr to 8 bit notation */
 
 	/* write device address first */
 	if ((ret = joker_write_off(joker, OC_I2C_TXR, chip)))
 		return ret;
-	
+
 	/* actual bus transfer */
 	cmd = OC_I2C_START | OC_I2C_WRITE;
 	if (size == 0)
@@ -92,9 +92,9 @@ int joker_i2c_write(struct joker_t *joker, uint8_t chip, unsigned char * data, i
 		return ret;
 
 	if ((ret = joker_i2c_read_cycle(joker, &buf[0], CHECK_ACK))) {
-    jdebug("i2c_write: can't set chip address to the bus. ret=%d \n", ret);
+		jdebug("i2c_write: can't set chip address to the bus. ret=%d \n", ret);
 		return ret;
-  }
+	}
 
 	for (i = 0; i < size; i++) {
 		/* set data to bus */
@@ -129,15 +129,15 @@ int joker_i2c_read(struct joker_t *joker, uint8_t chip, unsigned char * data, in
 	unsigned char buf[BUF_LEN];
 	unsigned char cmd;
 
-  if (!joker)
-    return ENODEV;
+	if (!joker)
+		return ENODEV;
 
 	chip = ((chip << 1) | 0x01); /* convert i2c addr to 8 bit notation and add Read bit */
 
 	/* write device address first */
 	if ((ret = joker_write_off(joker, OC_I2C_TXR, chip)))
 		return ret;
-	
+
 	/* actual bus transfer */
 	cmd = OC_I2C_START | OC_I2C_WRITE;
 	if (size == 0)
@@ -146,22 +146,22 @@ int joker_i2c_read(struct joker_t *joker, uint8_t chip, unsigned char * data, in
 		return ret;
 
 	if ((ret = joker_i2c_read_cycle(joker, &buf[0], CHECK_ACK))) {
-    jdebug("i2c_read: can't set chip address to the bus. ret=%d \n", ret);
+		jdebug("i2c_read: can't set chip address to the bus. ret=%d \n", ret);
 		return ret;
-  }
+	}
 
 	for (i = 0; i < size; i++) {
 		/* actual bus transfer */
 		cmd = OC_I2C_READ;
 		if ( (i+1) == size ) /* last byte */
-      cmd |= OC_I2C_STOP | OC_I2C_NACK; /* TODO: check NACK option behaviour */
-			// cmd |= OC_I2C_STOP;
+			cmd |= OC_I2C_STOP | OC_I2C_NACK; /* TODO: check NACK option behaviour */
+		// cmd |= OC_I2C_STOP;
 
 		if ((ret = joker_write_off(joker, OC_I2C_CR, cmd)))
 			return ret;
 
-    if ((ret = joker_i2c_read_cycle(joker, &buf[0], DO_NOT_CHECK_ACK)))
-      return ret;
+		if ((ret = joker_i2c_read_cycle(joker, &buf[0], DO_NOT_CHECK_ACK)))
+			return ret;
 
 		/* read saved byte */
 		if((ret = joker_read_off(joker, OC_I2C_RXR, &data[i])))
@@ -179,27 +179,27 @@ int joker_i2c_ping(struct joker_t *joker, uint8_t chip)
 	int i = 0;
 	unsigned char buf[BUF_LEN];
 	unsigned char cmd;
-  struct joker_i2c_t *i2c = NULL;
-  int ret = 0;
+	struct joker_i2c_t *i2c = NULL;
+	int ret = 0;
 
-  if (!joker)
-    return EINVAL;
+	if (!joker)
+		return EINVAL;
 
 	chip = (chip << 1); /* convert i2c addr to 8 bit notation */
 
 	/* write device address first */
 	if ((ret = joker_write_off(joker, OC_I2C_TXR, chip)))
 		return ret;
-	
+
 	/* actual bus transfer */
 	cmd = OC_I2C_START | OC_I2C_WRITE | OC_I2C_STOP;
 	if ((ret = joker_write_off(joker, OC_I2C_CR, cmd)))
 		return ret;
 
-  if ((ret = joker_i2c_read_cycle(joker, &buf[0], CHECK_ACK)))
-    return ret;
+	if ((ret = joker_i2c_read_cycle(joker, &buf[0], CHECK_ACK)))
+		return ret;
 
-  return 0;
+	return 0;
 }
 
 /* Open joker I2C
@@ -208,17 +208,17 @@ int joker_i2c_ping(struct joker_t *joker, uint8_t chip)
  * */
 int joker_i2c_init(struct joker_t *joker)
 {
-  struct joker_i2c_t *i2c = NULL;
-  int ret = 0;
+	struct joker_i2c_t *i2c = NULL;
+	int ret = 0;
 
-  if (!joker)
-    return ENODEV;
+	if (!joker)
+		return ENODEV;
 
-  i2c = (struct joker_i2c_t*)malloc(sizeof(struct joker_i2c_t));
-  if (!i2c)
-    return ENOMEM;
+	i2c = (struct joker_i2c_t*)malloc(sizeof(struct joker_i2c_t));
+	if (!i2c)
+		return ENOMEM;
 
-  joker->i2c_opaque = i2c;
+	joker->i2c_opaque = i2c;
 
 	/* enable core */
 	if ( (ret = joker_write_off(joker, OC_I2C_CTR, OC_I2C_CORE_ENABLE | OC_I2C_IRQ_ENABLE)) )
@@ -234,23 +234,23 @@ int joker_i2c_init(struct joker_t *joker)
 	return 0;
 
 cleanup:
-  free(i2c);
-  joker->i2c_opaque = NULL;
-  return ret;
+	free(i2c);
+	joker->i2c_opaque = NULL;
+	return ret;
 }
 
 /* release i2c resources */
 int joker_i2c_close(struct joker_t *joker) {
-  struct joker_i2c_t *i2c = NULL;
-  int ret = 0;
+	struct joker_i2c_t *i2c = NULL;
+	int ret = 0;
 
-  if (!joker || !joker->i2c_opaque)
-    return ENODEV;
+	if (!joker || !joker->i2c_opaque)
+		return ENODEV;
 
-  i2c = (struct joker_i2c_t*)joker->i2c_opaque;
+	i2c = (struct joker_i2c_t*)joker->i2c_opaque;
 
-  free(i2c);
-  joker->i2c_opaque = NULL;
+	free(i2c);
+	joker->i2c_opaque = NULL;
 
-  return 0;
+	return 0;
 }

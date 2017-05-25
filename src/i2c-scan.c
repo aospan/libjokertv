@@ -15,23 +15,23 @@
 
 int main() {
 	int i = 0;
-  int ret = 0;
-  struct joker_t joker;
+	int ret = 0;
+	struct joker_t joker;
 
 	if ((ret = joker_open(&joker)))
-    return ret;
+		return ret;
 
 	if ((ret = joker_i2c_init(&joker)))
-    return ret;
+		return ret;
 
 	for(i = 0; i < 0x7F; i++) {
 		if (!(ret = joker_i2c_ping(&joker, i))) {
 			printf("0x%x address ACKed on i2c bus\n", i );
 		} else {
-      //printf("0x%x address err=%d (%s)\n", i, ret, strerror(ret));
-    }
+			//printf("0x%x address err=%d (%s)\n", i, ret, strerror(ret));
+		}
 	}
 
-  joker_i2c_close(&joker);
-  joker_close(&joker);
+	joker_i2c_close(&joker);
+	joker_close(&joker);
 }

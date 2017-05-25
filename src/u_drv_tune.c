@@ -171,7 +171,7 @@ void print_hex_dump(const char *level, const char *prefix_str,
 int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
 	int i = 0;
-  struct joker_t *joker = adap->algo_data;
+	struct joker_t *joker = adap->algo_data;
 
 	for (i = 0; i < num; i++) {
 		if (msgs[i].flags & I2C_M_RD) {
@@ -213,16 +213,16 @@ int read_status(struct tune_info_t *info)
 	enum fe_status status;
 	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
 
-  if (!fe)
-    return EINVAL;
+	if (!fe)
+		return EINVAL;
 
-  fe->ops.read_status(fe, &status);
-  jdebug("%s: status=0x%x \n", __func__, status);
+	fe->ops.read_status(fe, &status);
+	jdebug("%s: status=0x%x \n", __func__, status);
 
-  if (status == 0x1f)
-    return 0;
+	if (status == 0x1f)
+		return 0;
 
-  return EAGAIN;
+	return EAGAIN;
 }
 
 /* return signal strength
@@ -235,13 +235,13 @@ int read_signal(struct tune_info_t *info)
 	u16 strength = 0;
 	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
 
-  if (!fe)
-    return -EINVAL;
+	if (!fe)
+		return -EINVAL;
 
-  fe->ops.read_signal_strength(fe, &strength);
-  jdebug("strength=0x%x \n", strength);
+	fe->ops.read_signal_strength(fe, &strength);
+	jdebug("strength=0x%x \n", strength);
 
-  return (int)strength;
+	return (int)strength;
 }
 
 /* return uncorrected blocks
@@ -249,19 +249,19 @@ int read_signal(struct tune_info_t *info)
  */
 int read_ucblocks(struct tune_info_t *info)
 {
-  int ucblocks = 0;
+	int ucblocks = 0;
 	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
 
-  if (!fe)
-    return -EINVAL;
+	if (!fe)
+		return -EINVAL;
 
-  if (fe->ops.read_ucblocks)
-    fe->ops.read_ucblocks(fe, (u32*)&ucblocks);
-  else 
-    ucblocks = -1;
-  jdebug("ucblocks=%d \n", ucblocks);
+	if (fe->ops.read_ucblocks)
+		fe->ops.read_ucblocks(fe, (u32*)&ucblocks);
+	else 
+		ucblocks = -1;
+	jdebug("ucblocks=%d \n", ucblocks);
 
-  return ucblocks;
+	return ucblocks;
 }
 
 /* tune to specified source (DVB, ATSC, etc)
@@ -282,36 +282,36 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	unsigned int delay = 0;
 	int ret = 0;
 	unsigned char buf[BUF_LEN];
-  int reset = OC_I2C_RESET_GATE | OC_I2C_RESET_TPS_CI | OC_I2C_RESET_TPS | OC_I2C_RESET_USB;
-  int unreset = 0, input = 0, need_lnb = 0;
+	int reset = OC_I2C_RESET_GATE | OC_I2C_RESET_TPS_CI | OC_I2C_RESET_TPS | OC_I2C_RESET_USB;
+	int unreset = 0, input = 0, need_lnb = 0;
 
 	struct dvb_diseqc_master_cmd dcmd = {
 		.msg = {0xFF},
 		.msg_len = 6
 	};
 
-  if (!joker || !joker->i2c_opaque || !info)
-    return EINVAL;
+	if (!joker || !joker->i2c_opaque || !info)
+		return EINVAL;
 
-  i2c.algo_data = (void*)joker;
+	i2c.algo_data = (void*)joker;
 
-  switch (info->delivery_system)
-  {
-    case JOKER_SYS_ATSC:
-      unreset = reset | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG;
-      input = OC_I2C_INSEL_LG;
-      break;
-    case JOKER_SYS_DVBS:
-    case JOKER_SYS_DVBS2:
-      need_lnb = 1;
-    case JOKER_SYS_DVBC_ANNEX_A:
-      unreset = reset | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY;
-      input = OC_I2C_INSEL_SONY;
-      break;
-    default:
-      printf("delivery system not supported \n");
-      return ENODEV;
-  }
+	switch (info->delivery_system)
+	{
+		case JOKER_SYS_ATSC:
+			unreset = reset | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG;
+			input = OC_I2C_INSEL_LG;
+			break;
+		case JOKER_SYS_DVBS:
+		case JOKER_SYS_DVBS2:
+			need_lnb = 1;
+		case JOKER_SYS_DVBC_ANNEX_A:
+			unreset = reset | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY;
+			input = OC_I2C_INSEL_SONY;
+			break;
+		default:
+			printf("delivery system not supported \n");
+			return ENODEV;
+	}
 
 	/* reset tuner and demods */
 	if ((ret = joker_write_off(joker, OC_I2C_RESET_CTRL, reset)))
@@ -326,42 +326,42 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	if ((ret = joker_write_off(joker, OC_I2C_INSEL_CTRL, input)))
 		return ret;
 
-  switch (info->delivery_system)
-  {
-    case JOKER_SYS_ATSC:
-      fe = lgdt3306a_attach(&lgdt3306a_config, &i2c);
-      if (!fe) {
-        printf("can't attach demod\n");
-        return -ENODEV;
-      }
-      /* attach HELENE universal tuner in TERR mode */
-      helene_attach(fe, &helene_conf, &i2c);
-      break;
-    case JOKER_SYS_DVBC_ANNEX_A:
-      fe = cxd2841er_attach_c(&demod_config, &i2c);
-      if (!fe) {
-        printf("Can't attach SONY demod\n");
-        return ENODEV;
-      }
-      /* attach HELENE universal tuner in CABLE mode */
-      helene_attach(fe, &helene_conf, &i2c);
-      break;
-    case JOKER_SYS_DVBS:
-    case JOKER_SYS_DVBS2:
-      fe = cxd2841er_attach_s(&demod_config, &i2c);
-      if (!fe) {
-        printf("Can't attach SONY demod\n");
-        return ENODEV;
-      }
-      /* attach HELENE universal tuner in DVB-S mode */
-      helene_attach_s(fe, &helene_conf, &i2c);
-      break;
-    default:
-      printf("delivery system not supported \n");
-      return ENODEV;
-  }
+	switch (info->delivery_system)
+	{
+		case JOKER_SYS_ATSC:
+			fe = lgdt3306a_attach(&lgdt3306a_config, &i2c);
+			if (!fe) {
+				printf("can't attach demod\n");
+				return -ENODEV;
+			}
+			/* attach HELENE universal tuner in TERR mode */
+			helene_attach(fe, &helene_conf, &i2c);
+			break;
+		case JOKER_SYS_DVBC_ANNEX_A:
+			fe = cxd2841er_attach_c(&demod_config, &i2c);
+			if (!fe) {
+				printf("Can't attach SONY demod\n");
+				return ENODEV;
+			}
+			/* attach HELENE universal tuner in CABLE mode */
+			helene_attach(fe, &helene_conf, &i2c);
+			break;
+		case JOKER_SYS_DVBS:
+		case JOKER_SYS_DVBS2:
+			fe = cxd2841er_attach_s(&demod_config, &i2c);
+			if (!fe) {
+				printf("Can't attach SONY demod\n");
+				return ENODEV;
+			}
+			/* attach HELENE universal tuner in DVB-S mode */
+			helene_attach_s(fe, &helene_conf, &i2c);
+			break;
+		default:
+			printf("delivery system not supported \n");
+			return ENODEV;
+	}
 
-  info->fe_opaque = (void *)fe;
+	info->fe_opaque = (void *)fe;
 
 	fe->ops.init(fe);
 
@@ -372,19 +372,19 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	fe->dtv_property_cache.modulation = info->modulation;
 	fe->dtv_property_cache.symbol_rate = info->symbol_rate;
 
-  /* enable LNB */
-  if (need_lnb) {
-    fe = tps65233_attach(fe, &lnb_config, &i2c);
-    if (!fe) {
-      printf("can't attach LNB\n");
-      return -1;
-    }
-  }
+	/* enable LNB */
+	if (need_lnb) {
+		fe = tps65233_attach(fe, &lnb_config, &i2c);
+		if (!fe) {
+			printf("can't attach LNB\n");
+			return -1;
+		}
+	}
 
-  /* actual tune call */
+	/* actual tune call */
 	fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
 
-  /* TODO */
+	/* TODO */
 #if 0
 	/* DISEQC */
 	/* send diseqc message */
