@@ -6,8 +6,8 @@ Supported platforms: Linux, Mac OSx (more platforms coming soon ... )
 'linux' folder contains stripped Linux kernel header and Linux media subsystem
 drivers (cxd2841er, helene, etc).
 
-(c) Abylay Ospan <aospan@jokersys.com>, 2017
-https://jokersys.com
+(c) Abylay Ospan <aospan@jokersys.com>, 2017, https://jokersys.com
+
 LICENSE: GPLv2
 
 # Compilation
