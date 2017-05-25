@@ -15,15 +15,17 @@ FIND_PATH(LIBUSB_INCLUDE_DIR libusb.h
 FIND_LIBRARY(LIBUSB_LIBRARIES NAMES usb-1.0
 	    PATHS ${PC_LIBUSB_LIBDIR} ${PC_LIBUSB_LIBRARY_DIRS})
 
-add_library (udrv linux/drivers/media/dvb-frontends/helene.c
-  linux/drivers/media/dvb-frontends/lgdt3306a.c
-  linux/drivers/media/dvb-frontends/cxd2841er.c
-  linux/drivers/media/dvb-frontends/tps65233.c
-  linux/drivers/media/dvb-core/dvb_math.c
-  src/u_drv_tune.c)
+#set sources list
+SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
+      linux/drivers/media/dvb-frontends/lgdt3306a.c
+      linux/drivers/media/dvb-frontends/cxd2841er.c
+      linux/drivers/media/dvb-frontends/tps65233.c
+      linux/drivers/media/dvb-core/dvb_math.c
+      src/u_drv_tune.c)
 
-add_library (udrv_data
-  src/u_drv_data.c)
+SET (JOKERTV_SRC src/u_drv_data.c
+  src/joker_i2c.c
+  src/joker_fpga.c)
 
 set(KOPTIONS
 	"-I ${CMAKE_SOURCE_DIR}/linux/ \
@@ -35,23 +37,20 @@ set(KOPTIONS
 
 set(INCLUDE_USER "-I ${LIBUSB_INCLUDE_DIR} -I${CMAKE_SOURCE_DIR}/include")
 
-set_target_properties(udrv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}")
-set_target_properties(udrv_data PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
+#combined shared lib
+add_library (jokertv SHARED ${LINUX_SRC} ${JOKERTV_SRC})
+set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}")
 
-add_library (joker_i2c src/joker_i2c.c)
-set_target_properties(joker_i2c PROPERTIES COMPILE_FLAGS ${INCLUDE_USER})
-
-add_library (joker_fpga src/joker_fpga.c)
-set_target_properties(joker_fpga PROPERTIES COMPILE_FLAGS ${INCLUDE_USER})
-
+#simple program: tune and save TS to file
 find_package( Threads )
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
-target_link_libraries(joker-tv udrv udrv_data joker_i2c joker_fpga ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES})
+target_link_libraries(joker-tv jokertv ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES})
 
+#simple program to scan i2c bus
 add_executable(i2c-scan src/i2c-scan.c)
 set_target_properties(i2c-scan PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
-target_link_libraries(i2c-scan joker_i2c joker_fpga ${LIBUSB_LIBRARIES})
+target_link_libraries(i2c-scan jokertv ${LIBUSB_LIBRARIES})
 
 # TS stream generate/validate utilities
 add_executable(tsgen src/tsgen.c)
