@@ -22,6 +22,8 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdarg.h>
 typedef unsigned char           uint8_t;
 typedef unsigned short int      uint16_t;
 typedef unsigned int            uint32_t;
@@ -33,9 +35,9 @@ typedef unsigned int            uint32_t;
 #include <drivers/media/dvb-frontends/atbm888x.h>
 #include <drivers/media/dvb-frontends/tps65233.h>
 #include <drivers/media/dvb-core/dvb_frontend.h>
-#include <drivers/media/pci/netup_unidvb/netup_unidvb.h>
+// #include <drivers/media/pci/netup_unidvb/netup_unidvb.h>
 #include <linux/dvb/frontend.h>
-#include <linux/moduleparam.h>
+// #include <linux/moduleparam.h>
 #include <time.h>
 #include <linux/i2c.h>
 #include "joker_i2c.h"
@@ -43,7 +45,7 @@ typedef unsigned int            uint32_t;
 #include "u_drv_tune.h"
 
 unsigned long phys_base = 0;
-const struct kernel_param_ops param_ops_int;
+// const struct kernel_param_ops param_ops_int;
 
 static struct tps65233_config lnb_config = {
 	.i2c_address = 0x60,
@@ -112,6 +114,11 @@ void *__kmalloc(size_t size, gfp_t flags)
 	return malloc(size);
 }
 
+void *kzalloc(size_t size, gfp_t flags)
+{
+	return malloc(size);
+}
+
 void kfree(const void *p)
 {
 	free(p);
@@ -126,7 +133,7 @@ void dev_err(const struct device *dev, const char *fmt, ...)
 	return 0;
 }
 
-void _dev_info(const struct device *dev, const char *fmt, ...)
+void dev_info(const struct device *dev, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -210,7 +217,7 @@ int read_status(struct tune_info_t *info)
     return EINVAL;
 
   fe->ops.read_status(fe, &status);
-  printf("%s: status=0x%x \n", __func__, status);
+  jdebug("%s: status=0x%x \n", __func__, status);
 
   if (status == 0x1f)
     return 0;
@@ -232,9 +239,29 @@ int read_signal(struct tune_info_t *info)
     return -EINVAL;
 
   fe->ops.read_signal_strength(fe, &strength);
-  printf("strength=0x%x \n", strength);
+  jdebug("strength=0x%x \n", strength);
 
   return (int)strength;
+}
+
+/* return uncorrected blocks
+ * can happen if signal is weak or noisy
+ */
+int read_ucblocks(struct tune_info_t *info)
+{
+  int ucblocks = 0;
+	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
+
+  if (!fe)
+    return -EINVAL;
+
+  if (fe->ops.read_ucblocks)
+    fe->ops.read_ucblocks(fe, (u32*)&ucblocks);
+  else 
+    ucblocks = -1;
+  jdebug("ucblocks=%d \n", ucblocks);
+
+  return ucblocks;
 }
 
 /* tune to specified source (DVB, ATSC, etc)

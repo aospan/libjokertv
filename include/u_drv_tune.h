@@ -90,6 +90,11 @@ int read_status(struct tune_info_t *info);
  * */
 int read_signal(struct tune_info_t *info);
 
+/* return uncorrected blocks
+ * can happen if signal is weak or noisy
+ */
+int read_ucblocks(struct tune_info_t *info);
+
 /* stop tune */
 // int stop(struct joker_t *joker);
 

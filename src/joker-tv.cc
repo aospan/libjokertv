@@ -33,6 +33,20 @@
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 
+void * print_stat(void *data)
+{
+  int status = 0;
+  int ucblocks = 0;
+  struct tune_info_t * info = (struct tune_info_t *)data;
+
+  while(1) {
+    status = read_status(info);
+    ucblocks = read_ucblocks(info);
+    printf("INFO: status=%d ucblocks=%d\n", status, ucblocks );
+    sleep(1);
+  }
+}
+
 int main ()
 {
   struct tune_info_t info;
@@ -41,9 +55,7 @@ int main ()
   struct joker_t joker;
   unsigned char buf[512];
   int isoc_len = USB_PACKET_SIZE;
-  // int isoc_len = 2046;
-  // int isoc_len = 1024;
-  // int isoc_len = 512;
+  pthread_t stat_thread;
 
 	FILE * out = fopen("out.ts", "w+");
 	if (!out){
@@ -89,28 +101,23 @@ int main ()
 
   while (1) {
     status = read_status(&info);
-    printf("LOCK status=%d error=%s \n", status, strerror(status) );
+    printf("WAITING LOCK. status=%d error=%s \n", status, strerror(status) );
     fflush(stdout);
     if (!status)
       break;
     sleep(1);
   }
 
+  /* start status printing thread */
+  if(pthread_create(&stat_thread, NULL, print_stat, &info)) {
+    fprintf(stderr, "Error creating status thread\n");
+    return -1;
+  }
+
+  /* start TS collection and save to file */
   start_ts(&joker, &pool);
   while(1) {
     rbytes = read_data(&joker, &pool, &buf[0], 512);
     fwrite(buf, 512, 1, out);
-    // printf("%d bytes read \n", rbytes );
-#if 0
-    sleep(1);
-    status = read_status(&info);
-    printf("LOCK status=%d error=%s \n", status, strerror(status) );
-    // sleep (10);
-
-    if (!status) {
-      // LOCKED
-    }
-#endif
   }
-
 }
