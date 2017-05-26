@@ -273,7 +273,7 @@ int read_ucblocks(struct tune_info_t *info)
 int tune(struct joker_t *joker, struct tune_info_t *info)
 {
 	struct dvb_frontend *fe = NULL;
-	struct i2c_adapter i2c;
+	struct i2c_adapter * i2c = NULL;
 	struct vb2_dvb_frontend *fes[2];
 	enum fe_status status;
 	int fe_count = 2;
@@ -290,10 +290,14 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 		.msg_len = 6
 	};
 
+	i2c = (struct i2c_adapter *)malloc(sizeof(struct i2c_adapter));
+	if (!i2c)
+		return ENOMEM;
+
 	if (!joker || !joker->i2c_opaque || !info)
 		return EINVAL;
 
-	i2c.algo_data = (void*)joker;
+	i2c->algo_data = (void*)joker;
 
 	switch (info->delivery_system)
 	{
@@ -329,32 +333,32 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	switch (info->delivery_system)
 	{
 		case JOKER_SYS_ATSC:
-			fe = lgdt3306a_attach(&lgdt3306a_config, &i2c);
+			fe = lgdt3306a_attach(&lgdt3306a_config, i2c);
 			if (!fe) {
 				printf("can't attach demod\n");
 				return -ENODEV;
 			}
 			/* attach HELENE universal tuner in TERR mode */
-			helene_attach(fe, &helene_conf, &i2c);
+			helene_attach(fe, &helene_conf, i2c);
 			break;
 		case JOKER_SYS_DVBC_ANNEX_A:
-			fe = cxd2841er_attach_c(&demod_config, &i2c);
+			fe = cxd2841er_attach_c(&demod_config, i2c);
 			if (!fe) {
 				printf("Can't attach SONY demod\n");
 				return ENODEV;
 			}
 			/* attach HELENE universal tuner in CABLE mode */
-			helene_attach(fe, &helene_conf, &i2c);
+			helene_attach(fe, &helene_conf, i2c);
 			break;
 		case JOKER_SYS_DVBS:
 		case JOKER_SYS_DVBS2:
-			fe = cxd2841er_attach_s(&demod_config, &i2c);
+			fe = cxd2841er_attach_s(&demod_config, i2c);
 			if (!fe) {
 				printf("Can't attach SONY demod\n");
 				return ENODEV;
 			}
 			/* attach HELENE universal tuner in DVB-S mode */
-			helene_attach_s(fe, &helene_conf, &i2c);
+			helene_attach_s(fe, &helene_conf, i2c);
 			break;
 		default:
 			printf("delivery system not supported \n");
@@ -374,7 +378,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 	/* enable LNB */
 	if (need_lnb) {
-		fe = tps65233_attach(fe, &lnb_config, &i2c);
+		fe = tps65233_attach(fe, &lnb_config, i2c);
 		if (!fe) {
 			printf("can't attach LNB\n");
 			return -1;
