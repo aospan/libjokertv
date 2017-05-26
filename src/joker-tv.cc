@@ -37,12 +37,15 @@ void * print_stat(void *data)
 {
 	int status = 0;
 	int ucblocks = 0;
+	int signal = 0;
 	struct tune_info_t * info = (struct tune_info_t *)data;
 
 	while(1) {
 		status = read_status(info);
 		ucblocks = read_ucblocks(info);
-		printf("INFO: status=%d ucblocks=%d\n", status, ucblocks );
+		signal = read_signal(info);
+		printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d\n", 
+				status, status ? "NOLOCK" : "LOCK", signal, 100*(int)signal/0xFFFF, ucblocks );
 		sleep(1);
 	}
 }
