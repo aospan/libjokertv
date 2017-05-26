@@ -42,12 +42,14 @@ set(CMAKE_MACOSX_RPATH 1)
 add_library (jokertv SHARED ${LINUX_SRC} ${JOKERTV_SRC})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${INCLUDE_USER}")
 target_link_libraries(jokertv ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES})
+install(TARGETS jokertv DESTINATION lib)
 
 #simple program: tune and save TS to file
 find_package( Threads )
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
 target_link_libraries(joker-tv jokertv ${CMAKE_THREAD_LIBS_INIT} ${LIBUSB_LIBRARIES})
+install(TARGETS joker-tv DESTINATION bin)
 
 #simple program to scan i2c bus
 add_executable(i2c-scan src/i2c-scan.c)
