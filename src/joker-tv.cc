@@ -52,7 +52,7 @@ int main ()
 	struct tune_info_t info;
 	struct big_pool_t pool;
 	int status = 0, ret = 0, rbytes = 0;
-	struct joker_t joker;
+	struct joker_t * joker;
 	unsigned char buf[512];
 	int isoc_len = USB_PACKET_SIZE;
 	pthread_t stat_thread;
@@ -63,18 +63,24 @@ int main ()
 		pthread_exit(NULL);
 	}
 
+
+	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
+	if (!joker)
+		return ENOMEM;
+
+	printf("allocated joker=%p \n", joker);
 	/* open Joker TV on USB bus */
-	if ((ret = joker_open(&joker)))
+	if ((ret = joker_open(joker)))
 		return ret;
 
 	/* tune usb isoc transaction len */
-	joker_write_off(&joker, JOKER_USB_ISOC_LEN_HI, ((isoc_len >> 8) & 0x7 ));
-	joker_write_off(&joker, JOKER_USB_ISOC_LEN_LO, (isoc_len & 0xFF));
+	joker_write_off(joker, JOKER_USB_ISOC_LEN_HI, ((isoc_len >> 8) & 0x7 ));
+	joker_write_off(joker, JOKER_USB_ISOC_LEN_LO, (isoc_len & 0xFF));
 
-	if ((ret = joker_i2c_init(&joker)))
+	if ((ret = joker_i2c_init(joker)))
 		return ret;
 
-#if 0
+#if 1
 	info.delivery_system = JOKER_SYS_ATSC;
 	info.bandwidth_hz = 6000000;
 	info.frequency = 575000000;
@@ -88,14 +94,14 @@ int main ()
 	info.symbol_rate = 20000000;
 #endif
 
-#if 1
+#if 0
 	info.delivery_system = JOKER_SYS_DVBC_ANNEX_A;
 	info.bandwidth_hz = 8000000;
 	info.frequency = 150000000;
 #endif
 
 	printf("TUNE start \n");
-	if (tune(&joker, &info))
+	if (tune(joker, &info))
 		return -1;
 	printf("TUNE done \n");
 
@@ -115,9 +121,11 @@ int main ()
 	}
 
 	/* start TS collection and save to file */
-	start_ts(&joker, &pool);
+	start_ts(joker, &pool);
 	while(1) {
-		rbytes = read_data(&joker, &pool, &buf[0], 512);
+		rbytes = read_data(joker, &pool, &buf[0], 512);
 		fwrite(buf, 512, 1, out);
 	}
+
+	free(joker);
 }
