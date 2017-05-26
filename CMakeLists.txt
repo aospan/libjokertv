@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8.12)
-project (u-drv)
+project (joker-tv)
 
 set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_BUILD_TYPE Release)
@@ -62,3 +62,12 @@ set_target_properties(tsgen PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
 
 add_executable(tscheck src/tscheck.c)
 set_target_properties(tscheck PROPERTIES COMPILE_FLAGS "${INCLUDE_USER}")
+
+#Installers generator
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Joker TV")
+SET(CPACK_PACKAGE_VENDOR "Joker Systems Inc.")
+SET(CPACK_PACKAGE_VERSION_MAJOR "0")
+SET(CPACK_PACKAGE_VERSION_MINOR "1")
+SET(CPACK_PACKAGE_VERSION_PATCH "1")
+set(CPACK_GENERATOR "DragNDrop;TGZ")
+INCLUDE(CPack)
