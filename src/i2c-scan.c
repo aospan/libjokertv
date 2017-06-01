@@ -28,7 +28,7 @@ int main() {
 		if (!(ret = joker_i2c_ping(&joker, i))) {
 			printf("0x%x address ACKed on i2c bus\n", i );
 		} else {
-			//printf("0x%x address err=%d (%s)\n", i, ret, strerror(ret));
+			jdebug("0x%x address err=%d (%s)\n", i, ret, strerror(ret));
 		}
 	}
 

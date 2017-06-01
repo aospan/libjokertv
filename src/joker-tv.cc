@@ -77,13 +77,22 @@ int main ()
 		return ret;
 
 	/* tune usb isoc transaction len */
-	joker_write_off(joker, JOKER_USB_ISOC_LEN_HI, ((isoc_len >> 8) & 0x7 ));
-	joker_write_off(joker, JOKER_USB_ISOC_LEN_LO, (isoc_len & 0xFF));
+	buf[0] = J_CMD_ISOC_LEN_WRITE_HI;
+	buf[1] = (isoc_len >> 8) & 0x7;
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		return ret;
+
+	buf[0] = J_CMD_ISOC_LEN_WRITE_LO;
+	buf[1] = isoc_len & 0xFF;
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		return ret;
+
+
 
 	if ((ret = joker_i2c_init(joker)))
 		return ret;
 
-#if 1
+#if 0
 	info.delivery_system = JOKER_SYS_ATSC;
 	info.bandwidth_hz = 6000000;
 	info.frequency = 575000000;
@@ -97,7 +106,7 @@ int main ()
 	info.symbol_rate = 20000000;
 #endif
 
-#if 0
+#if 1
 	info.delivery_system = JOKER_SYS_DVBC_ANNEX_A;
 	info.bandwidth_hz = 8000000;
 	info.frequency = 150000000;

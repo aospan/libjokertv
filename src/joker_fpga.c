@@ -100,56 +100,68 @@ int joker_close(struct joker_t * joker) {
 	joker->libusb_opaque = NULL; /* dev not valid anymore */
 }
 
-/* read byte at offset 
- * return 0 if success 
- * resulting byte in *data
+/* exchange with FPGA over USB
+ * EP2 OUT EP used as joker commands (jcmd) source
+ * EP1 IN EP used as command reply storage
+ * return 0 if success
  */
-int joker_read_off(struct joker_t * joker, int offset, char *data) {
+int joker_io(struct joker_t * joker, struct jcmd_t * jcmd) {
 	struct libusb_device_handle *dev = NULL;
-	int cnt = 20 /* 200 msec timeout */, ret = -1, transferred = 0;
-	unsigned char buf[BUF_LEN];
+	unsigned char buf[JCMD_BUF_LEN];
+	int cnt = 20 /* 200 msec timeout */, ret = 0, transferred = 0;
 
 	if (!joker)
 		return EINVAL;
 
 	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 
+	/* very slow ! rewrite bulk with less timeout */
+#if 0
+	/* prophylactic cleanup EP1 IN */
+	while (1) {
+		ret = libusb_bulk_transfer(dev, USB_EP1_IN, buf, JCMD_BUF_LEN, &transferred, 1 /* ms */);
+		//fprintf(stderr,"prophylactic read done. ret=%d transferred=%d \n",
+				//ret, transferred);
+		if (ret)
+			break;
+	}
+#endif
+
+	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, jcmd->buf, jcmd->len, &transferred, 0);
+	if (ret < 0 || transferred != jcmd->len)
+		return ret;
+
 	while ( cnt-- > 0) {
-		buf[0] = JOKER_READ; /* trigger read */
-		buf[1] = offset; 
-		ret = libusb_bulk_transfer(dev, USB_EP2_OUT, buf, 2, &transferred, 0);
-		if (ret < 0)
-			break;
-
-		/* read collected data */
-		ret = libusb_bulk_transfer(dev, USB_EP1_IN, buf, 1, &transferred, 0);
-		if (ret < 0 || transferred != 1)
-			break;
-
-		*data = buf[0];
+		/* jcmd expect some reply */
+		if (jcmd->in_len > 0) {
+			/* read collected data */
+			ret = libusb_bulk_transfer(dev, USB_EP1_IN, jcmd->in_buf, jcmd->in_len, &transferred, 1);
+			if (ret < 0 || transferred != jcmd->in_len)
+				break;
+		}
 		return 0;
 	}
 
 	return ret;
 }
 
-/* write byte to offset 
- * return 0 if success
- */
-int joker_write_off(struct joker_t * joker, int offset, char data) {
-	struct libusb_device_handle *dev = NULL;
-	int ret = 0, transferred = 0;
-	unsigned char buf[BUF_LEN];
+int joker_cmd(struct joker_t * joker, unsigned char *data, int len, unsigned char * in_buf, int in_len) {
+	int ret = 0;
+	struct jcmd_t jcmd;
+	int i = 0;
 
-	if (!joker)
+	if (len > JCMD_BUF_LEN || in_len > JCMD_BUF_LEN)
 		return EINVAL;
 
-	dev = (struct libusb_device_handle *)joker->libusb_opaque;
+	memcpy(jcmd.buf, data, len);
+	jcmd.len = len;
+	jcmd.in_len = in_len;
 
-	buf[0] = offset;
-	buf[1] = data; 
-	// printf("addr buf=%p &buf=%p dev=%p \n", buf, &buf[0], dev );
-	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, buf, 2, &transferred, 0);
+	if ((ret != joker_io(joker, &jcmd)))
+		return ret;
 
-	return ret;
+	if (in_buf && in_len)
+		memcpy(in_buf, jcmd.in_buf, in_len);
+
+	return 0;
 }

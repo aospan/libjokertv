@@ -74,20 +74,42 @@
 
 #define BUF_LEN 5120
 
+/**** Joker binary protocol for exchange with FPGA ***/
+/* keep sync command codes with Verilog firmware !*/
+#define J_CMD_VERSION		0 /* return fw version */				
+#define J_CMD_I2C_WRITE		10 /* i2c read/write */				
+#define	J_CMD_I2C_READ		11
+#define	J_CMD_RESET_CTRL_WRITE	12 /* reset control register  r/w */
+#define	J_CMD_RESET_CTRL_READ	13
+#define	J_CMD_TS_INSEL_WRITE	14 /* ts input select */
+#define	J_CMD_TS_INSEL_READ	15
+#define	J_CMD_ISOC_LEN_WRITE_HI	16 /* USB isoc transfers length */
+#define	J_CMD_ISOC_LEN_WRITE_LO	17
+
+/* limited by usb transfer size. 512 for bulk, 1024 for isoc */
+#define JCMD_BUF_LEN 1024
+
+struct jcmd_t {
+	int cmd; /* command code. see defines above */
+	/* out buffer. will be sent to device */
+	unsigned char buf[JCMD_BUF_LEN];
+	int len;
+	/* input buffer. received bytes stored in this buf */
+	unsigned char in_buf[JCMD_BUF_LEN];
+	int in_len; /* amount of expected bytes */
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* read byte at offset 
- * return 0 if success 
- * resulting byte in *data
- */
-int joker_read_off(struct joker_t *joker, int offset, char *data);
-
-/* write byte to offset 
+/* exchange with FPGA over USB
+ * EP2 OUT EP used as joker commands (jcmd) source
+ * EP1 IN EP used as command reply storage
  * return 0 if success
  */
-int joker_write_off(struct joker_t *joker, int offset, char data);
+int joker_io(struct joker_t * joker, struct jcmd_t * jcmd);
+int joker_cmd(struct joker_t * joker, unsigned char *data, int len, unsigned char * in_buf, int in_len);
 
 #ifdef __cplusplus
 }

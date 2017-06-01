@@ -19,6 +19,40 @@
 #define CHECK_ACK 1
 #define DO_NOT_CHECK_ACK 0
 
+
+/* helper funcs
+ * prepare jcmd to exchange with FPGA
+ */
+int joker_i2c_read_cmd(struct joker_t * joker, int offset, char *data) {
+	int ret = 0;
+	struct jcmd_t jcmd;
+	jcmd.buf[0] = J_CMD_I2C_READ;
+	jcmd.buf[1] = offset;
+	jcmd.len = 2;
+	jcmd.in_len = 2;
+
+	if ((ret != joker_io(joker, &jcmd)))
+		return ret;
+
+	*data = jcmd.in_buf[1];
+	return 0;
+}
+
+int joker_i2c_write_cmd(struct joker_t * joker, int offset, char *data) {
+	int ret = 0;
+	struct jcmd_t jcmd;
+	jcmd.buf[0] = J_CMD_I2C_WRITE;
+	jcmd.buf[1] = offset;
+	jcmd.buf[2] = data;
+	jcmd.len = 3;
+	jcmd.in_len = 0;
+
+	if ((ret != joker_io(joker, &jcmd)))
+		return ret;
+
+	return 0;
+}
+
 /* helper func
  * i2c read cycle with error control
  * return 0 if read success
@@ -30,13 +64,14 @@ int joker_i2c_read_cycle(struct joker_t *joker, unsigned char * buf, int check_a
 	int ret = 0;
 
 	while (cnt-- > 0) {
-		if ((ret = joker_read_off(joker, OC_I2C_SR, buf)))
+		if ((ret = joker_i2c_read_cmd(joker, OC_I2C_SR, buf)))
 			return ret;
 
 		/* TIP - transaction in progress */
 		if (!(buf[0] & OC_I2C_TIP))
 			break;
-
+		
+		jdebug("TIP. do one more cycle \n");
 		cnt--;
 		usleep(1000);
 	}
@@ -81,14 +116,14 @@ int joker_i2c_write(struct joker_t *joker, uint8_t chip, unsigned char * data, i
 	chip = chip << 1; /* convert i2c addr to 8 bit notation */
 
 	/* write device address first */
-	if ((ret = joker_write_off(joker, OC_I2C_TXR, chip)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_TXR, chip)))
 		return ret;
 
 	/* actual bus transfer */
 	cmd = OC_I2C_START | OC_I2C_WRITE;
 	if (size == 0)
 		cmd |= OC_I2C_STOP;
-	if ((ret = joker_write_off(joker, OC_I2C_CR, cmd)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_CR, cmd)))
 		return ret;
 
 	if ((ret = joker_i2c_read_cycle(joker, &buf[0], CHECK_ACK))) {
@@ -98,7 +133,7 @@ int joker_i2c_write(struct joker_t *joker, uint8_t chip, unsigned char * data, i
 
 	for (i = 0; i < size; i++) {
 		/* set data to bus */
-		if ((ret = joker_write_off(joker, OC_I2C_TXR, data[i])))
+		if ((ret = joker_i2c_write_cmd(joker, OC_I2C_TXR, data[i])))
 			return ret;
 
 		/* actual bus transfer */
@@ -106,7 +141,7 @@ int joker_i2c_write(struct joker_t *joker, uint8_t chip, unsigned char * data, i
 		if ( (i+1) == size ) /* last byte */
 			cmd |= OC_I2C_STOP;
 
-		if ((ret = joker_write_off(joker, OC_I2C_CR, cmd)))
+		if ((ret = joker_i2c_write_cmd(joker, OC_I2C_CR, cmd)))
 			return ret;
 
 		if((ret = joker_i2c_read_cycle(joker, &buf[0], DO_NOT_CHECK_ACK)))
@@ -135,14 +170,14 @@ int joker_i2c_read(struct joker_t *joker, uint8_t chip, unsigned char * data, in
 	chip = ((chip << 1) | 0x01); /* convert i2c addr to 8 bit notation and add Read bit */
 
 	/* write device address first */
-	if ((ret = joker_write_off(joker, OC_I2C_TXR, chip)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_TXR, chip)))
 		return ret;
 
 	/* actual bus transfer */
 	cmd = OC_I2C_START | OC_I2C_WRITE;
 	if (size == 0)
 		cmd |= OC_I2C_STOP;
-	if ((ret = joker_write_off(joker, OC_I2C_CR, cmd)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_CR, cmd)))
 		return ret;
 
 	if ((ret = joker_i2c_read_cycle(joker, &buf[0], CHECK_ACK))) {
@@ -157,14 +192,14 @@ int joker_i2c_read(struct joker_t *joker, uint8_t chip, unsigned char * data, in
 			cmd |= OC_I2C_STOP | OC_I2C_NACK; /* TODO: check NACK option behaviour */
 		// cmd |= OC_I2C_STOP;
 
-		if ((ret = joker_write_off(joker, OC_I2C_CR, cmd)))
+		if ((ret = joker_i2c_write_cmd(joker, OC_I2C_CR, cmd)))
 			return ret;
 
 		if ((ret = joker_i2c_read_cycle(joker, &buf[0], DO_NOT_CHECK_ACK)))
 			return ret;
 
 		/* read saved byte */
-		if((ret = joker_read_off(joker, OC_I2C_RXR, &data[i])))
+		if((ret = joker_i2c_read_cmd(joker, OC_I2C_RXR, &data[i])))
 			return ret;
 	}
 	return 0;
@@ -188,12 +223,12 @@ int joker_i2c_ping(struct joker_t *joker, uint8_t chip)
 	chip = (chip << 1); /* convert i2c addr to 8 bit notation */
 
 	/* write device address first */
-	if ((ret = joker_write_off(joker, OC_I2C_TXR, chip)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_TXR, chip)))
 		return ret;
 
 	/* actual bus transfer */
 	cmd = OC_I2C_START | OC_I2C_WRITE | OC_I2C_STOP;
-	if ((ret = joker_write_off(joker, OC_I2C_CR, cmd)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_CR, cmd)))
 		return ret;
 
 	if ((ret = joker_i2c_read_cycle(joker, &buf[0], CHECK_ACK)))
@@ -220,15 +255,15 @@ int joker_i2c_init(struct joker_t *joker)
 
 	joker->i2c_opaque = i2c;
 
-	/* enable core */
-	if ( (ret = joker_write_off(joker, OC_I2C_CTR, OC_I2C_CORE_ENABLE | OC_I2C_IRQ_ENABLE)) )
-		goto cleanup;
-
 	/* set i2c bus to 400kHz */
-	if ((ret = joker_write_off(joker, OC_I2C_PRELO, OC_I2C_400K)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_PRELO, OC_I2C_400K)))
 		goto cleanup;
 
-	if ((ret = joker_write_off(joker, OC_I2C_PREHI, 0x00)))
+	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_PREHI, 0x00)))
+		goto cleanup;
+
+	/* enable core */
+	if ( (ret = joker_i2c_write_cmd(joker, OC_I2C_CTR, OC_I2C_CORE_ENABLE | OC_I2C_IRQ_ENABLE)) )
 		goto cleanup;
 
 	return 0;
