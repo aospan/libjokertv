@@ -28,7 +28,8 @@ int joker_open(struct joker_t *joker)
 	struct libusb_device **usb_list = NULL;
 	struct libusb_device_handle *devh = NULL;
 	struct libusb_device_descriptor desc;
-	int usb_devs, i, r, ret;
+	int usb_devs, i, r, ret, transferred;
+	unsigned char in_buf[JCMD_BUF_LEN];
 
 	if (!joker)
 		return EINVAL;
@@ -81,6 +82,12 @@ int joker_open(struct joker_t *joker)
 
 	joker->libusb_opaque = (void *)devh;
 	printf("open:dev=%p \n", devh);
+
+
+	/* prophylactic cleanup EP1 IN */
+	libusb_bulk_transfer(devh, USB_EP1_IN, in_buf, JCMD_BUF_LEN, &transferred, 1);
+	libusb_bulk_transfer(devh, USB_EP1_IN, in_buf, JCMD_BUF_LEN, &transferred, 1);
+	libusb_bulk_transfer(devh, USB_EP1_IN, in_buf, JCMD_BUF_LEN, &transferred, 1);
 
 	return 0;
 }

@@ -30,6 +30,7 @@
 #include <queue>
 #include "joker_tv.h"
 #include "joker_fpga.h"
+#include "joker_ci.h"
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 
@@ -54,9 +55,10 @@ int main ()
 {
 	struct tune_info_t info;
 	struct big_pool_t pool;
-	int status = 0, ret = 0, rbytes = 0;
+	int status = 0, ret = 0, rbytes = 0, i = 0;
 	struct joker_t * joker;
 	unsigned char buf[512];
+	unsigned char in_buf[JCMD_BUF_LEN];
 	int isoc_len = USB_PACKET_SIZE;
 	pthread_t stat_thread;
 
@@ -66,15 +68,17 @@ int main ()
 		pthread_exit(NULL);
 	}
 
-
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
 		return ENOMEM;
 
-	printf("allocated joker=%p \n", joker);
 	/* open Joker TV on USB bus */
 	if ((ret = joker_open(joker)))
 		return ret;
+	printf("allocated joker=%p \n", joker);
+
+	/* init CI */
+	joker_ci(joker);
 
 	/* tune usb isoc transaction len */
 	buf[0] = J_CMD_ISOC_LEN_WRITE_HI;

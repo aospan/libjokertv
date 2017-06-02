@@ -25,7 +25,8 @@ SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
 
 SET (JOKERTV_SRC src/u_drv_data.c
   src/joker_i2c.c
-  src/joker_fpga.c)
+  src/joker_fpga.c
+  src/joker_ci.c)
 
 set(KOPTIONS
 	"-I ${CMAKE_SOURCE_DIR}/linux/ \

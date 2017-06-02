@@ -283,7 +283,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	unsigned int delay = 0;
 	int ret = 0;
 	unsigned char buf[BUF_LEN];
-	int reset = OC_I2C_RESET_GATE | OC_I2C_RESET_TPS_CI | OC_I2C_RESET_TPS | OC_I2C_RESET_USB;
+	int reset = 0xFF; /* reset all components on the board */
 	int unreset = 0, input = 0, need_lnb = 0;
 
 	struct dvb_diseqc_master_cmd dcmd = {
@@ -303,20 +303,23 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	switch (info->delivery_system)
 	{
 		case JOKER_SYS_ATSC:
-			unreset = reset | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG;
+			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG;
 			input = OC_I2C_INSEL_LG;
 			break;
 		case JOKER_SYS_DVBS:
 		case JOKER_SYS_DVBS2:
 			need_lnb = 1;
 		case JOKER_SYS_DVBC_ANNEX_A:
-			unreset = reset | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY;
+			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY;
 			input = OC_I2C_INSEL_SONY;
 			break;
 		default:
 			printf("delivery system not supported \n");
 			return ENODEV;
 	}
+
+	unreset |= OC_I2C_RESET_TPS_CI;
+	unreset = ~unreset;
 
 	/* reset tuner and demods */
 	buf[0] = J_CMD_RESET_CTRL_WRITE;
