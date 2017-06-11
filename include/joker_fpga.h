@@ -90,7 +90,7 @@
 #define	J_CMD_CI_WRITE_MEM	22 /* 0x16 CI common interfce */
 
 /* limited by usb transfer size. 512 for bulk, 1024 for isoc */
-#define JCMD_BUF_LEN 1024
+#define JCMD_BUF_LEN 512
 
 struct jcmd_t {
 	int cmd; /* command code. see defines above */

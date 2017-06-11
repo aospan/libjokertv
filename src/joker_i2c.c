@@ -23,7 +23,7 @@
 /* helper funcs
  * prepare jcmd to exchange with FPGA
  */
-int joker_i2c_read_cmd(struct joker_t * joker, int offset, char *data) {
+int joker_i2c_read_cmd(struct joker_t * joker, int offset, unsigned char * data) {
 	int ret = 0;
 	struct jcmd_t jcmd;
 	jcmd.buf[0] = J_CMD_I2C_READ;
@@ -38,7 +38,7 @@ int joker_i2c_read_cmd(struct joker_t * joker, int offset, char *data) {
 	return 0;
 }
 
-int joker_i2c_write_cmd(struct joker_t * joker, int offset, char *data) {
+int joker_i2c_write_cmd(struct joker_t * joker, int offset, unsigned char data) {
 	int ret = 0;
 	struct jcmd_t jcmd;
 	jcmd.buf[0] = J_CMD_I2C_WRITE;
