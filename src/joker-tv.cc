@@ -51,7 +51,22 @@ void * print_stat(void *data)
 	}
 }
 
-int main ()
+void show_help() {
+	printf("joker-tv usage: \n");
+	printf("	-d delsys	Delivery system. Options: \n \
+			%d-ATSC  %d-DVB-S  %d-DVB-C \n", 
+			JOKER_SYS_ATSC, JOKER_SYS_DVBS, JOKER_SYS_DVBC_ANNEX_A );
+	printf("	-m modulation	Modulation. Options: \n \
+			%d-VSB8 (for ATSC) 0-AUTO\n", JOKER_VSB_8);
+	printf("	-f freq		Frequency in Hz. Example: 1402000000\n");
+	printf("	-s symbol_rate	Symbol rate. Options: 0-AUTO. Example: 20000000\n");
+	printf("	-b bandwidth	Bandwidth in Hz. Example: 8000000\n");
+	printf("	-o filename	Output TS filename. Default: out.ts\n");
+
+	exit(0);
+}
+
+int main (int argc, char **argv)
 {
 	struct tune_info_t info;
 	struct big_pool_t pool;
@@ -61,11 +76,43 @@ int main ()
 	unsigned char in_buf[JCMD_BUF_LEN];
 	int isoc_len = USB_PACKET_SIZE;
 	pthread_t stat_thread;
+	int c;
+	int delsys = 0, mod = 0, freq = 0, sr = 0, bw = 0;
+	FILE * out = NULL;
+	unsigned char filename[FNAME_LEN] = "out.ts";
 
-	FILE * out = fopen("out.ts", "w+");
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:")) != -1)
+		switch (c)
+		{
+			case 'd':
+				delsys = atoi(optarg);
+				break;
+			case 'm':
+				mod = atoi(optarg);
+				break;
+			case 'f':
+				freq = atoi(optarg);
+				break;
+			case 's':
+				sr = atoi(optarg);
+				break;
+			case 'b':
+				bw = atoi(optarg);
+				break;
+			case 'o':
+				strncpy((char*)filename, optarg, FNAME_LEN);
+				break;
+			default:
+				show_help();
+		}
+
+	out = fopen((char*)filename, "w+");
 	if (!out){
-		fprintf(stderr, "Can't open out file \n");
-		pthread_exit(NULL);
+		printf("Can't open out file '%s' \n", filename);
+		perror("");
+		exit(-1);
+	} else {
+		printf("TS outfile:%s \n", filename);
 	}
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
@@ -96,25 +143,11 @@ int main ()
 	if ((ret = joker_i2c_init(joker)))
 		return ret;
 
-#if 0
-	info.delivery_system = JOKER_SYS_ATSC;
-	info.bandwidth_hz = 6000000;
-	info.frequency = 575000000;
-	info.modulation = JOKER_VSB_8;
-#endif
-
-#if 0
-	info.delivery_system = JOKER_SYS_DVBS;
-	info.bandwidth_hz = 0;
-	info.frequency = 1402000000;
-	info.symbol_rate = 20000000;
-#endif
-
-#if 1
-	info.delivery_system = JOKER_SYS_DVBC_ANNEX_A;
-	info.bandwidth_hz = 8000000;
-	info.frequency = 150000000;
-#endif
+	info.delivery_system = (joker_fe_delivery_system)delsys;
+	info.bandwidth_hz = bw;
+	info.frequency = freq;
+	info.symbol_rate = sr;
+	info.modulation = (joker_fe_modulation)mod;
 
 	printf("TUNE start \n");
 	if (tune(joker, &info))

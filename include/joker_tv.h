@@ -20,6 +20,8 @@
 #define jdebug(...) {};
 #endif
 
+#define FNAME_LEN 512
+
 /* main pointer to Joker TV */
 struct joker_t {
   void * libusb_opaque;

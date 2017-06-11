@@ -19,8 +19,15 @@ make
 ```
 
 # Run
+
+example tune to DVB-C on 150MHz with bandwidth 8MHz
 ```
-./joker-tv
+./joker-tv -d 1 -f 150000000 -b 8000000
+```
+
+example tune to ATSC on 575MHz with bandwidth 6MHz and modulation 8VSB
+```
+./build/joker-tv -d 11 -f 575000000 -b 6000000 -m 7
 ```
 
 if everything is fine then you can see progress. Something like this:
