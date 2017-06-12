@@ -89,6 +89,11 @@ static struct atbm888x_config atbm888x_config = {
 	.agc_hold_loop = 0,
 };
 
+// for atbm888x driver
+void mdelay(int n) {
+	usleep((n) * 1000);
+}
+
 int printk(const char *fmt, ...)
 {
 	va_list args;
@@ -306,15 +311,22 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG;
 			input = OC_I2C_INSEL_LG;
 			break;
+		case JOKER_SYS_DTMB:
+			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_ATBM;
+			input = OC_I2C_INSEL_ATBM;
+			break;
 		case JOKER_SYS_DVBS:
 		case JOKER_SYS_DVBS2:
 			need_lnb = 1;
 		case JOKER_SYS_DVBC_ANNEX_A:
+		case JOKER_SYS_DVBT:
+		case JOKER_SYS_DVBT2:
+		case JOKER_SYS_ISDBT:
 			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY;
 			input = OC_I2C_INSEL_SONY;
 			break;
 		default:
-			printf("delivery system not supported \n");
+			printf("delivery system %d not supported \n", info->delivery_system);
 			return ENODEV;
 	}
 
@@ -326,6 +338,8 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	buf[1] = reset;
 	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 		return ret;
+
+	msleep(50);
 
 	buf[0] = J_CMD_RESET_CTRL_WRITE;
 	buf[1] = unreset;
@@ -343,8 +357,36 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 		case JOKER_SYS_ATSC:
 			fe = lgdt3306a_attach(&lgdt3306a_config, i2c);
 			if (!fe) {
-				printf("can't attach demod\n");
+				printf("can't attach LGDT3306A demod\n");
 				return -ENODEV;
+			}
+			/* attach HELENE universal tuner in TERR mode */
+			helene_attach(fe, &helene_conf, i2c);
+			break;
+		case JOKER_SYS_DTMB:
+			fe = atbm888x_attach(&atbm888x_config, i2c);
+			if (!fe) {
+				printf("Can't attach ATBM888x demod\n");
+				return ENODEV;
+			}
+			/* attach HELENE universal tuner in TERR mode */
+			helene_attach(fe, &helene_conf, i2c);
+			break;
+		case JOKER_SYS_ISDBT:
+			fe = cxd2841er_attach_i(&demod_config, i2c);
+			if (!fe) {
+				printf("Can't attach SONY demod\n");
+				return ENODEV;
+			}
+			/* attach HELENE universal tuner in TERR mode */
+			helene_attach(fe, &helene_conf, i2c);
+			break;
+		case JOKER_SYS_DVBT:
+		case JOKER_SYS_DVBT2:
+			fe = cxd2841er_attach_t(&demod_config, i2c);
+			if (!fe) {
+				printf("Can't attach SONY demod\n");
+				return ENODEV;
 			}
 			/* attach HELENE universal tuner in TERR mode */
 			helene_attach(fe, &helene_conf, i2c);
@@ -369,7 +411,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			helene_attach_s(fe, &helene_conf, i2c);
 			break;
 		default:
-			printf("delivery system not supported \n");
+			printf("delivery system %d not supported \n", info->delivery_system);
 			return ENODEV;
 	}
 
@@ -403,17 +445,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	fe->ops.diseqc_send_master_cmd(fe, &dcmd);
 	/* set 22khz tone */
 	fe->ops.set_tone(fe, SEC_TONE_ON);
-#endif
-
-#if 0
-	/* DTMB */
-	fe = atbm888x_attach(&atbm888x_config, &i2c);
-	if (!fe) {
-		printf("can't attach demod\n");
-		return -1;
-	}
-
-	helene_attach(fe, &helene_conf, &i2c);
 #endif
 
 	return 0;

@@ -27,7 +27,22 @@ example tune to DVB-C on 150MHz with bandwidth 8MHz
 
 example tune to ATSC on 575MHz with bandwidth 6MHz and modulation 8VSB
 ```
-./build/joker-tv -d 11 -f 575000000 -b 6000000 -m 7
+./joker-tv -d 11 -f 575000000 -b 6000000 -m 7
+```
+
+example tune to DVB-T on 650MHz with bandwidth 8MHz
+```
+./joker-tv -d 3 -f 650000000 -b 8000000
+```
+
+example tune to ISDB-T on 473MHz with bandwidth 6MHz
+```
+./joker-tv -d 8 -f 473000000 -b 6000000
+```
+
+example tune to DTMB on 650MHz
+```
+./joker-tv -d 13 -f 650000000
 ```
 
 if everything is fine then you can see progress. Something like this:

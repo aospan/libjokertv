@@ -54,8 +54,9 @@ void * print_stat(void *data)
 void show_help() {
 	printf("joker-tv usage: \n");
 	printf("	-d delsys	Delivery system. Options: \n \
-			%d-ATSC  %d-DVB-S  %d-DVB-C \n", 
-			JOKER_SYS_ATSC, JOKER_SYS_DVBS, JOKER_SYS_DVBC_ANNEX_A );
+			%d-ATSC  %d-DVB-S  %d-DVB-C %d-DVB-T %d-DVB-T2 %d-ISDB-T %d-DTMB\n", 
+			JOKER_SYS_ATSC, JOKER_SYS_DVBS, JOKER_SYS_DVBC_ANNEX_A,
+			JOKER_SYS_DVBT, JOKER_SYS_DVBT2, JOKER_SYS_ISDBT, JOKER_SYS_DTMB);
 	printf("	-m modulation	Modulation. Options: \n \
 			%d-VSB8 (for ATSC) 0-AUTO\n", JOKER_VSB_8);
 	printf("	-f freq		Frequency in Hz. Example: 1402000000\n");
@@ -105,6 +106,9 @@ int main (int argc, char **argv)
 			default:
 				show_help();
 		}
+
+	if (delsys == JOKER_SYS_UNDEFINED)
+		show_help();
 
 	out = fopen((char*)filename, "w+");
 	if (!out){
