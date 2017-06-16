@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	ofd = fopen(filename, "r");
+	ofd = fopen(filename, "rb");
 	if (ofd <= 0) {
 		printf("can't open file %s \n", filename);
 		perror("");
