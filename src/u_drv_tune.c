@@ -309,11 +309,11 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	{
 		case JOKER_SYS_ATSC:
 			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG;
-			input = OC_I2C_INSEL_LG;
+			input = J_INSEL_LG;
 			break;
 		case JOKER_SYS_DTMB:
 			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_ATBM;
-			input = OC_I2C_INSEL_ATBM;
+			input = J_INSEL_ATBM;
 			break;
 		case JOKER_SYS_DVBS:
 		case JOKER_SYS_DVBS2:
@@ -323,7 +323,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 		case JOKER_SYS_DVBT2:
 		case JOKER_SYS_ISDBT:
 			unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY;
-			input = OC_I2C_INSEL_SONY;
+			input = J_INSEL_SONY;
 			break;
 		default:
 			printf("delivery system %d not supported \n", info->delivery_system);

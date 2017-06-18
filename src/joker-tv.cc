@@ -63,6 +63,7 @@ void show_help() {
 	printf("	-s symbol_rate	Symbol rate. Options: 0-AUTO. Example: 20000000\n");
 	printf("	-b bandwidth	Bandwidth in Hz. Example: 8000000\n");
 	printf("	-o filename	Output TS filename. Default: out.ts\n");
+	printf("	-t		enable TS generator. Default: disabled\n");
 
 	exit(0);
 }
@@ -77,12 +78,12 @@ int main (int argc, char **argv)
 	unsigned char in_buf[JCMD_BUF_LEN];
 	int isoc_len = USB_PACKET_SIZE;
 	pthread_t stat_thread;
-	int c;
+	int c, tsgen = 0;
 	int delsys = 0, mod = 0, freq = 0, sr = 0, bw = 0;
 	FILE * out = NULL;
 	unsigned char filename[FNAME_LEN] = "out.ts";
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:t")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -100,6 +101,9 @@ int main (int argc, char **argv)
 			case 'b':
 				bw = atoi(optarg);
 				break;
+			case 't':
+				tsgen = 1;
+				break;
 			case 'o':
 				strncpy((char*)filename, optarg, FNAME_LEN);
 				break;
@@ -107,7 +111,7 @@ int main (int argc, char **argv)
 				show_help();
 		}
 
-	if (delsys == JOKER_SYS_UNDEFINED)
+	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 )
 		show_help();
 
 	out = fopen((char*)filename, "w+");
@@ -142,35 +146,44 @@ int main (int argc, char **argv)
 	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 		return ret;
 
-
-
 	if ((ret = joker_i2c_init(joker)))
 		return ret;
 
-	info.delivery_system = (joker_fe_delivery_system)delsys;
-	info.bandwidth_hz = bw;
-	info.frequency = freq;
-	info.symbol_rate = sr;
-	info.modulation = (joker_fe_modulation)mod;
+	if(tsgen) {
+		/* TS generator selected */
+		buf[0] = J_CMD_TS_INSEL_WRITE;
+		buf[1] = J_INSEL_TSGEN;
+		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+			return ret;
+	} else {
+		/* real demod selected
+		 * tuning ...
+		 */
+		info.delivery_system = (joker_fe_delivery_system)delsys;
+		info.bandwidth_hz = bw;
+		info.frequency = freq;
+		info.symbol_rate = sr;
+		info.modulation = (joker_fe_modulation)mod;
 
-	printf("TUNE start \n");
-	if (tune(joker, &info))
-		return -1;
-	printf("TUNE done \n");
+		printf("TUNE start \n");
+		if (tune(joker, &info))
+			return -1;
+		printf("TUNE done \n");
 
-	while (1) {
-		status = read_status(&info);
-		printf("WAITING LOCK. status=%d error=%s \n", status, strerror(status) );
-		fflush(stdout);
-		if (!status)
-			break;
-		sleep(1);
-	}
+		while (1) {
+			status = read_status(&info);
+			printf("WAITING LOCK. status=%d error=%s \n", status, strerror(status) );
+			fflush(stdout);
+			if (!status)
+				break;
+			sleep(1);
+		}
 
-	/* start status printing thread */
-	if(pthread_create(&stat_thread, NULL, print_stat, &info)) {
-		fprintf(stderr, "Error creating status thread\n");
-		return -1;
+		/* start status printing thread */
+		if(pthread_create(&stat_thread, NULL, print_stat, &info)) {
+			fprintf(stderr, "Error creating status thread\n");
+			return -1;
+		}
 	}
 
 	/* start TS collection and save to file */

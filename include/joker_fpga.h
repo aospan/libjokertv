@@ -21,11 +21,6 @@
 #define OC_I2C_RXR		(0x03) /* Read: received data byte */
 #define OC_I2C_CR		(0x04) /* Write: command register */
 #define OC_I2C_SR		(0x04) /* Read: status register */
-#define JOKER_READ  (0x05) /* Trigger reading */
-#define OC_I2C_RESET_CTRL	(0x06) /* write: Control chips reset */
-#define OC_I2C_INSEL_CTRL	(0x07) /* write: Choose TS input */
-#define JOKER_USB_ISOC_LEN_HI (0x08) /* write: Choose USB isoc pkt len. default 512 */
-#define JOKER_USB_ISOC_LEN_LO (0x09) /* write: Choose USB isoc pkt len. default 512 */
 
 /* PRE registers bits */
 #define OC_I2C_100K		(0x63) /* 100kHz bus speed */
@@ -61,9 +56,10 @@
 #define OC_I2C_RESET_SONY	1 << 0 /* Sony DVB demod */ 
 
 /* Choose TS input */
-#define OC_I2C_INSEL_SONY	(0x00)
-#define OC_I2C_INSEL_ATBM	(0x01)
-#define OC_I2C_INSEL_LG		(0x02)
+#define J_INSEL_SONY	(0x00)
+#define J_INSEL_ATBM	(0x01)
+#define J_INSEL_LG	(0x02)
+#define J_INSEL_TSGEN	(0x03)
 
 /* USB defines */
 #define	USB_EP1_IN		(0x81) /* i2c, etc */

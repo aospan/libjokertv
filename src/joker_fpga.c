@@ -122,18 +122,6 @@ int joker_io(struct joker_t * joker, struct jcmd_t * jcmd) {
 
 	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 
-	/* very slow ! rewrite bulk with less timeout */
-#if 0
-	/* prophylactic cleanup EP1 IN */
-	while (1) {
-		ret = libusb_bulk_transfer(dev, USB_EP1_IN, buf, JCMD_BUF_LEN, &transferred, 1 /* ms */);
-		//fprintf(stderr,"prophylactic read done. ret=%d transferred=%d \n",
-				//ret, transferred);
-		if (ret)
-			break;
-	}
-#endif
-
 	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, jcmd->buf, jcmd->len, &transferred, 0);
 	if (ret < 0 || transferred != jcmd->len)
 		return ret;

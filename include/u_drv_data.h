@@ -25,7 +25,7 @@ struct big_pool_t {
   uint8_t *usb_buffers[NUM_USB_BUFS];
 
   /* threads stuff */
-	pthread_t thread;
+  pthread_t thread;
   pthread_cond_t cond;
   pthread_mutex_t mux;
 

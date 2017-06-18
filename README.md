@@ -58,6 +58,18 @@ USB ISOC: all/complete=8000.020000/2369.505924 transfer/sec 18.493687 mbits/sec
 
 resulting TS stream should apear in ./out.ts file.
 
+## TS stream generator
+choose TS stream generated inside FPGA:
+```
+./build/joker-tv -t
+```
+
+generated TS will be saved into 'out.ts' file. Check TS stream correctness with
+following command:
+```
+./build/tscheck -f out.ts -p
+```
+
 ## I2C bus scan
 ```
 ./i2c-scan
