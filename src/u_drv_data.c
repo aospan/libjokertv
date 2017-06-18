@@ -140,7 +140,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	struct libusb_device_handle *dev = NULL;
 	struct libusb_transfer *t;
 	int index = 0;
-	int transferred = 0, rc = 0;
+	int transferred = 0, rc = 0, ret = 0;
 
 	if (!joker || !pool)
 		return EINVAL;
@@ -183,8 +183,8 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 		libusb_fill_iso_transfer(t, dev, USB_EP3_IN, pool->usb_buffers[index], NUM_USB_PACKETS * USB_PACKET_SIZE, NUM_USB_PACKETS, cb, (void *)pool, 1000);
 		libusb_set_iso_packet_lengths(t, USB_PACKET_SIZE);
 
-		if (libusb_submit_transfer(t)) {
-			printf("ERROR: libusb_submit_transfer failed\n");
+		if ((ret = libusb_submit_transfer(t))) {
+			printf("ERROR:%d libusb_submit_transfer failed\n", ret);
 			return EIO;
 		}
 	}

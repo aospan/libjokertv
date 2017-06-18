@@ -190,7 +190,12 @@ int main (int argc, char **argv)
 	}
 
 	/* start TS collection and save to file */
-	start_ts(joker, &pool);
+	if((ret = start_ts(joker, &pool))) {
+		printf("start_ts failed. err=%d \n", ret);
+		exit(-1);
+	}
+	fflush(stdout);
+
 	while(1) {
 		rbytes = read_data(joker, &pool, &buf[0], 512);
 		fwrite(buf, 512, 1, out);
