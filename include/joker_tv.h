@@ -26,6 +26,7 @@
 struct joker_t {
   void * libusb_opaque;
   void * i2c_opaque;
+  int libusb_verbose;
 };
 
 #ifdef __cplusplus

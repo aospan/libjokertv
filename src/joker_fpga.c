@@ -40,8 +40,9 @@ int joker_open(struct joker_t *joker)
 		return ENODEV;
 	}
 
-	libusb_set_debug(NULL, 1);
-	// libusb_set_debug(NULL, 4); // more debug !
+	if (joker->libusb_verbose == 0)
+		joker->libusb_verbose = 1;
+	libusb_set_debug(NULL, joker->libusb_verbose);
 
 	usb_devs = libusb_get_device_list(ctx, &usb_list);
 	for(i = 0 ; i < usb_devs ; ++i) {

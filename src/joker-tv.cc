@@ -21,8 +21,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <unistd.h>
 #include <libusb.h>
 #include <pthread.h>
@@ -64,6 +62,7 @@ void show_help() {
 	printf("	-b bandwidth	Bandwidth in Hz. Example: 8000000\n");
 	printf("	-o filename	Output TS filename. Default: out.ts\n");
 	printf("	-t		enable TS generator. Default: disabled\n");
+	printf("	-u level	Libusb verbose level (0 - less, 4 - more verbose). Default: 0\n");
 
 	exit(0);
 }
@@ -83,7 +82,12 @@ int main (int argc, char **argv)
 	FILE * out = NULL;
 	unsigned char filename[FNAME_LEN] = "out.ts";
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:t")) != -1)
+	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
+	if (!joker)
+		return ENOMEM;
+	memset(joker, 0, sizeof(struct joker_t));
+
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:t:u:")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -104,6 +108,9 @@ int main (int argc, char **argv)
 			case 't':
 				tsgen = 1;
 				break;
+			case 'u':
+				joker->libusb_verbose = atoi(optarg);
+				break;
 			case 'o':
 				strncpy((char*)filename, optarg, FNAME_LEN);
 				break;
@@ -122,10 +129,6 @@ int main (int argc, char **argv)
 	} else {
 		printf("TS outfile:%s \n", filename);
 	}
-
-	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
-	if (!joker)
-		return ENOMEM;
 
 	/* open Joker TV on USB bus */
 	if ((ret = joker_open(joker)))
