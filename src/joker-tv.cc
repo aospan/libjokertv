@@ -87,7 +87,7 @@ int main (int argc, char **argv)
 		return ENOMEM;
 	memset(joker, 0, sizeof(struct joker_t));
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:t:u:")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:")) != -1)
 		switch (c)
 		{
 			case 'd':
