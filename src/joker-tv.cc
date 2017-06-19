@@ -121,7 +121,7 @@ int main (int argc, char **argv)
 	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 )
 		show_help();
 
-	out = fopen((char*)filename, "w+");
+	out = fopen((char*)filename, "w+b");
 	if (!out){
 		printf("Can't open out file '%s' \n", filename);
 		perror("");
