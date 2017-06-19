@@ -10,7 +10,7 @@
 
 #define NUM_USB_BUFS 16
 #define NUM_USB_PACKETS 128
-#define USB_PACKET_SIZE 1023
+#define USB_PACKET_SIZE 1024
 
 #define BIG_POOL_GAIN	16
 
