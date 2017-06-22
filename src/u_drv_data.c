@@ -74,6 +74,7 @@ void record_callback(struct libusb_transfer *transfer)
 				(double)((int64_t)1000000*pool->pkt_count)/(getus() - pool->start_time),
 				(double)((int64_t)1000000*pool->pkt_count_complete)/(getus() - pool->start_time),
 				(double)((int64_t)1000000*8*pool->bytes/1048576)/(getus() - pool->start_time));
+		fflush(stdout);
 		pool->pkt_count = 0;
 		pool->pkt_count_complete = 0;
 		pool->bytes = 0;
