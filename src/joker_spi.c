@@ -179,6 +179,7 @@ int joker_flash_write(struct joker_t * joker, char * filename)
 		/* should we clean sector first */
 		if(next_sector > prev_sector) {
 			printf("cleaning sector %d at addr %d\n", next_sector, next_sector * J_SPI_SECTOR_SIZE);
+			fflush(stdout);
 			if(joker_flash_erase_sector(joker, next_sector * J_SPI_SECTOR_SIZE)) {
 				printf("Can't erase sector at off=%d \n", next_sector * J_SPI_SECTOR_SIZE);
 				return(-1);
@@ -193,6 +194,7 @@ int joker_flash_write(struct joker_t * joker, char * filename)
 		}
 		if(!off)
 			printf("Starting page programming ...\n");
+		fflush(stdout);
 
 		off += to_write;
 	}
