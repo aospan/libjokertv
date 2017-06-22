@@ -16,17 +16,18 @@ FIND_LIBRARY(LIBUSB_LIBRARIES NAMES usb-1.0)
 
 #set sources list
 SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
-      linux/drivers/media/dvb-frontends/lgdt3306a.c
-      linux/drivers/media/dvb-frontends/cxd2841er.c
-      linux/drivers/media/dvb-frontends/tps65233.c
-      linux/drivers/media/dvb-frontends/atbm888x.c
-      linux/drivers/media/dvb-core/dvb_math.c
-      src/u_drv_tune.c)
+	linux/drivers/media/dvb-frontends/lgdt3306a.c
+	linux/drivers/media/dvb-frontends/cxd2841er.c
+	linux/drivers/media/dvb-frontends/tps65233.c
+	linux/drivers/media/dvb-frontends/atbm888x.c
+	linux/drivers/media/dvb-core/dvb_math.c
+	src/u_drv_tune.c)
 
 SET (JOKERTV_SRC src/u_drv_data.c
-  src/joker_i2c.c
-  src/joker_fpga.c
-  src/joker_ci.c)
+	src/joker_i2c.c
+	src/joker_fpga.c
+	src/joker_spi.c
+	src/joker_ci.c)
 
 set(KOPTIONS
 	"-I ${CMAKE_SOURCE_DIR}/linux/ \
@@ -60,6 +61,12 @@ set_target_properties(i2c-scan PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 target_include_directories(i2c-scan PUBLIC ${INCLUDE_USER})
 target_link_libraries(i2c-scan jokertv ${LIBUSB_LIBRARIES})
 
+#simple program to scan i2c bus
+#add_executable(spi-flash src/spi-flash.c)
+#set_target_properties(spi-flash PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
+#target_include_directories(spi-flash PUBLIC ${INCLUDE_USER})
+#target_link_libraries(spi-flash jokertv ${LIBUSB_LIBRARIES})
+
 # TS stream generate/validate utilities
 add_executable(tsgen src/tsgen.c)
 target_include_directories(tsgen PUBLIC ${INCLUDE_USER})
@@ -75,9 +82,9 @@ SET(CPACK_PACKAGE_VERSION_MINOR "1")
 SET(CPACK_PACKAGE_VERSION_PATCH "1")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(CPACK_GENERATOR "DragNDrop")
+	set(CPACK_GENERATOR "DragNDrop")
 else()
-  set(CPACK_GENERATOR "TGZ")
+	set(CPACK_GENERATOR "TGZ")
 endif()
 
 INCLUDE(CPack)

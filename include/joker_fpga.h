@@ -84,6 +84,7 @@
 #define	J_CMD_CI_STATUS		20 /* 0x14 CI common interfce */
 #define	J_CMD_CI_READ_MEM	21 /* 0x15 CI common interfce */
 #define	J_CMD_CI_WRITE_MEM	22 /* 0x16 CI common interfce */
+#define	J_CMD_SPI		30 /* SPI bus access */
 
 /* limited by usb transfer size. 512 for bulk, 1024 for isoc */
 #define JCMD_BUF_LEN 512

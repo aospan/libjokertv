@@ -29,6 +29,7 @@
 #include "joker_tv.h"
 #include "joker_fpga.h"
 #include "joker_ci.h"
+#include "joker_spi.h"
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 
@@ -63,6 +64,7 @@ void show_help() {
 	printf("	-o filename	Output TS filename. Default: out.ts\n");
 	printf("	-t		enable TS generator. Default: disabled\n");
 	printf("	-u level	Libusb verbose level (0 - less, 4 - more verbose). Default: 0\n");
+	printf("	-w filename	Update firmware on flash. Default: none\n");
 
 	exit(0);
 }
@@ -80,14 +82,15 @@ int main (int argc, char **argv)
 	int c, tsgen = 0;
 	int delsys = 0, mod = 0, freq = 0, sr = 0, bw = 0;
 	FILE * out = NULL;
-	unsigned char filename[FNAME_LEN] = "out.ts";
+	char filename[FNAME_LEN] = "out.ts";
+	char fwfilename[FNAME_LEN] = "";
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
 		return ENOMEM;
 	memset(joker, 0, sizeof(struct joker_t));
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -114,12 +117,12 @@ int main (int argc, char **argv)
 			case 'o':
 				strncpy((char*)filename, optarg, FNAME_LEN);
 				break;
+			case 'w':
+				strncpy((char*)fwfilename, optarg, FNAME_LEN);
+				break;
 			default:
 				show_help();
 		}
-
-	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 )
-		show_help();
 
 	out = fopen((char*)filename, "w+b");
 	if (!out){
@@ -137,6 +140,26 @@ int main (int argc, char **argv)
 
 	/* init CI */
 	joker_ci(joker);
+
+	/* upgrade fw if selected */
+	if(strlen((const char*)fwfilename)) {
+		if(joker_flash_checkid(joker)) {
+			printf("SPI flash id check failed. Cancelling fw update.\n");
+			return -1;
+		}
+		printf("SPI flash id check success. Starting fw update.\n");
+
+		if(joker_flash_write(joker, fwfilename)) {
+			printf("Can't write fw to flash !\n");
+			return -1;
+		} else {
+			printf("FW successfully upgraded. Reconnect device please.\n");
+			return 0;
+		}
+	}
+
+	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 )
+		show_help();
 
 	/* tune usb isoc transaction len */
 	buf[0] = J_CMD_ISOC_LEN_WRITE_HI;
