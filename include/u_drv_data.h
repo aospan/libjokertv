@@ -10,8 +10,8 @@
 
 #define NUM_USB_BUFS 16
 // under CentOS 5.5 limit for URB size (?)
-// so, choose 64 here (original was 128)
-#define NUM_USB_PACKETS 64
+// so, choose 64 here (original was 128) for CentOS 5.5
+#define NUM_USB_PACKETS 128
 #define USB_PACKET_SIZE 1024
 
 #define BIG_POOL_GAIN	16

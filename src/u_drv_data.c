@@ -70,10 +70,11 @@ void record_callback(struct libusb_transfer *transfer)
 	int ret = 0;
 
 	/* update statistics */
-	if ( !(pool->pkt_count%1000) ){
-		printf("USB ISOC: all/complete=%f/%f transfer/sec %f mbits/sec \n", 
+	if ( pool->pkt_count && !(pool->pkt_count%1000) ){
+		printf("USB ISOC: all/complete=%f/%f transfer/sec %.2f MBytes %f mbits/sec \n", 
 				(double)((int64_t)1000000*pool->pkt_count)/(getus() - pool->start_time),
 				(double)((int64_t)1000000*pool->pkt_count_complete)/(getus() - pool->start_time),
+				(double)pool->bytes/1024/1024,
 				(double)((int64_t)1000000*8*pool->bytes/1048576)/(getus() - pool->start_time));
 		fflush(stdout);
 		pool->pkt_count = 0;
@@ -198,11 +199,13 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	pool->pkt_count = 0;
 	pool->pkt_count_complete = 0;
 	pool->start_time = getus();
+	pool->bytes = 0;
 	rc = pthread_create(&pool->thread, NULL, process_usb, (void *)&pool);
 	if (rc){
 		printf("ERROR; return code from pthread_create() is %d\n", rc);
 		return rc;
 	}
+	return 0;
 }
 
 /* stop ts processing 
