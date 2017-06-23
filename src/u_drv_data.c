@@ -201,6 +201,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 		printf("ERROR; return code from pthread_create() is %d\n", rc);
 		return rc;
 	}
+	return 0;
 }
 
 /* stop ts processing 
