@@ -46,7 +46,7 @@ void * print_stat(void *data)
 		signal = read_signal(info);
 		printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d\n", 
 				status, status ? "NOLOCK" : "LOCK", signal, 100*(int)signal/0xFFFF, ucblocks );
-		sleep(1);
+		sleep(10);
 	}
 }
 
