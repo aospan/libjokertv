@@ -67,6 +67,7 @@ void record_callback(struct libusb_transfer *transfer)
 	unsigned char * buf = 0;
 	int remain = 0, to_write = 0;
 	int err_counter = 0;
+	int ret = 0;
 
 	/* update statistics */
 	if ( !(pool->pkt_count%1000) ){
@@ -115,9 +116,10 @@ void record_callback(struct libusb_transfer *transfer)
 
 	// return USB ISOC ASAP !
 	while(1) {
-		if (libusb_submit_transfer(transfer)) {
+		if ((ret = libusb_submit_transfer(transfer))) {
 			if(!(err_counter%1000))
-				printf("CALLBACK: ERROR: libusb_submit_transfer failed. err_counter=%d\n", err_counter);
+				printf("CALLBACK: ERROR: libusb_submit_transfer failed ret=%d. err_counter=%d\n", 
+						ret, err_counter);
 			err_counter++;
 			usleep(100);
 			if (err_counter > 10000) {
