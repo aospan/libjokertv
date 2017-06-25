@@ -103,9 +103,7 @@ int printk(const char *fmt, ...)
 	return 0;
 }
 
-/* uncomment if you want to see dev_dbg messages */
-void __dynamic_dev_dbg(struct _ddebug *descriptor,
-		const struct device *dev, const char *fmt, ...)
+void __dynamic_dev_dbg(const struct device *dev, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -192,7 +190,7 @@ int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 
 void usleep_range(unsigned long min, unsigned long max)
 {
-	printf("%s min=%d max=%d\n", 
+	jdebug("%s min=%d max=%d\n", 
 			__func__, min, max);
 	usleep(max);
 }
