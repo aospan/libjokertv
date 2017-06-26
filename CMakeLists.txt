@@ -56,6 +56,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_i2c.c
 	src/joker_fpga.c
 	src/joker_spi.c
+	src/joker_utils.c
 	src/joker_ci.c)
 
 set(KOPTIONS

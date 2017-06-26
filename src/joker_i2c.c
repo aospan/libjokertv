@@ -115,6 +115,10 @@ int joker_i2c_write(struct joker_t *joker, uint8_t chip, unsigned char * data, i
 
 	chip = chip << 1; /* convert i2c addr to 8 bit notation */
 
+	/* dump data (if debug enabled) */
+	jdebug("i2c:WRITE chip=0x%x size=%d \n", chip, size);
+	jhexdump(data, size);
+
 	/* write device address first */
 	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_TXR, chip)))
 		return ret;
@@ -169,6 +173,8 @@ int joker_i2c_read(struct joker_t *joker, uint8_t chip, unsigned char * data, in
 
 	chip = ((chip << 1) | 0x01); /* convert i2c addr to 8 bit notation and add Read bit */
 
+	jdebug("i2c:READ chip=0x%x size=%d \n", chip, size);
+
 	/* write device address first */
 	if ((ret = joker_i2c_write_cmd(joker, OC_I2C_TXR, chip)))
 		return ret;
@@ -202,6 +208,9 @@ int joker_i2c_read(struct joker_t *joker, uint8_t chip, unsigned char * data, in
 		if((ret = joker_i2c_read_cmd(joker, OC_I2C_RXR, &data[i])))
 			return ret;
 	}
+
+	/* dump data (if debug enabled) */
+	jhexdump(data, size);
 	return 0;
 }
 
