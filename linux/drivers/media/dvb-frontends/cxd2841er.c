@@ -2669,16 +2669,18 @@ static int cxd2841er_sleep_tc_to_active_t2(struct cxd2841er_priv *priv,
 	/* Enable demod clock */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x2c, 0x01);
 	/* Disable RF level monitor */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x59, 0x00);
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x2f, 0x00);
 	/* Enable ADC clock */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x30, 0x00);
 	/* Enable ADC 1 */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x41, 0x1a);
 
-  if (priv->xtal == SONY_XTAL_41000) {
-    data[0] = 0x0A;
-    data[1] = 0xD4;
-  }
+	if (priv->xtal == SONY_XTAL_41000) {
+		data[0] = 0x0A;
+		data[1] = 0xD4;
+	}
+
 	cxd2841er_write_regs(priv, I2C_SLVT, 0x43, data, 2);
 	/* Enable ADC 4 */
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x18, 0x00);
