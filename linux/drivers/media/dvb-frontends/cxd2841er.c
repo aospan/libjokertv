@@ -796,7 +796,7 @@ static int cxd2841er_shutdown_to_sleep_tc(struct cxd2841er_priv *priv)
 		return -EINVAL;
 	}
 	/* Set SLV-X Bank : 0x00 */
-	cxd2841er_write_reg(priv, I2C_SLVX, 0x00, 0x00);
+	// cxd2841er_write_reg(priv, I2C_SLVX, 0x00, 0x00);
 	/* Clear all demodulator registers */
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x02, 0x00);
 	usleep_range(3000, 5000);
@@ -923,7 +923,7 @@ static void cxd2841er_set_ts_clock_mode(struct cxd2841er_priv *priv,
 	 * slave    Bank    Addr    Bit    default    Name
 	 * <SLV-T>  00h     33h     [1:0]  2'b01      OREG_CKSEL_TSIF
 	 */
-	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0x33, 0x00, 0x03);
+	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0x33, 0x01, 0x03);
 	/*
 	 * Enable TS IF Clock
 	 * slave    Bank    Addr    Bit    default    Name
