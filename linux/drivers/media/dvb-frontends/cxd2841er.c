@@ -1841,15 +1841,15 @@ static int cxd2841er_dvbt2_set_profile(
 	switch (profile) {
 	case DVBT2_PROFILE_BASE:
 		tune_mode = 0x01;
-		seq_not2d_time = 12;
+		seq_not2d_time = (priv->xtal == SONY_XTAL_24000) ? 0x0E : 0x0C;
 		break;
 	case DVBT2_PROFILE_LITE:
 		tune_mode = 0x05;
-		seq_not2d_time = 40;
+		seq_not2d_time = (priv->xtal == SONY_XTAL_24000) ? 0x2E : 0x28;
 		break;
 	case DVBT2_PROFILE_ANY:
 		tune_mode = 0x00;
-		seq_not2d_time = 40;
+		seq_not2d_time = (priv->xtal == SONY_XTAL_24000) ? 0x2E : 0x28;
 		break;
 	default:
 		return -EINVAL;
