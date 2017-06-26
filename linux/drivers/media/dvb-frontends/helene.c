@@ -916,9 +916,11 @@ static int helene_x_pon(struct helene_priv *priv)
 {
 	/* RFIN matching in power save (terrestrial) = ACTIVE */
 	/* RFIN matching in power save (satellite) = ACTIVE */
-	u8 dataT[] = { 0x06, 0x00, 0x02, 0x00 };
+	u8 dataT[] = { 0x15, 0x00, 0x00, 0x00 }; // HACK
+	//u8 dataT[] = { 0x06, 0x00, 0x02, 0x00 };
 	/* SAT_RF_ACTIVE = true, lnaOff = false, terrRfActive = true */
-	u8 dataS[] = { 0x05, 0x06 };
+	u8 dataS[] = { 0x14, 0x07 }; // HACK
+	// u8 dataS[] = { 0x05, 0x06 };
 	u8 cdata[] = {0x7A, 0x01};
 	u8 data[20];
 	u8 rdata[2];
