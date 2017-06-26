@@ -102,6 +102,11 @@ target_include_directories(tsgen PUBLIC ${INCLUDE_USER})
 add_executable(tscheck src/tscheck.c)
 target_include_directories(tscheck PUBLIC ${INCLUDE_USER})
 
+INSTALL (
+	DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+	DESTINATION include
+	FILES_MATCHING PATTERN "*.h*")
+
 #Installers generator
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Joker TV")
 SET(CPACK_PACKAGE_VENDOR "Joker Systems Inc.")
