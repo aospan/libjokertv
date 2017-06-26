@@ -358,6 +358,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 				printf("can't attach LGDT3306A demod\n");
 				return -ENODEV;
 			}
+			fe->ops.init(fe);
 			/* attach HELENE universal tuner in TERR mode */
 			helene_attach(fe, &helene_conf, i2c);
 			break;
@@ -367,6 +368,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 				printf("Can't attach ATBM888x demod\n");
 				return ENODEV;
 			}
+			fe->ops.init(fe);
 			/* attach HELENE universal tuner in TERR mode */
 			helene_attach(fe, &helene_conf, i2c);
 			break;
@@ -376,6 +378,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 				printf("Can't attach SONY demod\n");
 				return ENODEV;
 			}
+			fe->ops.init(fe);
 			/* attach HELENE universal tuner in TERR mode */
 			helene_attach(fe, &helene_conf, i2c);
 			break;
@@ -386,6 +389,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 				printf("Can't attach SONY demod\n");
 				return ENODEV;
 			}
+			fe->ops.init(fe);
 			/* attach HELENE universal tuner in TERR mode */
 			helene_attach(fe, &helene_conf, i2c);
 			break;
@@ -395,6 +399,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 				printf("Can't attach SONY demod\n");
 				return ENODEV;
 			}
+			fe->ops.init(fe);
 			/* attach HELENE universal tuner in CABLE mode */
 			helene_attach(fe, &helene_conf, i2c);
 			break;
@@ -405,6 +410,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 				printf("Can't attach SONY demod\n");
 				return ENODEV;
 			}
+			fe->ops.init(fe);
 			/* attach HELENE universal tuner in DVB-S mode */
 			helene_attach_s(fe, &helene_conf, i2c);
 			break;
@@ -414,8 +420,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	}
 
 	info->fe_opaque = (void *)fe;
-
-	fe->ops.init(fe);
 
 	/* set tune info */
 	fe->dtv_property_cache.delivery_system = info->delivery_system;
