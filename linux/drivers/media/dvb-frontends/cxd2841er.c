@@ -3110,8 +3110,8 @@ static int cxd2841er_set_frontend_tc(struct dvb_frontend *fe)
 			goto done;
 		if (status & FE_HAS_LOCK)
 			break;
-		msleep(20);
-		timeout -= 20;
+		msleep(10);
+		timeout -= 10;
 	}
 	if (timeout < 0)
 		dev_dbg(&priv->i2c->dev,
