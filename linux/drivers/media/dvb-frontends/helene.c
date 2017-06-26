@@ -704,8 +704,8 @@ static int helene_set_params(struct dvb_frontend *fe)
 	struct helene_priv *priv = fe->tuner_priv;
 	int frequencykHz = p->frequency / 1000;
 
-	dev_dbg(&priv->i2c->dev, "%s(): tune frequency %dkHz\n",
-			__func__, frequencykHz);
+	dev_dbg(&priv->i2c->dev, "%s(): tune frequency %dkHz (%d Hz)\n",
+			__func__, frequencykHz, p->frequency);
 	tv_system = helene_get_tv_system(fe);
 
 	if (tv_system == SONY_HELENE_TV_SYSTEM_UNKNOWN) {
@@ -713,7 +713,6 @@ static int helene_set_params(struct dvb_frontend *fe)
 				__func__);
 		return -EINVAL;
 	}
-	helene_leave_power_save(priv);
 
 	/* RF switch turn to terrestrial */
 	if (priv->set_tuner)
@@ -726,8 +725,10 @@ static int helene_set_params(struct dvb_frontend *fe)
 	/* Disable IF signal output */
 	helene_write_reg(priv, 0x74, 0x02);
 
-	if (priv->state == STATE_SLEEP)
-		helene_leave_power_save(priv);
+	helene_leave_power_save(priv);
+
+	// if (priv->state == STATE_SLEEP)
+		// helene_leave_power_save(priv);
 
 	/* Initial setting for internal analog block (0x91, 0x92) */
 	if ((tv_system == SONY_HELENE_DTV_DVBC_6) ||
@@ -740,10 +741,11 @@ static int helene_set_params(struct dvb_frontend *fe)
 	}
 	helene_write_regs(priv, 0x91, data, 2);
 
+	// HACK
 	/* Setting for analog block */
-	if (TERR_INTERNAL_LOOPFILTER_AVAILABLE(tv_system))
-		data[0] = 0x90;
-	else
+	//if (TERR_INTERNAL_LOOPFILTER_AVAILABLE(tv_system))
+		//data[0] = 0x90;
+	//else
 		data[0] = 0x00;
 
 	/* Setting for local polarity (0x9D) */
@@ -764,7 +766,7 @@ static int helene_set_params(struct dvb_frontend *fe)
 		data[4] = 0x03;
 
 	/* Tuning setting for analog block */
-	if (TERR_INTERNAL_LOOPFILTER_AVAILABLE(tv_system)) {
+	if (false /*SONY_HELENE_CONFIG_LOOPFILTER_INTERNAL*/ && TERR_INTERNAL_LOOPFILTER_AVAILABLE(tv_system)) {
 		data[5] = 0x38;
 		data[6] = 0x1E;
 		data[7] = 0x02;
