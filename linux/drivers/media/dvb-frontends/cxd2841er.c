@@ -1896,31 +1896,33 @@ static int cxd2841er_sleep_tc_to_active_t2_band(struct cxd2841er_priv *priv,
 	u8 b10_b6[3];
 	u8 b10_d7;
 
+	/* TODO: only for xtal 24M now. need to add other values */
+	/* TODO: only for ASCOT3/2E/2D. need to add other values */
 	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
 	switch (bandwidth) {
 	case 8000000:
 		/* bank 0x20, reg 0x9f */
-		b20_9f[0] = 0x11;
-		b20_9f[1] = 0xf0;
+		b20_9f[0] = 0x15;
+		b20_9f[1] = 0x00;
 		b20_9f[2] = 0x00;
 		b20_9f[3] = 0x00;
 		b20_9f[4] = 0x00;
 		/* bank 0x10, reg 0xa6 */
-		b10_a6[0] = 0x26;
-		b10_a6[1] = 0xaf;
-		b10_a6[2] = 0x06;
-		b10_a6[3] = 0xcd;
-		b10_a6[4] = 0x13;
-		b10_a6[5] = 0xbb;
+		b10_a6[0] = 0x2F;
+		b10_a6[1] = 0xBA;
+		b10_a6[2] = 0x28;
+		b10_a6[3] = 0x9B;
+		b10_a6[4] = 0x28;
+		b10_a6[5] = 0x9D;
 		b10_a6[6] = 0x28;
-		b10_a6[7] = 0xba;
-		b10_a6[8] = 0x23;
-		b10_a6[9] = 0xa9;
-		b10_a6[10] = 0x1f;
-		b10_a6[11] = 0xa8;
-		b10_a6[12] = 0x2c;
-		b10_a6[13] = 0xc8;
-		iffreq = MAKE_IFFREQ_CONFIG(4.80);
+		b10_a6[7] = 0xA1;
+		b10_a6[8] = 0x29;
+		b10_a6[9] = 0xa5;
+		b10_a6[10] = 0x2a;
+		b10_a6[11] = 0xac;
+		b10_a6[12] = 0x29;
+		b10_a6[13] = 0xb5;
+		iffreq = MAKE_IFFREQ_CONFIG_XTAL(priv->xtal, 4.80);
 		b10_d7 = 0x00;
 		break;
 	case 7000000:
@@ -1945,7 +1947,7 @@ static int cxd2841er_sleep_tc_to_active_t2_band(struct cxd2841er_priv *priv,
 		b10_a6[11] = 0xA9;
 		b10_a6[12] = 0x21;
 		b10_a6[13] = 0xA5;
-		iffreq = MAKE_IFFREQ_CONFIG(4.2);
+		iffreq = MAKE_IFFREQ_CONFIG_XTAL(priv->xtal, 4.2);
 		b10_d7 = 0x02;
 		break;
 	case 6000000:
@@ -1970,7 +1972,7 @@ static int cxd2841er_sleep_tc_to_active_t2_band(struct cxd2841er_priv *priv,
 		b10_a6[11] = 0xE6;
 		b10_a6[12] = 0x23;
 		b10_a6[13] = 0xA4;
-		iffreq = MAKE_IFFREQ_CONFIG(3.6);
+		iffreq = MAKE_IFFREQ_CONFIG_XTAL(priv->xtal, 3.6);
 		b10_d7 = 0x04;
 		break;
 	case 5000000:
@@ -1995,7 +1997,7 @@ static int cxd2841er_sleep_tc_to_active_t2_band(struct cxd2841er_priv *priv,
 		b10_a6[11] = 0xE6;
 		b10_a6[12] = 0x23;
 		b10_a6[13] = 0xA4;
-		iffreq = MAKE_IFFREQ_CONFIG(3.6);
+		iffreq = MAKE_IFFREQ_CONFIG_XTAL(priv->xtal, 3.6);
 		b10_d7 = 0x06;
 		break;
 	case 1712000:
@@ -2020,7 +2022,7 @@ static int cxd2841er_sleep_tc_to_active_t2_band(struct cxd2841er_priv *priv,
 		b10_a6[11] = 0x9D;
 		b10_a6[12] = 0x29;
 		b10_a6[13] = 0x99;
-		iffreq = MAKE_IFFREQ_CONFIG(3.5);
+		iffreq = MAKE_IFFREQ_CONFIG_XTAL(priv->xtal, 3.5);
 		b10_d7 = 0x03;
 		break;
 	default:
@@ -2585,6 +2587,70 @@ static int cxd2841er_sleep_tc_to_active_t(struct cxd2841er_priv *priv,
 	return 0;
 }
 
+static int cxd2841er_sleep_tc_to_active_t2_24mhz(struct cxd2841er_priv *priv)
+{
+	u8 data[3] = { 0x0 };
+
+	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
+
+	/* Set SLV-T Bank */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x11);
+	data[0] = 0xEB;
+	data[1] = 0x03;
+	data[2] = 0x3B;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0x33, data, 3);
+
+	/* Set SLV-T Bank */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x20);
+	data[0] = 0x5E;
+	data[1] = 0x5E;
+	data[2] = 0x47;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0x95, data, 3);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x99, 0x18);
+
+	data[0] = 0x3F;
+	data[1] = 0xFF;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0xD9, data, 2);
+
+	/* Set SLV-T Bank */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x24);
+	data[0] = 0x0B;
+	data[1] = 0x72;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0x34, data, 2);
+	data[0] = 0x93;
+	data[1] = 0xF3;
+	data[2] = 0x00;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0xD2, data, 3);
+	data[0] = 0x05;
+	data[1] = 0xB8;
+	data[2] = 0xD8;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0xDD, data, 3);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0xE0, 0x00);
+
+	/* Set SLV-T Bank */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x25);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0xED, 0x60);
+
+	/* Set SLV-T Bank */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x27);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0xFA, 0x34);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x2B);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x4B, 0x2F);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x9E, 0x0E);
+
+	/* Set SLV-T Bank */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x2D);
+	data[0] = 0x89;
+	data[1] = 0x89;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0x24, data, 2);
+
+	/* Set SLV-T Bank */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x5E);
+	data[0] = 0x24;
+	data[1] = 0x95;
+	cxd2841er_write_regs(priv, I2C_SLVT, 0x8C, data, 2);
+}
+
 static int cxd2841er_sleep_tc_to_active_t2(struct cxd2841er_priv *priv,
 					   u32 bandwidth)
 {
@@ -2633,6 +2699,10 @@ static int cxd2841er_sleep_tc_to_active_t2(struct cxd2841er_priv *priv,
 	/* Set SLV-T Bank : 0x2b */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x2b);
 	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0x76, 0x20, 0x70);
+	/* Set SLV-T Bank : 0x23 */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x23);
+	/* L1 Control setting */
+	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xe6, 0x00, 0x03);
 	/* Set SLV-T Bank : 0x00 */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x00);
 	/* TSIF setting */
@@ -2651,6 +2721,11 @@ static int cxd2841er_sleep_tc_to_active_t2(struct cxd2841er_priv *priv,
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x2b);
 	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0x11, 0x20, 0x3f);
 
+	/* 24MHz Xtal setting */
+	if (priv->xtal == SONY_XTAL_24000) {
+		cxd2841er_sleep_tc_to_active_t2_24mhz(priv);
+	}
+
 	cxd2841er_sleep_tc_to_active_t2_band(priv, bandwidth);
 
 	/* Set SLV-T Bank : 0x00 */
@@ -2658,7 +2733,8 @@ static int cxd2841er_sleep_tc_to_active_t2(struct cxd2841er_priv *priv,
 	/* Disable HiZ Setting 1 */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x80, 0x28);
 	/* Disable HiZ Setting 2 */
-	cxd2841er_write_reg(priv, I2C_SLVT, 0x81, 0x00);
+	/* TODO: this only for Serial TS, output from TSDATA0 */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x81, 0xFE );
 	priv->state = STATE_ACTIVE_TC;
 	return 0;
 }
