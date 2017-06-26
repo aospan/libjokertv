@@ -3011,6 +3011,19 @@ static int cxd2841er_set_frontend_tc(struct dvb_frontend *fe)
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
 	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
+	/* SONY_DEMOD_CONFIG_IFAGCNEG = 1 */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x10);
+	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xcb, 0x40, 0x40);
+	/* SONY_DEMOD_CONFIG_IFAGC_ADC_FS = 0 */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0xcd, 0x50);
+
+	/* SONY_DEMOD_CONFIG_PARALLEL_SEL = 0 */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x00);
+	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x80, 0x80);
+
+	/* SONY_DEMOD_CONFIG_SER_DATA_ON_MSB = 0 */
+	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x00, 0x08);
+
 	if (p->delivery_system == SYS_DVBT) {
 		priv->system = SYS_DVBT;
 		switch (priv->state) {
@@ -3384,6 +3397,7 @@ static int cxd2841er_init_tc(struct dvb_frontend *fe)
 	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
 	cxd2841er_shutdown_to_sleep_tc(priv);
 
+#if 0
 	/* SONY_DEMOD_CONFIG_IFAGCNEG = 1 */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x10);
 	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xcb, 0x40, 0x40);
@@ -3396,6 +3410,7 @@ static int cxd2841er_init_tc(struct dvb_frontend *fe)
 
 	/* SONY_DEMOD_CONFIG_SER_DATA_ON_MSB = 0 */
 	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x00, 0x08);
+#endif
 
 	return 0;
 }
