@@ -985,6 +985,8 @@ static int cxd2841er_read_status_t_t2(struct cxd2841er_priv *priv,
 		cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x20);
 	}
 	cxd2841er_read_reg(priv, I2C_SLVT, 0x10, &data);
+	dev_dbg(&priv->i2c->dev,
+			"%s(): data=0x%x\n", __func__, data);
 	if ((data & 0x07) == 0x07) {
 		dev_dbg(&priv->i2c->dev,
 			"%s(): invalid hardware state detected\n", __func__);
@@ -3064,7 +3066,7 @@ static int cxd2841er_set_frontend_tc(struct dvb_frontend *fe)
 	if (fe->ops.i2c_gate_ctrl)
 		fe->ops.i2c_gate_ctrl(fe, 0);
 	cxd2841er_tune_done(priv);
-	timeout = 2500;
+	timeout = p->delivery_system == SYS_DVBT2 ? 3500 : 2500;
 	while (timeout > 0) {
 		ret = cxd2841er_read_status_tc(fe, &status);
 		if (ret)
