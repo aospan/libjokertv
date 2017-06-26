@@ -833,10 +833,14 @@ static int cxd2841er_shutdown_to_sleep_tc(struct cxd2841er_priv *priv)
 	/* TADC Bias On */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x43, 0x0a);
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x41, 0x0a);
+#if 0
+	// aospan: actually this code doesn't used
 	/* SADC Bias On */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x63, 0x16);
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x65, 0x27);
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x69, 0x06);
+#endif
+
 	priv->state = STATE_SLEEP_TC;
 	return 0;
 }
