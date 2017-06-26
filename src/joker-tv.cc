@@ -40,13 +40,16 @@ void * print_stat(void *data)
 	int signal = 0;
 	struct tune_info_t * info = (struct tune_info_t *)data;
 
+	if (info->refresh <= 0)
+		info->refresh = 1000; /* 1 sec refresh by default */
+
 	while(1) {
 		status = read_status(info);
 		ucblocks = read_ucblocks(info);
 		signal = read_signal(info);
 		printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d\n", 
-				status, status ? "NOLOCK" : "LOCK", signal, 100*(int)signal/0xFFFF, ucblocks );
-		sleep(10);
+				status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF, ucblocks );
+		usleep(1000 * info->refresh);
 	}
 }
 
@@ -84,6 +87,7 @@ int main (int argc, char **argv)
 	FILE * out = NULL;
 	char filename[FNAME_LEN] = "out.ts";
 	char fwfilename[FNAME_LEN] = "";
+	int signal = 0;
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
@@ -190,6 +194,7 @@ int main (int argc, char **argv)
 		info.frequency = freq;
 		info.symbol_rate = sr;
 		info.modulation = (joker_fe_modulation)mod;
+		info.refresh = 500;
 
 		printf("TUNE start \n");
 		if (tune(joker, &info))
@@ -197,13 +202,14 @@ int main (int argc, char **argv)
 		printf("TUNE done \n");
 
 		while (1) {
-			status = read_status(&info);
-			printf("WAITING LOCK. status=%d error=%s \n", status, strerror(status) );
+			printf("WAITING LOCK.\n");
+			print_stat(&info);
 			fflush(stdout);
 			if (!status)
 				break;
 			sleep(1);
 		}
+		info.refresh = 3000; /* less heavy refresh */
 
 		/* start status printing thread */
 		if(pthread_create(&stat_thread, NULL, print_stat, &info)) {

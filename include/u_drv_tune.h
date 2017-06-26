@@ -62,6 +62,7 @@ struct tune_info_t {
   uint32_t                     symbol_rate;
   uint32_t                     bandwidth_hz;   /* 0 = AUTO */
   void * fe_opaque;
+  int				refresh; /* status refresh interval in ms */
 };
 
 #ifdef __cplusplus

@@ -1687,9 +1687,9 @@ static u16 cxd2841er_read_agc_gain_t_t2(struct cxd2841er_priv *priv,
 		priv, I2C_SLVT, 0x00, (delsys == SYS_DVBT ? 0x10 : 0x20));
 	cxd2841er_read_regs(priv, I2C_SLVT, 0x26, data, 2);
 	dev_dbg(&priv->i2c->dev,
-			"%s(): AGC value=%u\n",
+			"%s(): AGC value=%u ret=%u\n",
 			__func__, (((u16)data[0] & 0x0F) << 8) |
-			(u16)(data[1] & 0xFF));
+			(u16)(data[1] & 0xFF), ((((u16)data[0] & 0x0F) << 8) | (u16)(data[1] & 0xFF)) << 4);
 	return ((((u16)data[0] & 0x0F) << 8) | (u16)(data[1] & 0xFF)) << 4;
 }
 
@@ -3456,6 +3456,7 @@ static struct  dvb_frontend_ops cxd2841er_dvbt_t2_ops = {
 	.set_frontend = cxd2841er_set_frontend_tc,
 	.get_frontend = cxd2841er_get_frontend,
 	.read_status = cxd2841er_read_status_tc,
+	.read_signal_strength = cxd2841er_read_signal_strength,
 	.tune = cxd2841er_tune_tc,
 	.i2c_gate_ctrl = cxd2841er_i2c_gate_ctrl,
 	.get_frontend_algo = cxd2841er_get_algo
