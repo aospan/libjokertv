@@ -838,23 +838,23 @@ static int cxd2841er_tune_done(struct cxd2841er_priv *priv)
 /* Configure TS */
 static int cxd2841er_set_ts_mode(struct cxd2841er_priv *priv)
 {
-  uint8_t serial_ts = 0;
+	uint8_t serial_ts = 0;
 
-  dev_dbg(&priv->i2c->dev, "%s() TS mode=%d", __func__, priv->config->ts_mode);
+	dev_dbg(&priv->i2c->dev, "%s() TS mode=%d", __func__, priv->config->ts_mode);
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x00);
-  if (priv->config->ts_mode == SONY_TS_SERIAL){
-    cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x80, 0x80);
-    /* Serial output pin data[0] */
-    cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x00, 0x08);
+	if (priv->config->ts_mode == SONY_TS_SERIAL){
+		cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x80, 0x80);
+		/* Serial output pin data[0] */
+		cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x00, 0x08);
 		dev_dbg(&priv->i2c->dev, "%s() TS serial", __func__);
-  } else {
-    cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x00, 0x80);
+	} else {
+		cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x00, 0x80);
 		dev_dbg(&priv->i2c->dev, "%s() TS parallel", __func__);
-  }
+	}
 	cxd2841er_read_reg(priv, I2C_SLVT, 0xc4, &serial_ts);
-  dev_dbg(&priv->i2c->dev, "%s() TS reg=0x%x", __func__, serial_ts);
+	dev_dbg(&priv->i2c->dev, "%s() TS reg=0x%x", __func__, serial_ts);
 
-  return 0;
+	return 0;
 }
 
 static void cxd2841er_set_ts_clock_mode(struct cxd2841er_priv *priv,
@@ -864,7 +864,7 @@ static void cxd2841er_set_ts_clock_mode(struct cxd2841er_priv *priv,
 
 	dev_dbg(&priv->i2c->dev, "%s() system=%d\n", __func__, system);
 
-  cxd2841er_set_ts_mode(priv);
+	cxd2841er_set_ts_mode(priv);
 
 	/* Set SLV-T Bank : 0x00 */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x00);
@@ -872,17 +872,17 @@ static void cxd2841er_set_ts_clock_mode(struct cxd2841er_priv *priv,
 	cxd2841er_read_reg(priv, I2C_SLVT, 0xd3, &ts_rate_ctrl_off);
 	cxd2841er_read_reg(priv, I2C_SLVT, 0xde, &ts_in_off);
 	dev_dbg(&priv->i2c->dev, "%s(): ser_ts=0x%02x rate_ctrl_off=0x%02x in_off=0x%02x\n",
-		__func__, serial_ts, ts_rate_ctrl_off, ts_in_off);
+			__func__, serial_ts, ts_rate_ctrl_off, ts_in_off);
 
-  /* TODO */
-  /* Serial TS, so set serial TS specific registers */
-  /* 0x2 - High Freq, half rate
-   * 0x2 - High Freq, half rate
-   * 0x1 - High Freq, full rate 
-   */
-  /* serialClkMode */
+	/* TODO */
+	/* Serial TS, so set serial TS specific registers */
+	/* 0x2 - High Freq, half rate
+	 * 0x2 - High Freq, half rate
+	 * 0x1 - High Freq, full rate 
+	 */
+	/* serialClkMode */
 	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x01, 0x03);
-  /* serialDutyMode */
+	/* serialDutyMode */
 	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xd1, 0x01, 0x03);
 
 

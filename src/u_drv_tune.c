@@ -107,7 +107,7 @@ void __dynamic_dev_dbg(const struct device *dev, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	// vprintf( fmt, args );
+	jdebug_va( fmt, args );
 	va_end(args);
 	return;
 }
@@ -423,6 +423,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	fe->dtv_property_cache.frequency = info->frequency; 
 	fe->dtv_property_cache.modulation = info->modulation;
 	fe->dtv_property_cache.symbol_rate = info->symbol_rate;
+	fe->dtv_property_cache.stream_id = 0; /* TODO: selection for DVB-T2 */
 
 	/* enable LNB */
 	if (need_lnb) {

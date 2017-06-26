@@ -12,26 +12,22 @@
 #ifndef _JOKER_TV
 #define _JOKER_TV 1
 
-/* TODO: debug system */
-// #define DBG
-#ifdef DBG
-#define jdebug(...) printf(__VA_ARGS__);
-#else
-#define jdebug(...) {};
-#endif
-
 #define FNAME_LEN 512
 
 /* main pointer to Joker TV */
 struct joker_t {
   void * libusb_opaque;
   void * i2c_opaque;
+  int verbose;
   int libusb_verbose;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* simple logging */
+void jdebug(const char *fmt, ...);
 
 /* open Joker TV on USB
  * return negative error code if fail

@@ -12,9 +12,32 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <joker_tv.h>
 #include <joker_fpga.h>
+
+static int jverbose = 0;
+
+/* simple logging */
+void jdebug(const char *fmt, ...)
+{
+	if(jverbose) {
+		va_list args;
+		va_start(args, fmt);
+		vprintf( fmt, args );
+		va_end(args);
+	}
+	return;
+}
+
+void jdebug_va(const char *fmt, va_list args) 
+{
+	if(jverbose) {
+		vprintf( fmt, args );
+	}
+	return;
+}
 
 /* USB part */
 /* open usb device
@@ -33,6 +56,8 @@ int joker_open(struct joker_t *joker)
 
 	if (!joker)
 		return EINVAL;
+
+	jverbose = joker->verbose;
 
 	ret = libusb_init(NULL);
 	if (ret < 0) {

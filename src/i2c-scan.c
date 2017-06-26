@@ -18,6 +18,9 @@ int main() {
 	int ret = 0;
 	struct joker_t joker;
 
+	joker.verbose = 0;
+	joker.libusb_verbose = 0;
+
 	if ((ret = joker_open(&joker)))
 		return ret;
 

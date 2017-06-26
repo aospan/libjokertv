@@ -66,6 +66,7 @@ void show_help() {
 	printf("	-b bandwidth	Bandwidth in Hz. Example: 8000000\n");
 	printf("	-o filename	Output TS filename. Default: out.ts\n");
 	printf("	-t		enable TS generator. Default: disabled\n");
+	printf("	-v		show debug messages. Default: disabled\n");
 	printf("	-u level	Libusb verbose level (0 - less, 4 - more verbose). Default: 0\n");
 	printf("	-w filename	Update firmware on flash. Default: none\n");
 
@@ -94,7 +95,7 @@ int main (int argc, char **argv)
 		return ENOMEM;
 	memset(joker, 0, sizeof(struct joker_t));
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:v")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -117,6 +118,9 @@ int main (int argc, char **argv)
 				break;
 			case 'u':
 				joker->libusb_verbose = atoi(optarg);
+				break;
+			case 'v':
+				joker->verbose = 1;
 				break;
 			case 'o':
 				strncpy((char*)filename, optarg, FNAME_LEN);
