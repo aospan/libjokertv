@@ -804,9 +804,27 @@ static int cxd2841er_shutdown_to_sleep_tc(struct cxd2841er_priv *priv)
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x00, 0x00);
 	/* Set demod SW reset */
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x10, 0x01);
-	/* Set X'tal clock to 20.5Mhz */
+	/* Select ADC clock mode */
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x13, 0x00);
-	cxd2841er_write_reg(priv, I2C_SLVX, 0x14, 0x00);
+
+	switch (priv->xtal) {
+	case SONY_XTAL_20500:
+		cxd2841er_write_reg(priv, I2C_SLVX, 0x14, 0x00);
+		break;
+	case SONY_XTAL_24000:
+		/* Select demod frequency */
+		cxd2841er_write_reg(priv, I2C_SLVX, 0x12, 0x00);
+		cxd2841er_write_reg(priv, I2C_SLVX, 0x14, 0x03);
+		break;
+	case SONY_XTAL_41000:
+		cxd2841er_write_reg(priv, I2C_SLVX, 0x14, 0x01);
+		break;
+        default:
+                dev_dbg(&priv->i2c->dev, "%s(): invalid demod xtal %d\n",
+                                __func__, priv->xtal);
+                return -EINVAL;
+        }
+
 	/* Clear demod SW reset */
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x10, 0x00);
 	usleep_range(1000, 2000);
