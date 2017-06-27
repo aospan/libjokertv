@@ -3476,6 +3476,7 @@ static struct dvb_frontend *cxd2841er_attach(struct cxd2841er_config *cfg,
 		"%s(): I2C adapter %p SLVX addr %x SLVT addr %x\n",
 		__func__, priv->i2c,
 		priv->i2c_addr_slvx, priv->i2c_addr_slvt);
+#if 0
 	chip_id = cxd2841er_chip_id(priv);
 	if (chip_id != CXD2841ER_CHIP_ID && chip_id != CXD2854ER_CHIP_ID) {
 		dev_err(&priv->i2c->dev, "%s(): invalid chip ID 0x%02x\n",
@@ -3486,6 +3487,7 @@ static struct dvb_frontend *cxd2841er_attach(struct cxd2841er_config *cfg,
 	}
 	dev_info(&priv->i2c->dev, "%s(): chip ID 0x%02x OK.\n",
 		__func__, chip_id);
+#endif
 	return &priv->frontend;
 }
 

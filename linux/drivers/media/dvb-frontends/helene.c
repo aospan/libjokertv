@@ -428,9 +428,9 @@ static int helene_enter_power_save(struct helene_priv *priv)
 		return 0;
 
 	/* Standby setting for internal logic block */
-	data[0] = 0x00;
+	data[0] = 0xC0;
 	/* Standby setting for CPU */
-	data[1] = 0xC0;
+	data[1] = 0x00;
 	helene_write_regs(priv, 0x87, data, 2);
 
 	priv->state = STATE_SLEEP;
