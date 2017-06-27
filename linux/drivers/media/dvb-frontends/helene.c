@@ -942,8 +942,8 @@ static int helene_x_pon(struct helene_priv *priv)
 	data[0] = 0x18; /* xtal 24 MHz */
 	data[1] = (uint8_t)(0x80 | (0x04 & 0x1F)); /* 4 x 25 = 100uA */
 	data[2] = (uint8_t)(0x80 | (0x26 & 0x7F)); /* 38 x 0.25 = 9.5pF */
-	data[3] = 0x80; /* REFOUT signal output 500mVpp */
-	//data[3] = 0x83; /* REFOUT signal output 800mVpp */
+	// data[3] = 0x80; /* REFOUT signal output 500mVpp */
+	data[3] = 0x83; /* REFOUT signal output 800mVpp */
 	data[4] = 0x00; /* GPIO settings */
 	data[5] = 0x00; /* GPIO settings */
 	data[6] = 0xC4; /* Clock enable for internal logic block */
