@@ -194,22 +194,32 @@ int main (int argc, char **argv)
 		info.frequency = freq;
 		info.symbol_rate = sr;
 		info.modulation = (joker_fe_modulation)mod;
-		info.refresh = 500;
+		info.refresh = 3000; /* less heavy refresh */
 
 		printf("TUNE start \n");
 		if (tune(joker, &info))
 			return -1;
 		printf("TUNE done \n");
 
+		i = 0;
 		while (1) {
-			printf("WAITING LOCK.\n");
-			print_stat(&info);
-			fflush(stdout);
-			if (!status)
+			i++;
+			status = read_status(&info);
+			signal = read_signal(&info);
+			if(!(i%10)) {
+				printf("Waiting lock. status=%d (%s) signal=%d (%d %%) \n", 
+						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF);
+				fflush(stdout);
+			}
+			if (!status) {
+				// LOCKED !
+				printf("status=%d (%s) signal=%d (%d %%) \n", 
+						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF);
+				fflush(stdout);
 				break;
-			sleep(1);
+			}
+			usleep(100*1000);
 		}
-		info.refresh = 3000; /* less heavy refresh */
 
 		/* start status printing thread */
 		if(pthread_create(&stat_thread, NULL, print_stat, &info)) {
