@@ -2029,7 +2029,7 @@ static int cxd2841er_sleep_tc_to_active_t2_band(struct cxd2841er_priv *priv,
 		return -EINVAL;
 	}
 	/* Set SLV-T Bank : 0x20 */
-	cxd2841er_write_reg(priv, I2C_SLVX, 0x00, 0x20);
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x20);
 	cxd2841er_write_regs(priv, I2C_SLVT, 0x9f, b20_9f, sizeof(b20_9f));
 	/* Set SLV-T Bank : 0x27 */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x27);
