@@ -422,15 +422,16 @@ static int helene_dump_regs(struct helene_priv *priv)
 
 static int helene_enter_power_save(struct helene_priv *priv)
 {
+	u8 data[MAX_WRITE_REGSIZE];
 	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
 	if (priv->state == STATE_SLEEP)
 		return 0;
 
-	/* Standby setting for CPU */
-	helene_write_reg(priv, 0x88, 0x0);
-
 	/* Standby setting for internal logic block */
-	helene_write_reg(priv, 0x87, 0xC0);
+	data[0] = 0x00;
+	/* Standby setting for CPU */
+	data[1] = 0xC0;
+	helene_write_regs(priv, 0x87, data, 2);
 
 	priv->state = STATE_SLEEP;
 	return 0;
@@ -438,15 +439,16 @@ static int helene_enter_power_save(struct helene_priv *priv)
 
 static int helene_leave_power_save(struct helene_priv *priv)
 {
+	u8 data[MAX_WRITE_REGSIZE];
 	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
 	if (priv->state == STATE_ACTIVE)
 		return 0;
 
 	/* Standby setting for internal logic block */
-	helene_write_reg(priv, 0x87, 0xC4);
-
+	data[0] = 0xC4;
 	/* Standby setting for CPU */
-	helene_write_reg(priv, 0x88, 0x40);
+	data[1] = 0x40;
+	helene_write_regs(priv, 0x87, data, 2);
 
 	priv->state = STATE_ACTIVE;
 	return 0;

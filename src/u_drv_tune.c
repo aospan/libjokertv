@@ -344,6 +344,8 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 		return ret;
 
+	msleep(50);
+
 	/* choose TS input */
 	buf[0] = J_CMD_TS_INSEL_WRITE;
 	buf[1] = input;
