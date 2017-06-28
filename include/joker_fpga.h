@@ -75,7 +75,7 @@
 #define J_CMD_VERSION		0 /* return fw version */				
 #define J_CMD_I2C_WRITE		10 /* i2c read/write */				
 #define	J_CMD_I2C_READ		11
-#define	J_CMD_RESET_CTRL_WRITE	12 /* reset control register  r/w */
+#define	J_CMD_RESET_CTRL_WRITE	12 /* reset control register  r/w. see note below */
 #define	J_CMD_RESET_CTRL_READ	13
 #define	J_CMD_TS_INSEL_WRITE	14 /* ts input select */
 #define	J_CMD_TS_INSEL_READ	15
@@ -85,6 +85,21 @@
 #define	J_CMD_CI_READ_MEM	21 /* 0x15 CI common interfce */
 #define	J_CMD_CI_WRITE_MEM	22 /* 0x16 CI common interfce */
 #define	J_CMD_SPI		30 /* SPI bus access */
+
+
+/* J_CMD_RESET_CTRL_WRITE
+ * '1' - mean in reset state
+ * '0' - mean in unreset state
+ * bit:
+ *  7 - Sony tuner i2c gate
+ *  6 - CI power
+ *  5 - 5V power for TERR antenna
+ *  4 - USB phy (always on ! )
+ *  3 - Altobeam demod
+ *  2 - LG demod
+ *  1 - Sony tuner
+ *  0 - Sony demod
+ * Note: 5V tps for TERR antenna disabled by default. Can cause shorts with passive antenna */
 
 /* limited by usb transfer size. 512 for bulk, 1024 for isoc */
 #define JCMD_BUF_LEN 512

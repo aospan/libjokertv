@@ -65,7 +65,8 @@ void show_help() {
 	printf("	-s symbol_rate	Symbol rate. Options: 0-AUTO. Example: 20000000\n");
 	printf("	-b bandwidth	Bandwidth in Hz. Example: 8000000\n");
 	printf("	-o filename	Output TS filename. Default: out.ts\n");
-	printf("	-t		enable TS generator. Default: disabled\n");
+	printf("	-t		Enable TS generator. Default: disabled\n");
+	printf("	-n		Disable TS data processing. Default: enabled\n");
 	printf("	-u level	Libusb verbose level (0 - less, 4 - more verbose). Default: 0\n");
 	printf("	-w filename	Update firmware on flash. Default: none\n");
 
@@ -88,13 +89,14 @@ int main (int argc, char **argv)
 	char filename[FNAME_LEN] = "out.ts";
 	char fwfilename[FNAME_LEN] = "";
 	int signal = 0;
+	int disable_data = 0;
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
 		return ENOMEM;
 	memset(joker, 0, sizeof(struct joker_t));
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:n")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -111,6 +113,9 @@ int main (int argc, char **argv)
 				break;
 			case 'b':
 				bw = atoi(optarg);
+				break;
+			case 'n':
+				disable_data = 1;
 				break;
 			case 't':
 				tsgen = 1;
@@ -211,8 +216,7 @@ int main (int argc, char **argv)
 						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF);
 				fflush(stdout);
 			}
-			if (!status) {
-				// LOCKED !
+			if (!status /* LOCKED */) {
 				printf("status=%d (%s) signal=%d (%d %%) \n", 
 						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF);
 				fflush(stdout);
@@ -226,6 +230,11 @@ int main (int argc, char **argv)
 			fprintf(stderr, "Error creating status thread\n");
 			return -1;
 		}
+	}
+
+	while(disable_data) {
+		info.refresh = 1000; /* more often refresh */
+		sleep(3600);
 	}
 
 	/* start TS collection and save to file */
