@@ -35,7 +35,7 @@ endif()
 #we should build our own libusb with our patches for Isoc transfers
 include(ExternalProject)
 ExternalProject_Add(libusb
-	GIT_REPOSITORY https://github.com/aospan/libusb.git
+	GIT_REPOSITORY https://github.com/philemonf/libusb.git
 	CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure
 	UPDATE_COMMAND ""
 	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
