@@ -83,7 +83,7 @@ void record_callback(struct libusb_transfer *transfer)
 		pool->start_time = getus();
 	}
 
-	jdebug("NUM num_iso_packets=%d \n", transfer->num_iso_packets);
+	jdebug("NUM num_iso_packets=%d transfer->status=0x%x\n", transfer->num_iso_packets, transfer->status);
 	// copy data and 
 	// return USB ISOC ASAP (can't wait here) !
 	// otherwise we loose ISOC synchronization and get buffer overrun on device !
