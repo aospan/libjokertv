@@ -96,7 +96,7 @@ int main (int argc, char **argv)
 		return ENOMEM;
 	memset(joker, 0, sizeof(struct joker_t));
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:n")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:nh")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -129,6 +129,7 @@ int main (int argc, char **argv)
 			case 'w':
 				strncpy((char*)fwfilename, optarg, FNAME_LEN);
 				break;
+			case 'h':
 			default:
 				show_help();
 		}
