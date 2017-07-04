@@ -35,7 +35,7 @@ endif()
 #we should build our own libusb with our patches for Isoc transfers
 include(ExternalProject)
 ExternalProject_Add(libusb
-	GIT_REPOSITORY https://github.com/aospan/libusb.git
+	GIT_REPOSITORY https://github.com/philemonf/libusb.git
 	CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure
 	UPDATE_COMMAND ""
 	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
@@ -122,7 +122,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	include(InstallRequiredSystemLibraries)
 	FIND_FILE(WINPTHREAD_LIB libwinpthread-1.dll)
 	INSTALL(TARGETS jokertv DESTINATION "bin")
-	INSTALL(FILES ${PC_LIBUSB_LIBDIR}/libusb-1.0${CMAKE_SHARED_LIBRARY_SUFFIX}* ${WINPTHREAD_LIB} DESTINATION "bin")
+	INSTALL(FILES ${PC_LIBUSB_LIBDIR}/libusb-1.0${CMAKE_SHARED_LIBRARY_SUFFIX} ${WINPTHREAD_LIB} DESTINATION "bin")
 	install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION programs COMPONENT applications)
 endif()
 
