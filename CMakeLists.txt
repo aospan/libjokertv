@@ -29,7 +29,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET(CMAKE_INSTALL_RPATH "@loader_path/../lib")
 	install(FILES ${PC_LIBUSB_LIBDIR}/libusb-1.0.0${CMAKE_SHARED_LIBRARY_SUFFIX} DESTINATION lib)
 else()
-	set(PC_LIBUSB_INSTALL )
+	set(PC_LIBUSB_INSTALL make install)
 endif()
 
 #we should build our own libusb with our patches for Isoc transfers
