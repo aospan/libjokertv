@@ -70,7 +70,7 @@ set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
 
 #install header files
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include DESTINATION include
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
           FILES_MATCHING PATTERN "*.h")
 
 #combined shared lib
