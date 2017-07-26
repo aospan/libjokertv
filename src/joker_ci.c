@@ -19,29 +19,7 @@
 #include <joker_tv.h>
 #include <joker_ci.h>
 #include <joker_fpga.h>
-
-void hexdump(unsigned char * buf, int size)
-{
-	int i = 0, printed = 0;
-	unsigned char txt[512] = { 0 };
-	unsigned char * ptr = txt;
-
-	for(i = 0; i < size; i ++){
-		if (i && !(i%8))
-			printf("   ");
-		if (i && !(i%16)) {
-			printf("  %s\n", txt, ptr, txt);
-			ptr = txt;
-			printf("%.8x  ", i);
-		}
-		printf("%.2x ", buf[i]);
-		printed = sprintf(ptr, "%c", isprint(buf[i]) ? buf[i] : '.' );
-		if (printed > 0)
-			ptr += printed;
-	}
-
-	printf("\n");
-}
+#include <joker_utils.h>
 
 int joker_ci(struct joker_t * joker)
 {
