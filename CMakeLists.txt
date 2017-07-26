@@ -14,7 +14,10 @@ find_package( PkgConfig )
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	find_library(LIBIOKit IOKit)
 	find_library(LIBCoreFoundation CoreFoundation)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	find_library(LIBUDEV udev)
 endif()
+
 
 # Add libusb
 # we should build our own libusb with patches for Isoc transfers
@@ -22,7 +25,7 @@ endif()
 include(ExternalProject)
 ExternalProject_Add(libusb
 	GIT_REPOSITORY https://github.com/philemonf/libusb.git
-	CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure --enable-static
+	CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure --enable-static --with-pic
 	UPDATE_COMMAND ""
 	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
 	BUILD_IN_SOURCE 1
@@ -34,7 +37,7 @@ set(PC_LIBUSB_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb/li
 include(ExternalProject)
 ExternalProject_Add(libdvbpsi
 	GIT_REPOSITORY http://git.videolan.org/git/libdvbpsi.git
-	CONFIGURE_COMMAND ./bootstrap COMMAND ./configure
+	CONFIGURE_COMMAND ./bootstrap COMMAND ./configure --enable-static --with-pic
 	UPDATE_COMMAND ""
 	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
 	BUILD_IN_SOURCE 1
@@ -69,7 +72,8 @@ set(KOPTIONS
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${PC_LIBDVBPSI_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
-set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES} ${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation})
+set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES}
+	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBUDEV})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
