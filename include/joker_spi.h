@@ -9,7 +9,6 @@
  */
 
 #include <stdio.h>
-#include <libusb.h>
 #include "joker_tv.h"
 
 #ifndef _JOKER_SPI

@@ -7,7 +7,6 @@
  */
 
 #include <stdio.h>
-#include <libusb.h>
 
 #ifndef _JOKER_TV
 #define _JOKER_TV 1

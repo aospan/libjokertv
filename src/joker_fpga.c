@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <joker_tv.h>
 #include <joker_fpga.h>
+#include <libusb.h>
 
 /* USB part */
 /* open usb device

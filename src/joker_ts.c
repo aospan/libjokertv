@@ -21,9 +21,9 @@
 #include <u_drv_data.h>
 
 #include <stdbool.h>
-#include <dvbpsi/dvbpsi.h>
-#include <dvbpsi/psi.h>
-#include <dvbpsi/pat.h>
+#include <dvbpsi.h>
+#include <psi.h>
+#include <pat.h>
 
 static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 {

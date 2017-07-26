@@ -8,56 +8,39 @@ set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 find_package( Threads REQUIRED)
+find_package( PkgConfig )
 
-# Search libusb
-find_package(PkgConfig)
-#pkg_check_modules(PC_LIBUSB libusb-1.0)
-#pkg_check_modules(PC_LIBDVBPSI libdvbpsi)
-find_library(STATIC_LIBDVBPSI libdvbpsi.a)
-
-#Add libusb
-#we should build our own libusb with our patches for Isoc transfers
-set(PC_LIBUSB_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb//libusb")
-set(PC_LIBUSB_LIBDIR "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb/libusb/.libs/")
-set(PC_LIBUSB_LIBRARIES "libusb-1.0${CMAKE_SHARED_LIBRARY_SUFFIX}")
-set(PC_LIBUSB_LIBRARIES_FULL "${PC_LIBUSB_LIBDIR}/${PC_LIBUSB_LIBRARIES}")
-add_library(libusb_imported SHARED IMPORTED)
-set_target_properties(libusb_imported PROPERTIES IMPORTED_LOCATION ${PC_LIBUSB_LIBRARIES_FULL})
-install(FILES ${PC_LIBUSB_LIBRARIES_FULL} DESTINATION lib)
-
+# unser OSx we need some system libs for libusb functionality
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	set(PC_LIBUSB_INSTALL install_name_tool -id @rpath/libusb-1.0.dylib ${PC_LIBUSB_LIBRARIES_FULL})
-	#dmg image binary should has relative path under OSx
-	SET(CMAKE_INSTALL_RPATH "@loader_path/../lib")
-	install(FILES ${PC_LIBUSB_LIBDIR}/libusb-1.0.0${CMAKE_SHARED_LIBRARY_SUFFIX} DESTINATION lib)
-else()
-	set(PC_LIBUSB_INSTALL make install)
+	find_library(LIBIOKit IOKit)
+	find_library(LIBCoreFoundation CoreFoundation)
 endif()
 
-#we should build our own libusb with our patches for Isoc transfers
+# Add libusb
+# we should build our own libusb with patches for Isoc transfers
+# until it not accepted to mainline
 include(ExternalProject)
 ExternalProject_Add(libusb
 	GIT_REPOSITORY https://github.com/philemonf/libusb.git
-	CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure
+	CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure --enable-static
 	UPDATE_COMMAND ""
 	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
-	INSTALL_COMMAND ${PC_LIBUSB_INSTALL}
 	BUILD_IN_SOURCE 1
 	)
+set(PC_LIBUSB_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb//libusb")
+set(PC_LIBUSB_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb/libusb/.libs/libusb-1.0${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-#build libdvbpsi for TS processing
-#TODO: darwin change for PC_LIBDVBPSI_INSTALL
-#set(PC_LIBDVBPSI_INSTALL make install)
-
-#include(ExternalProject)
-#ExternalProject_Add(libdvbpsi
-#GIT_REPOSITORY http://git.videolan.org/git/libdvbpsi.git
-#CONFIGURE_COMMAND ./bootstrap COMMAND ./configure
-#UPDATE_COMMAND ""
-#BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
-#INSTALL_COMMAND ${PC_LIBDVBPSI_INSTALL}
-#BUILD_IN_SOURCE 1
-#)
+# build libdvbpsi for TS processing
+include(ExternalProject)
+ExternalProject_Add(libdvbpsi
+	GIT_REPOSITORY http://git.videolan.org/git/libdvbpsi.git
+	CONFIGURE_COMMAND ./bootstrap COMMAND ./configure
+	UPDATE_COMMAND ""
+	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
+	BUILD_IN_SOURCE 1
+	)
+set(PC_LIBDVBPSI_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/" "${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/tables/")
+set(PC_LIBDVBPSI_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/.libs/libdvbpsi${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 #set sources list
 SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
@@ -85,8 +68,8 @@ set(KOPTIONS
 	-include ./include/linux/types.h")
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
-set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
-set(EXT_LIBS ${PC_LIBUSB_LIBRARIES} ${STATIC_LIBDVBPSI})
+set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${PC_LIBDVBPSI_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
+set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES} ${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
@@ -95,26 +78,23 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
 #combined shared lib
 add_library (jokertv SHARED ${LINUX_SRC} ${JOKERTV_SRC})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
-set_target_properties(jokertv PROPERTIES LINK_FLAGS "-L${PC_LIBUSB_LIBDIR}")
 set_source_files_properties(${LINUX_SRC} PROPERTIES COMPILE_FLAGS ${KOPTIONS})
-target_link_libraries(jokertv ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES})
+target_link_libraries(jokertv ${EXT_LIBS})
 target_include_directories(jokertv PUBLIC ${INCLUDE_USER})
-add_dependencies(jokertv libusb)
+add_dependencies(jokertv libusb libdvbpsi)
 install(TARGETS jokertv DESTINATION lib)
 
 #simple program: tune and save TS to file
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
-set_target_properties(joker-tv PROPERTIES LINK_FLAGS "-L${PC_LIBUSB_LIBDIR}")
-target_link_libraries(joker-tv jokertv ${CMAKE_THREAD_LIBS_INIT} ${EXT_LIBS})
-add_dependencies(joker-tv libusb)
+target_link_libraries(joker-tv jokertv ${EXT_LIBS})
+add_dependencies(joker-tv libusb libdvbpsi)
 target_include_directories(joker-tv PUBLIC ${INCLUDE_USER})
 install(TARGETS joker-tv DESTINATION bin)
 
 #simple program to scan i2c bus
 add_executable(i2c-scan src/i2c-scan.c)
 set_target_properties(i2c-scan PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
-set_target_properties(i2c-scan PROPERTIES LINK_FLAGS "-L${PC_LIBUSB_LIBDIR}")
 target_include_directories(i2c-scan PUBLIC ${INCLUDE_USER})
 target_link_libraries(i2c-scan jokertv ${EXT_LIBS})
 install(TARGETS i2c-scan DESTINATION bin)
@@ -136,9 +116,6 @@ SET(CPACK_PACKAGE_VERSION_PATCH "0")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(CPACK_GENERATOR "DragNDrop;TGZ")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	INSTALL(FILES
-    ${PC_LIBUSB_LIBDIR}/libusb-1.0${CMAKE_SHARED_LIBRARY_SUFFIX}.0.1.0
-    DESTINATION "lib")
 	set(CPACK_GENERATOR "TGZ")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(CPACK_GENERATOR "NSIS;ZIP")
@@ -146,7 +123,6 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	include(InstallRequiredSystemLibraries)
 	FIND_FILE(WINPTHREAD_LIB libwinpthread-1.dll)
 	INSTALL(TARGETS jokertv DESTINATION "bin")
-	INSTALL(FILES ${PC_LIBUSB_LIBDIR}/libusb-1.0${CMAKE_SHARED_LIBRARY_SUFFIX} ${WINPTHREAD_LIB} DESTINATION "bin")
 	install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION programs COMPONENT applications)
 endif()
 

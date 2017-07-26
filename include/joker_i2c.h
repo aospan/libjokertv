@@ -7,7 +7,7 @@
  */
 
 #include <stdio.h>
-#include <libusb.h>
+#include <inttypes.h>
 #include <joker_tv.h>
 
 #ifndef _JOKER_I2C
