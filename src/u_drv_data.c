@@ -97,6 +97,7 @@ void record_callback(struct libusb_transfer *transfer)
 	node = malloc(sizeof(*node));
 	if(!node)
 		return;
+	memset(node, 0, sizeof(*node));
 
 	node->data = malloc(total_len + TS_SIZE);
 	if (!node->data)
@@ -289,12 +290,12 @@ int next_ts_off(unsigned char *buf, size_t size)
 		if (buf[off] == TS_SYNC && buf[off + TS_SIZE] == TS_SYNC)
 			return off;
 		off++;
-	}
+	 }
 
 	return -1;
 }
 
-int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data)
+int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data, int size)
 {
 	struct ts_node *node = NULL, *tmp = NULL;
 	int off = 0, len = 0, res_off = 0, pid = 0;
@@ -306,15 +307,17 @@ int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data)
 	list_for_each_entry_safe(node, tmp, &pool->ts_list, list)
 	{
 		ptr = node->data;
-		len = node->size;
-	
-		if ( (res_off + len) > TS_BUF_MAX_SIZE)
-			break;
 
-		while ((off = next_ts_off(ptr, len)) >= 0) {
-			ts_pkt = ptr + off;
-			if (ts_pkt[0] != TS_SYNC)
+		// nodes already aligned to TS_SIZE
+		for (off = node->read_off; off < node->size; off += TS_SIZE ){
+			// no more space in output buffer. stop
+			if ( (res_off + TS_SIZE) > size)
 				break;
+
+			ts_pkt = ptr + off;
+			// cannot use this data as TS
+			if (ts_pkt[0] != TS_SYNC)
+				continue; 
 
 			pid = (ts_pkt[1] & 0x1f)<<8 | ts_pkt[2]; 
 			if (pid == req_pid || req_pid == TS_WILDCARD_PID) {
@@ -322,11 +325,12 @@ int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data)
 				res_off += TS_SIZE;
 			}
 
-			ptr += off + TS_SIZE;
-			len = len - off - TS_SIZE;
+			node->read_off += TS_SIZE;
 		}
 
-		drop_ts_data(node);
+		// node fully processed. drop it
+		if (node->read_off == node->size)
+			drop_ts_data(node);
 	}
 
 	return res_off;

@@ -22,6 +22,7 @@ struct ts_node {
 	int counter;
 	unsigned char * data;
 	int size;
+	int read_off;
 	struct list_head list;
 };
 
@@ -70,7 +71,16 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool);
 int next_ts_off(unsigned char *buf, size_t size);
 struct ts_node * read_ts_data(struct big_pool_t * pool);
 void drop_ts_data(struct ts_node * node);
-int read_ts_data_pid(struct big_pool_t *pool, int pid, unsigned char *data);
+
+/* read TS data
+ * pid - desired PID. can be TS_WILDCARD_PID for all pids
+ * data - output buffer for data. should be allocated by caller and at least
+ * size bytes long
+ * size - maximum available space in data
+ *
+ * return - copied bytes into data (can be less than requested size or zero if
+ * no data available) */
+int read_ts_data_pid(struct big_pool_t *pool, int pid, unsigned char *data, int size);
 
 #ifdef __cplusplus
 }

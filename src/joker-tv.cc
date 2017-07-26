@@ -115,7 +115,7 @@ int main (int argc, char **argv)
 	int disable_data = 0;
 	struct ts_node * node = NULL;
 	unsigned char *res = NULL;
-	int res_len = 0;
+	int res_len = 0, read_once = 0;
 	struct list_head *programs = NULL;
 	struct program_t *program = NULL, *tmp = NULL;
 
@@ -299,12 +299,14 @@ int main (int argc, char **argv)
 	}
 
 	/* get raw TS and save it to output file */
-	res = (unsigned char*)malloc(TS_BUF_MAX_SIZE);
+	/* reading about 18K at once */
+	read_once = TS_SIZE * 100;
+	res = (unsigned char*)malloc(read_once);
 	if (!res)
 		return -1;
 
 	while(1) {
-		res_len = read_ts_data_pid(&pool, TS_WILDCARD_PID, res);
+		res_len = read_ts_data_pid(&pool, TS_WILDCARD_PID, res, read_once);
 
 		/* save to output file */
 		if (res_len > 0)

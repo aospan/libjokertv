@@ -95,7 +95,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 		goto out;
 
 	while(1) {
-		res_len = read_ts_data_pid(pool, 0x0, res);
+		res_len = read_ts_data_pid(pool, 0x0, res, TS_BUF_MAX_SIZE);
 
 		// printf("res_len=%d \n", res_len );
 		if (res_len > 0) {
