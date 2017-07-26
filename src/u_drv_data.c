@@ -26,6 +26,7 @@
 #include "joker_tv.h"
 #include "joker_fpga.h"
 #include "u_drv_data.h"
+#include "joker_utils.h"
 
 /* helper func 
  * get current time in usec */
@@ -68,6 +69,9 @@ void record_callback(struct libusb_transfer *transfer)
 	int remain = 0, to_write = 0;
 	int err_counter = 0;
 	int ret = 0;
+	struct ts_node * node = NULL;
+	int total_len = 0;
+	int off = 0, cnt = 0, ts_off = 0, len = 0;
 
 	/* update statistics */
 	if ( pool->pkt_count && !(pool->pkt_count%1000) ){
@@ -83,38 +87,86 @@ void record_callback(struct libusb_transfer *transfer)
 		pool->start_time = getus();
 	}
 
-	jdebug("NUM num_iso_packets=%d transfer->status=0x%x\n", transfer->num_iso_packets, transfer->status);
-	// copy data and 
-	// return USB ISOC ASAP (can't wait here) !
-	// otherwise we loose ISOC synchronization and get buffer overrun on device !
+	// fill TS list with received data
 	for(i = 0; i < transfer->num_iso_packets; i++) {
 		pkt = transfer->iso_packet_desc[i];
+		if (pkt.status == LIBUSB_TRANSFER_COMPLETED)
+			total_len += transfer->iso_packet_desc[i].actual_length;
+	}
+
+	node = malloc(sizeof(*node));
+	if(!node)
+		return;
+
+	node->data = malloc(total_len + TS_SIZE);
+	if (!node->data)
+		return;
+
+	node->size = 0;
+	node->counter = pool->node_counter++;
+
+	// traversal of ISOC packets and copy data to TS list
+	// data may be not aligned to TS_SIZE so we use "tail"
+	for(i = 0; i < transfer->num_iso_packets; i++) {
+		pkt = transfer->iso_packet_desc[i];
+		len = transfer->iso_packet_desc[i].actual_length;
 		pool->pkt_count++;
 
-		if (pkt.status == LIBUSB_TRANSFER_COMPLETED) {
+		if (pkt.status == LIBUSB_TRANSFER_COMPLETED && len > 0) {
 			pool->pkt_count_complete++;
-			jdebug("ISOC size=%d \n", transfer->iso_packet_desc[i].actual_length );
+			pool->bytes += len;
+			jdebug("ISOC size=%d \n", len );
 			if (buf = libusb_get_iso_packet_buffer(transfer, i)) {
-				pool->bytes += transfer->iso_packet_desc[i].actual_length;
-				remain = transfer->iso_packet_desc[i].actual_length;
-				while(remain > 0) {
-					pthread_mutex_lock(&pool->mux);
-					to_write = ((pool->write_ptr + remain) > pool->ptr_end) ? (pool->ptr_end - pool->write_ptr) : remain;
-					memcpy(pool->write_ptr, buf, to_write);
-					pool->write_ptr += to_write;
-					if(pool->write_ptr >= pool->ptr_end) {
-						// rollover ring buffer
-						pool->write_ptr = pool->ptr;
-					}
-					remain -= to_write;
-					pthread_mutex_unlock(&pool->mux);
+				if (buf[TS_SIZE - pool->tail_size] == TS_SYNC)
+					ts_off = TS_SIZE - pool->tail_size; // tail is ok. use it
+				else
+					ts_off = next_ts_off(buf, len);
+				jdebug("	ts_off=%d tail_size=%d\n", ts_off, pool->tail_size);
+				if (ts_off < 0)
+					break;
+
+				if ((ts_off + pool->tail_size) == TS_SIZE) {
+					jdebug("	 tail OK\n");
+					// tail from previous round is ok
+					// use it
+					memcpy(node->data + off, pool->tail, pool->tail_size);
+					off += pool->tail_size;
+
+					memcpy(node->data + off, buf, ts_off);
+					off += ts_off;
+
+					node->size = node->size + pool->tail_size + ts_off;
+					pool->tail_size = 0;
+				} else {
+					// just drop useless tail
+					jdebug("	 tail size=%d DROP\n", pool->tail_size);
+					pool->tail_size = 0;
 				}
-				pthread_cond_signal(&pool->cond); // wake processing thread
+
+				// process rest of the buffer
+				cnt = (len - ts_off)/TS_SIZE;
+				jdebug("	 cnt=%d\n", cnt);
+
+				memcpy(node->data + off, buf + ts_off, cnt * TS_SIZE); 
+				off += cnt * TS_SIZE;
+				node->size += cnt * TS_SIZE;
+
+				// copy tail if exist
+				if ( (ts_off + cnt * TS_SIZE) < len) {
+					pool->tail_size = len - (ts_off + cnt * TS_SIZE);
+					memcpy(pool->tail, buf + (ts_off + cnt * TS_SIZE), pool->tail_size);
+					jdebug("tail=0x%x tailoff=0x%x\n", pool->tail[0], (ts_off + cnt * TS_SIZE));
+				}
+
 			}
-		} else {
-			jdebug("ISOC NOT COMPLETE. pkt.status=0x%x\n", pkt.status);
 		}
 	}
+
+	list_add_tail(&node->list, &pool->ts_list);
+	jdebug("TSLIST:added to tslist. total_len=%d \n", total_len);
+
+	// TODO: delete old nodes in TS list
+
 
 	// return USB ISOC ASAP !
 	while(1) {
@@ -161,20 +213,6 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	sched_setscheduler(0, SCHED_FIFO, &p);
 #endif
 
-	/* Allocate big pool memory 
-	 * TS will be stored here
-	 * TODO: dynamic allocation
-	 * */
-	pool->size = NUM_USB_BUFS * NUM_USB_PACKETS * USB_PACKET_SIZE * BIG_POOL_GAIN;
-	pool->ptr = (unsigned char*)malloc(pool->size);
-	if (!pool->ptr) {
-		printf("ERROR:can't alloc memory to big pool \n");
-		return ENOMEM;
-	}
-	pool->ptr_end = pool->ptr + pool->size;
-	pool->read_ptr = pool->ptr;
-	pool->write_ptr = pool->ptr;
-
 	// create isochronous transfers
 	// USB isoc transfer should be delivered to Joker TV 
 	// every microframe (125usec)
@@ -192,7 +230,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 			return EIO;
 		}
 	}
-
+	
 	// start ISOC USB transfers processing thread
 	pthread_mutex_init(&pool->mux, NULL);
 	pthread_cond_init(&pool->cond, NULL);
@@ -215,50 +253,81 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	return 0;
 }
 
-/* read TS into buf
- * maximum available space in size bytes.
- * return read bytes or negative error code if failed
- * */
-ssize_t read_data(struct joker_t *joker, struct big_pool_t * pool, unsigned char *buf, size_t size)
+void drop_ts_data(struct ts_node * node)
 {
-	int remain = size;
-	int to_write = 0, avail = 0;
-	unsigned char * ptr = buf;
+	list_del(&node->list);
+	free(node->data);
+	free(node);
+}
 
-	while (remain > 0) {
-		// just wait more data
-		pthread_mutex_lock(&pool->mux);
-		if (pool->read_ptr == pool->write_ptr) // no new data in ring
-			pthread_cond_wait(&pool->cond, &pool->mux);  // just wait
+struct ts_node * read_ts_data(struct big_pool_t * pool)
+{
+	struct ts_node *node = NULL;
+	
+	if(!list_empty(&pool->ts_list))
+		return list_first_entry(&pool->ts_list, struct ts_node, list);
 
-		pthread_mutex_unlock(&pool->mux);
+	return NULL;
+}
 
-		// process ring data
-		// without locking for faster USB ISOC release
-		// this can cause data loss/overwrite if we are too slow
-		// and write_ptr catch read_ptr !
-		if (pool->read_ptr != pool->write_ptr) {
-			/* some data in ringbuffer detected */
-			if (pool->read_ptr < pool->write_ptr) {
-				avail = pool->write_ptr - pool->read_ptr;
-				to_write = (avail > remain) ? remain : avail;
-				memcpy(ptr, pool->read_ptr, to_write);
-				/* update pointers/sizes */
-				ptr += to_write;
-				pool->read_ptr += to_write;
-				remain -= to_write;
-			} else if (pool->read_ptr > pool->write_ptr) {
-				/* ring rollover detected */
-				avail = pool->ptr_end - pool->read_ptr;
-				to_write = (avail > remain) ? remain : avail;
-				memcpy(ptr, pool->read_ptr, to_write);
-				ptr += to_write;
-				if (to_write == avail)
-					pool->read_ptr = pool->ptr; /* ring end reached */
-				else
-					pool->read_ptr += to_write;
-				remain -= to_write;
-			}
-		}
+/* find next TS packet start
+ * 0x47 - sync byte
+ * TS packet size hardcoded to 188 bytes
+ * return offset of TS packet start 
+ * return -1 if no TS packets start found */
+int next_ts_off(unsigned char *buf, size_t size)
+{
+	int off = 0;
+
+	if (size < TS_SIZE)
+		return -1;
+
+	for (off = 0; off <= (size - TS_SIZE); )
+	{
+		if (buf[off] == TS_SYNC && (off + TS_SIZE) == size)
+			return off;
+		if (buf[off] == TS_SYNC && buf[off + TS_SIZE] == TS_SYNC)
+			return off;
+		off++;
 	}
+
+	return -1;
+}
+
+int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data)
+{
+	struct ts_node *node = NULL, *tmp = NULL;
+	int off = 0, len = 0, res_off = 0, pid = 0;
+	unsigned char * ptr = NULL, *ts_pkt = NULL, *res = NULL;
+
+	if (!data)
+		return -EINVAL;
+
+	list_for_each_entry_safe(node, tmp, &pool->ts_list, list)
+	{
+		ptr = node->data;
+		len = node->size;
+	
+		if ( (res_off + len) > TS_BUF_MAX_SIZE)
+			break;
+
+		while ((off = next_ts_off(ptr, len)) >= 0) {
+			ts_pkt = ptr + off;
+			if (ts_pkt[0] != TS_SYNC)
+				break;
+
+			pid = (ts_pkt[1] & 0x1f)<<8 | ts_pkt[2]; 
+			if (pid == req_pid || req_pid == TS_WILDCARD_PID) {
+				memcpy(data + res_off, ts_pkt, TS_SIZE);
+				res_off += TS_SIZE;
+			}
+
+			ptr += off + TS_SIZE;
+			len = len - off - TS_SIZE;
+		}
+
+		drop_ts_data(node);
+	}
+
+	return res_off;
 }

@@ -65,6 +65,11 @@ struct tune_info_t {
   int				refresh; /* status refresh interval in ms */
 };
 
+struct stat_t {
+	struct joker_t *joker;
+	struct tune_info_t *info;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif

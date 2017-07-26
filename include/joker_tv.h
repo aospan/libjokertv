@@ -20,7 +20,13 @@
 #define jdebug(...) {};
 #endif
 
-#define FNAME_LEN 512
+/* constants */
+#define FNAME_LEN		512
+#define TS_SIZE			188
+// should be more than 128KB
+#define TS_BUF_MAX_SIZE		TS_SIZE*700
+#define TS_SYNC			0x47
+#define TS_WILDCARD_PID		0x2000
 
 /* main pointer to Joker TV */
 struct joker_t {

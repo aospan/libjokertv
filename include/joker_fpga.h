@@ -85,6 +85,7 @@
 #define	J_CMD_CI_READ_MEM	21 /* 0x15 CI common interfce */
 #define	J_CMD_CI_WRITE_MEM	22 /* 0x16 CI common interfce */
 #define	J_CMD_SPI		30 /* SPI bus access */
+#define	J_CMD_TSFIFO_LEVEL	31 /* get TSFIFO used level. current write position */
 
 
 /* J_CMD_RESET_CTRL_WRITE

@@ -30,6 +30,7 @@
 #include "joker_fpga.h"
 #include "joker_ci.h"
 #include "joker_spi.h"
+#include "joker_ts.h"
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 
@@ -38,17 +39,38 @@ void * print_stat(void *data)
 	int status = 0;
 	int ucblocks = 0;
 	int signal = 0;
-	struct tune_info_t * info = (struct tune_info_t *)data;
+	struct stat_t * stat = (struct stat_t *)data;
+	struct tune_info_t * info = NULL;
+	struct joker_t * joker = NULL;
+	unsigned char buf[JCMD_BUF_LEN];
+	unsigned char in_buf[JCMD_BUF_LEN];
+	uint16_t level = 0;
+	int ret = 0;
+
+	if(!stat)
+		return NULL;
+
+	info = stat->info;
+	joker = stat->joker;
 
 	if (info->refresh <= 0)
 		info->refresh = 1000; /* 1 sec refresh by default */
 
 	while(1) {
-		status = read_status(info);
-		ucblocks = read_ucblocks(info);
-		signal = read_signal(info);
-		printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d\n", 
-				status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF, ucblocks );
+		if (info->fe_opaque) {
+			status = read_status(info);
+			ucblocks = read_ucblocks(info);
+			signal = read_signal(info);
+			printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d\n", 
+					status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF, ucblocks );
+		}
+
+		buf[0] = J_CMD_TSFIFO_LEVEL;
+		if ((ret = joker_cmd(joker, buf, 2, in_buf, 3)))
+			continue;
+		level = (in_buf[1] << 8) | in_buf[2];
+		printf("INFO: TSFIFO cmd=0x%x level=0x%x \n", in_buf[0], level );
+
 		usleep(1000 * info->refresh);
 	}
 }
@@ -76,10 +98,11 @@ void show_help() {
 int main (int argc, char **argv)
 {
 	struct tune_info_t info;
+	struct stat_t stat;
 	struct big_pool_t pool;
 	int status = 0, ret = 0, rbytes = 0, i = 0;
-	struct joker_t * joker;
-	unsigned char buf[512];
+	struct joker_t * joker = NULL;
+	unsigned char buf[JCMD_BUF_LEN];
 	unsigned char in_buf[JCMD_BUF_LEN];
 	int isoc_len = USB_PACKET_SIZE;
 	pthread_t stat_thread;
@@ -90,11 +113,22 @@ int main (int argc, char **argv)
 	char fwfilename[FNAME_LEN] = "";
 	int signal = 0;
 	int disable_data = 0;
+	struct ts_node * node = NULL;
+	unsigned char *res = NULL;
+	int res_len = 0;
+	struct list_head *programs = NULL;
+	struct program_t *program = NULL, *tmp = NULL;
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
 		return ENOMEM;
 	memset(joker, 0, sizeof(struct joker_t));
+	memset(in_buf, 0, JCMD_BUF_LEN);
+	memset(buf, 0, JCMD_BUF_LEN);
+
+	pool.node_counter = 0;
+	INIT_LIST_HEAD(&pool.ts_list);
+	INIT_LIST_HEAD(&pool.programs_list);
 
 	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:nh")) != -1)
 		switch (c)
@@ -182,8 +216,17 @@ int main (int argc, char **argv)
 	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 		return ret;
 
+	buf[0] = J_CMD_TSFIFO_LEVEL;
+	if ((ret = joker_cmd(joker, buf, 2, in_buf, 3)))
+		return ret;
+	printf("INFO: TSFIFO cmd=0x%x level=0x%x\n", in_buf[0], (in_buf[1] << 8) | in_buf[2]);
+
+
 	if ((ret = joker_i2c_init(joker)))
 		return ret;
+
+	info.fe_opaque = NULL;
+	info.refresh = 3000; /* less heavy refresh */
 
 	if(tsgen) {
 		/* TS generator selected */
@@ -191,6 +234,7 @@ int main (int argc, char **argv)
 		buf[1] = J_INSEL_TSGEN;
 		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 			return ret;
+
 	} else {
 		/* real demod selected
 		 * tuning ...
@@ -200,7 +244,6 @@ int main (int argc, char **argv)
 		info.frequency = freq;
 		info.symbol_rate = sr;
 		info.modulation = (joker_fe_modulation)mod;
-		info.refresh = 3000; /* less heavy refresh */
 
 		printf("TUNE start \n");
 		if (tune(joker, &info))
@@ -225,12 +268,14 @@ int main (int argc, char **argv)
 			}
 			usleep(100*1000);
 		}
+	}
 
-		/* start status printing thread */
-		if(pthread_create(&stat_thread, NULL, print_stat, &info)) {
-			fprintf(stderr, "Error creating status thread\n");
-			return -1;
-		}
+	/* start status printing thread */
+	stat.joker = joker;
+	stat.info = &info;
+	if(pthread_create(&stat_thread, NULL, print_stat, &stat)) {
+		fprintf(stderr, "Error creating status thread\n");
+		return -1;
 	}
 
 	while(disable_data) {
@@ -238,16 +283,34 @@ int main (int argc, char **argv)
 		sleep(3600);
 	}
 
-	/* start TS collection and save to file */
+	/* start TS collection */
 	if((ret = start_ts(joker, &pool))) {
 		printf("start_ts failed. err=%d \n", ret);
 		exit(-1);
 	}
 	fflush(stdout);
 
+	if (!tsgen) {
+		/* get TV programs list */
+		printf("Trying to get programs list ... \n");
+		programs = get_programs(&pool);
+		list_for_each_entry_safe(program, tmp, programs, list)
+			printf("Program number=%d name=%s \n", program->number, program->name);
+	}
+
+	/* get raw TS and save it to output file */
+	res = (unsigned char*)malloc(TS_BUF_MAX_SIZE);
+	if (!res)
+		return -1;
+
 	while(1) {
-		rbytes = read_data(joker, &pool, &buf[0], 512);
-		fwrite(buf, 512, 1, out);
+		res_len = read_ts_data_pid(&pool, TS_WILDCARD_PID, res);
+
+		/* save to output file */
+		if (res_len > 0)
+			fwrite(res, res_len, 1, out);
+		else
+			usleep(1000); // TODO: rework this (condwait ?)
 	}
 
 	free(joker);

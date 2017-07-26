@@ -3,8 +3,8 @@ project (joker-tv)
 
 set(CMAKE_MACOSX_RPATH 1)
 
-set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 find_package( Threads REQUIRED)
@@ -12,6 +12,8 @@ find_package( Threads REQUIRED)
 # Search libusb
 find_package(PkgConfig)
 #pkg_check_modules(PC_LIBUSB libusb-1.0)
+#pkg_check_modules(PC_LIBDVBPSI libdvbpsi)
+find_library(STATIC_LIBDVBPSI libdvbpsi.a)
 
 #Add libusb
 #we should build our own libusb with our patches for Isoc transfers
@@ -43,6 +45,20 @@ ExternalProject_Add(libusb
 	BUILD_IN_SOURCE 1
 	)
 
+#build libdvbpsi for TS processing
+#TODO: darwin change for PC_LIBDVBPSI_INSTALL
+#set(PC_LIBDVBPSI_INSTALL make install)
+
+#include(ExternalProject)
+#ExternalProject_Add(libdvbpsi
+#GIT_REPOSITORY http://git.videolan.org/git/libdvbpsi.git
+#CONFIGURE_COMMAND ./bootstrap COMMAND ./configure
+#UPDATE_COMMAND ""
+#BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
+#INSTALL_COMMAND ${PC_LIBDVBPSI_INSTALL}
+#BUILD_IN_SOURCE 1
+#)
+
 #set sources list
 SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
 	linux/drivers/media/dvb-frontends/lgdt3306a.c
@@ -56,7 +72,9 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_i2c.c
 	src/joker_fpga.c
 	src/joker_spi.c
-	src/joker_ci.c)
+	src/joker_ci.c
+	src/joker_utils.c
+	src/joker_ts.c)
 
 set(KOPTIONS
 	"-I ${CMAKE_SOURCE_DIR}/linux/ \
@@ -68,6 +86,7 @@ set(KOPTIONS
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
+set(EXT_LIBS ${PC_LIBUSB_LIBRARIES} ${STATIC_LIBDVBPSI})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
@@ -75,8 +94,9 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
 
 #combined shared lib
 add_library (jokertv SHARED ${LINUX_SRC} ${JOKERTV_SRC})
-set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${KOPTIONS} ${CFLAGS_USER}")
+set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 set_target_properties(jokertv PROPERTIES LINK_FLAGS "-L${PC_LIBUSB_LIBDIR}")
+set_source_files_properties(${LINUX_SRC} PROPERTIES COMPILE_FLAGS ${KOPTIONS})
 target_link_libraries(jokertv ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES})
 target_include_directories(jokertv PUBLIC ${INCLUDE_USER})
 add_dependencies(jokertv libusb)
@@ -86,7 +106,7 @@ install(TARGETS jokertv DESTINATION lib)
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 set_target_properties(joker-tv PROPERTIES LINK_FLAGS "-L${PC_LIBUSB_LIBDIR}")
-target_link_libraries(joker-tv jokertv ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES})
+target_link_libraries(joker-tv jokertv ${CMAKE_THREAD_LIBS_INIT} ${EXT_LIBS})
 add_dependencies(joker-tv libusb)
 target_include_directories(joker-tv PUBLIC ${INCLUDE_USER})
 install(TARGETS joker-tv DESTINATION bin)
@@ -96,7 +116,7 @@ add_executable(i2c-scan src/i2c-scan.c)
 set_target_properties(i2c-scan PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 set_target_properties(i2c-scan PROPERTIES LINK_FLAGS "-L${PC_LIBUSB_LIBDIR}")
 target_include_directories(i2c-scan PUBLIC ${INCLUDE_USER})
-target_link_libraries(i2c-scan jokertv ${PC_LIBUSB_LIBRARIES})
+target_link_libraries(i2c-scan jokertv ${EXT_LIBS})
 install(TARGETS i2c-scan DESTINATION bin)
 
 # TS stream generate/validate utilities
