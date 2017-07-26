@@ -8,6 +8,7 @@
 #ifndef _U_DRV_DATA
 #define _U_DRV_DATA	1
 
+#include <pthread.h>
 #include "joker_list.h"
 
 #define NUM_USB_BUFS 16
