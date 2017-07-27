@@ -127,6 +127,7 @@ int main (int argc, char **argv)
 	memset(buf, 0, JCMD_BUF_LEN);
 
 	pool.node_counter = 0;
+	pool.tail_size = 0;
 	INIT_LIST_HEAD(&pool.ts_list);
 	INIT_LIST_HEAD(&pool.programs_list);
 

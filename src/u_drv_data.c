@@ -117,7 +117,7 @@ void record_callback(struct libusb_transfer *transfer)
 			pool->pkt_count_complete++;
 			pool->bytes += len;
 			jdebug("ISOC size=%d \n", len );
-			if (buf = libusb_get_iso_packet_buffer(transfer, i)) {
+			if ((buf = libusb_get_iso_packet_buffer(transfer, i))) {
 				if (buf[TS_SIZE - pool->tail_size] == TS_SYNC)
 					ts_off = TS_SIZE - pool->tail_size; // tail is ok. use it
 				else
