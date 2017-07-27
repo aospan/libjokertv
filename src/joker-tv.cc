@@ -91,6 +91,7 @@ void show_help() {
 	printf("	-n		Disable TS data processing. Default: enabled\n");
 	printf("	-u level	Libusb verbose level (0 - less, 4 - more verbose). Default: 0\n");
 	printf("	-w filename	Update firmware on flash. Default: none\n");
+	printf("	-p		Decode programs info (DVB PSI tables). Default: no\n");
 
 	exit(0);
 }
@@ -118,6 +119,7 @@ int main (int argc, char **argv)
 	int res_len = 0, read_once = 0;
 	struct list_head *programs = NULL;
 	struct program_t *program = NULL, *tmp = NULL;
+	bool decode_program = false;
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
@@ -129,7 +131,7 @@ int main (int argc, char **argv)
 	if (pool_init(&pool))
 		return -1;
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:nh")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tpu:w:nh")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -152,6 +154,9 @@ int main (int argc, char **argv)
 				break;
 			case 't':
 				tsgen = 1;
+				break;
+			case 'p':
+				decode_program = 1;
 				break;
 			case 'u':
 				joker->libusb_verbose = atoi(optarg);
@@ -233,7 +238,6 @@ int main (int argc, char **argv)
 		buf[1] = J_INSEL_TSGEN;
 		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 			return ret;
-
 	} else {
 		/* real demod selected
 		 * tuning ...
@@ -289,7 +293,7 @@ int main (int argc, char **argv)
 	}
 	fflush(stdout);
 
-	if (!tsgen) {
+	if (decode_program) {
 		/* get TV programs list */
 		printf("Trying to get programs list ... \n");
 		programs = get_programs(&pool);
