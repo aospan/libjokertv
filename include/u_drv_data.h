@@ -62,6 +62,9 @@ struct big_pool_t {
 extern "C" {
 #endif
 
+/* init pool */
+int pool_init(struct big_pool_t * pool);
+
 /* start TS processing thread 
  */
 int start_ts(struct joker_t *joker, struct big_pool_t *pool);

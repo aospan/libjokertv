@@ -36,6 +36,20 @@ uint64_t getus() {
 	return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
 }
 
+/* init pool */
+int pool_init(struct big_pool_t * pool)
+{
+	if (!pool)
+		return -EINVAL;
+
+	pool->node_counter = 0;
+	pool->tail_size = 0;
+	INIT_LIST_HEAD(&pool->ts_list);
+	INIT_LIST_HEAD(&pool->programs_list);
+
+	return 0;
+}
+
 /* thread for 'kicking' libusb polling 
  * TODO: not only default libusb context polling
  * */

@@ -126,10 +126,8 @@ int main (int argc, char **argv)
 	memset(in_buf, 0, JCMD_BUF_LEN);
 	memset(buf, 0, JCMD_BUF_LEN);
 
-	pool.node_counter = 0;
-	pool.tail_size = 0;
-	INIT_LIST_HEAD(&pool.ts_list);
-	INIT_LIST_HEAD(&pool.programs_list);
+	if (pool_init(&pool))
+		return -1;
 
 	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tu:w:nh")) != -1)
 		switch (c)
