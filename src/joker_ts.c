@@ -83,7 +83,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	dvbpsi_t *p_dvbpsi;
 	struct list_head *result = NULL;
 
-	p_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_DEBUG);
+	p_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
 	if (p_dvbpsi == NULL)
 		goto out;
 
