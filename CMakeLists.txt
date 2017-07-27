@@ -27,6 +27,7 @@ ExternalProject_Add(libusb
 	GIT_REPOSITORY https://github.com/philemonf/libusb.git
 	CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure --enable-static --with-pic
 	UPDATE_COMMAND ""
+	INSTALL_COMMAND ""
 	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
 	BUILD_IN_SOURCE 1
 	)
@@ -39,6 +40,7 @@ ExternalProject_Add(libdvbpsi
 	GIT_REPOSITORY http://git.videolan.org/git/libdvbpsi.git
 	CONFIGURE_COMMAND ./bootstrap COMMAND ./configure --enable-static --with-pic
 	UPDATE_COMMAND ""
+	INSTALL_COMMAND ""
 	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
 	BUILD_IN_SOURCE 1
 	)
