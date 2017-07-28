@@ -314,37 +314,35 @@ int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data, 
 	struct ts_node *node = NULL, *tmp = NULL;
 	int off = 0, len = 0, res_off = 0, pid = 0;
 	unsigned char * ptr = NULL, *ts_pkt = NULL, *res = NULL;
+	int remain = size;
 
 	if (!data)
 		return -EINVAL;
 
+	// TODO: rework this to condwait
+	while(list_empty(&pool->ts_list))
+		usleep(1000);
+
+	jdebug("req:%d \n", size);
 	list_for_each_entry_safe(node, tmp, &pool->ts_list, list)
 	{
-		ptr = node->data;
-
-		// nodes already aligned to TS_SIZE
-		for (off = node->read_off; off < node->size; off += TS_SIZE ){
-			// no more space in output buffer. stop
-			if ( (res_off + TS_SIZE) > size)
-				break;
-
-			ts_pkt = ptr + off;
-			// cannot use this data as TS
-			if (ts_pkt[0] != TS_SYNC)
-				continue; 
-
-			pid = (ts_pkt[1] & 0x1f)<<8 | ts_pkt[2]; 
-			if (pid == req_pid || req_pid == TS_WILDCARD_PID) {
-				memcpy(data + res_off, ts_pkt, TS_SIZE);
-				res_off += TS_SIZE;
-			}
-
-			node->read_off += TS_SIZE;
+		jdebug("	node=%d size:%d read_off=%d\n", node->counter, node->size, node->read_off);
+		if (remain > (node->size - node->read_off)) {
+			// copy all node to output
+			memcpy(data + res_off, node->data + node->read_off, node->size - node->read_off);
+			// node fully processed. drop it
+			remain -= (node->size - node->read_off);
+			res_off += (node->size - node->read_off);
+			drop_ts_data(node);
+		} else {
+			memcpy(data + res_off, node->data + node->read_off, remain);
+			node->read_off += remain;
+			res_off += remain;
+			remain = 0;
 		}
 
-		// node fully processed. drop it
-		if (node->read_off == node->size)
-			drop_ts_data(node);
+		if(!remain)
+			break;
 	}
 
 	return res_off;
