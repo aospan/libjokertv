@@ -55,6 +55,7 @@ int pool_init(struct big_pool_t * pool)
  * */
 void* process_usb(void * data) {
 	int completed = 0;
+	struct big_pool_t * pool = (struct big_pool_t *)data;
 
 #ifdef __linux__ 
 	/* set FIFO schedule priority
@@ -64,7 +65,7 @@ void* process_usb(void * data) {
 	sched_setscheduler(0, SCHED_FIFO, &p);
 #endif
 
-	while(1) {
+	while(!pool->cancel) {
 		struct timeval tv = {
 			.tv_sec = 0,
 			.tv_usec = 1000
@@ -86,6 +87,10 @@ void record_callback(struct libusb_transfer *transfer)
 	struct ts_node * node = NULL;
 	int total_len = 0;
 	int off = 0, cnt = 0, ts_off = 0, len = 0;
+
+	// looks like we stopping TS processing. do not submit this transfer
+	if(transfer->status == LIBUSB_TRANSFER_CANCELLED)
+		return;
 
 	/* update statistics */
 	if ( pool->pkt_count && !(pool->pkt_count%1000) ){
@@ -209,7 +214,6 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 {
 	libusb_transfer_cb_fn cb = record_callback;
 	struct libusb_device_handle *dev = NULL;
-	struct libusb_transfer *t;
 	int index = 0;
 	int transferred = 0, rc = 0, ret = 0;
 
@@ -236,14 +240,15 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 		pool->usb_buffers[index] = (uint8_t*)malloc(NUM_USB_PACKETS * USB_PACKET_SIZE);
 		memset(pool->usb_buffers[index], 0, NUM_USB_PACKETS * USB_PACKET_SIZE);
 
-		t = libusb_alloc_transfer(NUM_USB_PACKETS);    
-		libusb_fill_iso_transfer(t, dev, USB_EP3_IN, pool->usb_buffers[index], NUM_USB_PACKETS * USB_PACKET_SIZE, NUM_USB_PACKETS, cb, (void *)pool, 1000);
-		libusb_set_iso_packet_lengths(t, USB_PACKET_SIZE);
+		pool->transfers[index] = libusb_alloc_transfer(NUM_USB_PACKETS);    
+		libusb_fill_iso_transfer(pool->transfers[index], dev, USB_EP3_IN, pool->usb_buffers[index], NUM_USB_PACKETS * USB_PACKET_SIZE, NUM_USB_PACKETS, cb, (void *)pool, 1000);
+		libusb_set_iso_packet_lengths(pool->transfers[index], USB_PACKET_SIZE);
 
-		if ((ret = libusb_submit_transfer(t))) {
+		if ((ret = libusb_submit_transfer(pool->transfers[index]))) {
 			printf("ERROR:%d libusb_submit_transfer failed\n", ret);
 			return EIO;
 		}
+		jdebug("submit usb transfer %d (%p) done\n", index, pool->transfers[index]);
 	}
 	
 	// start ISOC USB transfers processing thread
@@ -253,7 +258,8 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	pool->pkt_count_complete = 0;
 	pool->start_time = getus();
 	pool->bytes = 0;
-	rc = pthread_create(&pool->thread, NULL, process_usb, (void *)&pool);
+	pool->cancel = 0;
+	rc = pthread_create(&pool->thread, NULL, process_usb, (void *)pool);
 	if (rc){
 		printf("ERROR; return code from pthread_create() is %d\n", rc);
 		return rc;
@@ -265,6 +271,20 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
  * TODO*/
 int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 {
+	int index = 0;
+
+	for (index = 0; index < NUM_USB_BUFS; index++) {
+		if(libusb_cancel_transfer(pool->transfers[index]))
+			printf("can't cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
+		else
+			jdebug("cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
+	}
+
+	// stop processing thread
+	pool->cancel = 1;
+	// lock until thread ended
+	pthread_join(pool->thread, NULL);
+
 	return 0;
 }
 

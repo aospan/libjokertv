@@ -68,6 +68,7 @@ struct tune_info_t {
 struct stat_t {
 	struct joker_t *joker;
 	struct tune_info_t *info;
+	int cancel;
 };
 
 #ifdef __cplusplus

@@ -56,7 +56,7 @@ void * print_stat(void *data)
 	if (info->refresh <= 0)
 		info->refresh = 1000; /* 1 sec refresh by default */
 
-	while(1) {
+	while(!stat->cancel) {
 		if (info->fe_opaque) {
 			status = read_status(info);
 			ucblocks = read_ucblocks(info);
@@ -89,6 +89,7 @@ void show_help() {
 	printf("	-o filename	Output TS filename. Default: out.ts\n");
 	printf("	-t		Enable TS generator. Default: disabled\n");
 	printf("	-n		Disable TS data processing. Default: enabled\n");
+	printf("	-l limit	Write only limit MB(megabytes) of TS. Default: unlimited\n");
 	printf("	-u level	Libusb verbose level (0 - less, 4 - more verbose). Default: 0\n");
 	printf("	-w filename	Update firmware on flash. Default: none\n");
 	printf("	-p		Decode programs info (DVB PSI tables). Default: no\n");
@@ -119,6 +120,7 @@ int main (int argc, char **argv)
 	struct list_head *programs = NULL;
 	struct program_t *program = NULL, *tmp = NULL;
 	bool decode_program = false;
+	int64_t total_len = 0, limit = 0;
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
@@ -130,7 +132,7 @@ int main (int argc, char **argv)
 	if (pool_init(&pool))
 		return -1;
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:tpu:w:nh")) != -1)
+	while ((c = getopt (argc, argv, "d:m:f:s:o:b:l:tpu:w:nh")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -159,6 +161,9 @@ int main (int argc, char **argv)
 				break;
 			case 'u':
 				joker->libusb_verbose = atoi(optarg);
+				break;
+			case 'l':
+				limit = 1024*1024*atoi(optarg);
 				break;
 			case 'o':
 				strncpy((char*)filename, optarg, FNAME_LEN);
@@ -252,6 +257,7 @@ int main (int argc, char **argv)
 	/* start status printing thread */
 	stat.joker = joker;
 	stat.info = &info;
+	stat.cancel = 0;
 	if(pthread_create(&stat_thread, NULL, print_stat, &stat)) {
 		fprintf(stderr, "Error creating status thread\n");
 		return -1;
@@ -284,7 +290,7 @@ int main (int argc, char **argv)
 	if (!res)
 		return -1;
 
-	while(1) {
+	while( limit == 0 || (limit > 0 && total_len < limit) ) {
 		res_len = read_ts_data_pid(&pool, TS_WILDCARD_PID, res, read_once);
 
 		/* save to output file */
@@ -292,7 +298,17 @@ int main (int argc, char **argv)
 			fwrite(res, res_len, 1, out);
 		else
 			usleep(1000); // TODO: rework this (condwait ?)
-	}
 
+		total_len += res_len;
+	}
+	printf("Stopping TS ... \n");
+	stop_ts(joker, &pool);
+
+	printf("Stopping stat thread ... \n");
+	stat.cancel = 1;
+	pthread_join(stat_thread, NULL);
+
+	printf("Closing device ... \n");
+	joker_close(joker);
 	free(joker);
 }

@@ -37,6 +37,7 @@ struct big_pool_t {
 	int node_counter;
 
 	uint8_t *usb_buffers[NUM_USB_BUFS];
+	struct libusb_transfer *transfers[NUM_USB_BUFS];
 
 	/* threads stuff */
 	pthread_t thread;
@@ -53,6 +54,7 @@ struct big_pool_t {
 	struct list_head ts_list;
 	int tail_size;
 	unsigned char tail[TS_SIZE];
+	int cancel;
 
 	/* PSI related stuff */
 	struct list_head programs_list;
