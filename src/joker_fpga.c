@@ -120,9 +120,13 @@ int joker_open(struct joker_t *joker)
 /* release usb device */
 int joker_close(struct joker_t * joker) {
 	struct libusb_device_handle *dev = NULL;
+	int ret = 0;
 
 	if (!joker)
 		return EINVAL;
+
+	if((ret = joker_i2c_close(joker)))
+		return ret;
 
 	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 

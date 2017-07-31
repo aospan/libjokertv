@@ -22,9 +22,6 @@ int main() {
 	if ((ret = joker_open(&joker)))
 		return ret;
 
-	if ((ret = joker_i2c_init(&joker)))
-		return ret;
-
 	for(i = 0; i < 0x7F; i++) {
 		if (!(ret = joker_i2c_ping(&joker, i))) {
 			printf("0x%x address ACKed on i2c bus\n", i );
@@ -33,6 +30,5 @@ int main() {
 		}
 	}
 
-	joker_i2c_close(&joker);
 	joker_close(&joker);
 }
