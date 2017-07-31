@@ -105,7 +105,6 @@ int main (int argc, char **argv)
 	struct joker_t * joker = NULL;
 	unsigned char buf[JCMD_BUF_LEN];
 	unsigned char in_buf[JCMD_BUF_LEN];
-	int isoc_len = USB_PACKET_SIZE;
 	pthread_t stat_thread;
 	int c, tsgen = 0;
 	int delsys = 0, mod = 0, freq = 0, sr = 0, bw = 0;
@@ -186,9 +185,6 @@ int main (int argc, char **argv)
 		return ret;
 	printf("allocated joker=%p \n", joker);
 
-	/* init CI */
-	joker_ci(joker);
-
 	/* upgrade fw if selected */
 	if(strlen((const char*)fwfilename)) {
 		if(joker_flash_checkid(joker)) {
@@ -208,26 +204,6 @@ int main (int argc, char **argv)
 
 	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 )
 		show_help();
-
-	/* tune usb isoc transaction len */
-	buf[0] = J_CMD_ISOC_LEN_WRITE_HI;
-	buf[1] = (isoc_len >> 8) & 0x7;
-	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
-		return ret;
-
-	buf[0] = J_CMD_ISOC_LEN_WRITE_LO;
-	buf[1] = isoc_len & 0xFF;
-	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
-		return ret;
-
-	buf[0] = J_CMD_TSFIFO_LEVEL;
-	if ((ret = joker_cmd(joker, buf, 2, in_buf, 3)))
-		return ret;
-	printf("INFO: TSFIFO cmd=0x%x level=0x%x\n", in_buf[0], (in_buf[1] << 8) | in_buf[2]);
-
-
-	if ((ret = joker_i2c_init(joker)))
-		return ret;
 
 	info.fe_opaque = NULL;
 	info.refresh = 3000; /* less heavy refresh */

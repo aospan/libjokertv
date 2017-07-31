@@ -12,9 +12,13 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #include <joker_tv.h>
 #include <joker_fpga.h>
+#include <joker_ci.h>
+#include <joker_i2c.h>
+#include <u_drv_data.h>
 #include <libusb.h>
 
 /* USB part */
@@ -30,7 +34,9 @@ int joker_open(struct joker_t *joker)
 	struct libusb_device_handle *devh = NULL;
 	struct libusb_device_descriptor desc;
 	int usb_devs, i, r, ret, transferred;
+	unsigned char buf[JCMD_BUF_LEN];
 	unsigned char in_buf[JCMD_BUF_LEN];
+	int isoc_len = USB_PACKET_SIZE;
 
 	if (!joker)
 		return EINVAL;
@@ -85,11 +91,28 @@ int joker_open(struct joker_t *joker)
 	joker->libusb_opaque = (void *)devh;
 	printf("open:dev=%p \n", devh);
 
-
 	/* prophylactic cleanup EP1 IN */
 	libusb_bulk_transfer(devh, USB_EP1_IN, in_buf, JCMD_BUF_LEN, &transferred, 1);
 	libusb_bulk_transfer(devh, USB_EP1_IN, in_buf, JCMD_BUF_LEN, &transferred, 1);
 	libusb_bulk_transfer(devh, USB_EP1_IN, in_buf, JCMD_BUF_LEN, &transferred, 1);
+
+	/* tune usb isoc transaction len */
+	buf[0] = J_CMD_ISOC_LEN_WRITE_HI;
+	buf[1] = (isoc_len >> 8) & 0x7;
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		return ret;
+
+	buf[0] = J_CMD_ISOC_LEN_WRITE_LO;
+	buf[1] = isoc_len & 0xFF;
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		return ret;
+
+	/* init CI */
+	joker_ci(joker);
+
+	/* i2c core init */
+	if ((ret = joker_i2c_init(joker)))
+		return ret;
 
 	return 0;
 }
