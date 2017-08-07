@@ -58,6 +58,7 @@ int pool_init(struct big_pool_t * pool)
 	pthread_cond_init(&pool->cond, NULL);
 
 	memset(&pool->hooks, 0, sizeof(pool->hooks));
+	memset(&pool->transfers, 0, sizeof(pool->transfers));
 
 	return 0;
 }
@@ -353,10 +354,11 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	int index = 0;
 
 	for (index = 0; index < NUM_USB_BUFS; index++) {
-		if(libusb_cancel_transfer(pool->transfers[index]))
+		if(pool->transfers[index] && libusb_cancel_transfer(pool->transfers[index]))
 			printf("can't cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
 		else
 			jdebug("cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
+		pool->transfers[index] = NULL;
 	}
 
 	// stop USB and TS processing threads
