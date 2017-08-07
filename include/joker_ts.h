@@ -16,9 +16,11 @@
 extern "C" {
 #endif
 
+#define SERVICE_NAME_LEN		128
+
 struct program_t {
 	int number;
-	unsigned char * name;
+	unsigned char name[SERVICE_NAME_LEN];
 	struct list_head list;
 };
 

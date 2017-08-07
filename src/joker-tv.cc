@@ -75,6 +75,13 @@ void * print_stat(void *data)
 	}
 }
 
+// this callback will be called when new service name arrived
+void service_name_update(struct program_t *program)
+{
+	printf("callback:%s program number=%d name=%s \n",
+			__func__, program->number, program->name);
+}
+
 void show_help() {
 	printf("joker-tv usage: \n");
 	printf("	-d delsys	Delivery system. Options: \n \
@@ -131,6 +138,8 @@ int main (int argc, char **argv)
 
 	if (pool_init(&pool))
 		return -1;
+
+	pool.service_name_callback = &service_name_update;
 
 	while ((c = getopt (argc, argv, "d:m:f:s:o:b:l:tpu:w:nh")) != -1)
 		switch (c)
@@ -280,7 +289,7 @@ int main (int argc, char **argv)
 		printf("Trying to get programs list ... \n");
 		programs = get_programs(&pool);
 		list_for_each_entry_safe(program, tmp, programs, list)
-			printf("Program number=%d name=%s \n", program->number, program->name);
+			printf("Program number=%d \n", program->number);
 	}
 
 	/* get raw TS and save it to output file */
@@ -291,7 +300,7 @@ int main (int argc, char **argv)
 		return -1;
 
 	while( limit == 0 || (limit > 0 && total_len < limit) ) {
-		res_len = read_ts_data_pid(&pool, TS_WILDCARD_PID, res, read_once);
+		res_len = read_ts_data(&pool, res, read_once);
 
 		/* save to output file */
 		if (res_len > 0)

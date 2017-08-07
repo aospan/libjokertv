@@ -44,10 +44,77 @@ int pool_init(struct big_pool_t * pool)
 
 	pool->node_counter = 0;
 	pool->tail_size = 0;
+	pool->ts_list_size = 0;
+	if (pool->ts_list_size_max <= 0)
+		pool->ts_list_size_max = TS_LIST_SIZE_DEFAULT;
+
 	INIT_LIST_HEAD(&pool->ts_list);
+	INIT_LIST_HEAD(&pool->ts_list_all);
 	INIT_LIST_HEAD(&pool->programs_list);
 
+	pthread_mutex_init(&pool->mux_all, NULL);
+	pthread_mutex_init(&pool->mux, NULL);
+	pthread_cond_init(&pool->cond_all, NULL);
+	pthread_cond_init(&pool->cond, NULL);
+
+	memset(&pool->hooks, 0, sizeof(pool->hooks));
+
 	return 0;
+}
+
+/* thread for processing Transport Stream packets
+ */
+void* process_ts(void * data) {
+	struct big_pool_t * pool = (struct big_pool_t *)data;
+	struct ts_node * node = NULL;
+	unsigned char * pkt = NULL;
+	int pid = 0, i = 0;
+
+	while(!pool->cancel) {
+		// get node from the list with locking (safe)
+		pthread_mutex_lock(&pool->mux);
+		if(list_empty(&pool->ts_list))
+			pthread_cond_wait(&pool->cond, &pool->mux);
+		if(!list_empty(&pool->ts_list)) {
+			node = list_first_entry(&pool->ts_list, struct ts_node, list);
+			list_del(&node->list);
+		} else {
+			node = NULL;
+		}
+		pthread_mutex_unlock(&pool->mux);
+
+		if (!node)
+			continue;
+
+		// process hooks
+		for (i = 0; i < node->size; i += TS_SIZE) {
+			pkt = node->data + i;
+			pid = (pkt[1]&0xf) << 8 | pkt[2];
+
+			if(pool->hooks[pid]) {
+				jdebug("calling hook pid=0x%x pool=%p pkt=%p\n", pid, pool, pkt);
+				pool->hooks[pid](pool, pkt);
+			}
+		}
+
+		// save node to list 
+		pthread_mutex_lock(&pool->mux_all);
+		list_add_tail(&node->list, &pool->ts_list_all);
+		pool->ts_list_size += node->size;
+
+		// keep list in desired memory limit (remove old nodes)
+		jdebug("TS:all: ts_list_size=%d\n", pool->ts_list_size);
+		while (pool->ts_list_size > pool->ts_list_size_max && !list_empty(&pool->ts_list_all)) {
+			node = list_first_entry(&pool->ts_list_all, struct ts_node, list);
+			pool->ts_list_size -= node->size;
+			drop_ts_data(node);
+			jdebug("TS:all: drop node %p. ts_list_size=%d\n", node, pool->ts_list_size);
+		}
+
+		jdebug("TS:all: node %p inserted. ts_list_size=%d\n", node, pool->ts_list_size);
+		pthread_mutex_unlock(&pool->mux_all);
+		pthread_cond_signal(&pool->cond_all); // wakeup read threads
+	}
 }
 
 /* thread for 'kicking' libusb polling 
@@ -182,7 +249,11 @@ void record_callback(struct libusb_transfer *transfer)
 		}
 	}
 
+	// add node to the list with locking (safe)
+	pthread_mutex_lock(&pool->mux);
 	list_add_tail(&node->list, &pool->ts_list);
+	pthread_mutex_unlock(&pool->mux);
+	pthread_cond_signal(&pool->cond); // wakeup ts procesing thread
 	jdebug("TSLIST:added to tslist. total_len=%d \n", total_len);
 
 	// TODO: delete old nodes in TS list
@@ -252,18 +323,26 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	}
 	
 	// start ISOC USB transfers processing thread
-	pthread_mutex_init(&pool->mux, NULL);
-	pthread_cond_init(&pool->cond, NULL);
 	pool->pkt_count = 0;
 	pool->pkt_count_complete = 0;
 	pool->start_time = getus();
 	pool->bytes = 0;
 	pool->cancel = 0;
-	rc = pthread_create(&pool->thread, NULL, process_usb, (void *)pool);
+
+	rc = pthread_create(&pool->usb_thread, NULL, process_usb, (void *)pool);
 	if (rc){
-		printf("ERROR; return code from pthread_create() is %d\n", rc);
+		printf("ERROR: can't start USB processing thread. code=%d\n", rc);
 		return rc;
 	}
+
+	// start TS processing thread
+	rc = pthread_create(&pool->ts_thread, NULL, process_ts, (void *)pool);
+	if (rc){
+		printf("ERROR: can't start TS processing thread. code=%d\n", rc);
+		pool->cancel = 1; // will stop usb processing
+		return rc;
+	}
+
 	return 0;
 }
 
@@ -280,10 +359,12 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 			jdebug("cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
 	}
 
-	// stop processing thread
+	// stop USB and TS processing threads
 	pool->cancel = 1;
+	pthread_cond_signal(&pool->cond); // wakeup TS procesing thread
+
 	// lock until thread ended
-	pthread_join(pool->thread, NULL);
+	pthread_join(pool->usb_thread, NULL);
 
 	return 0;
 }
@@ -293,16 +374,6 @@ void drop_ts_data(struct ts_node * node)
 	list_del(&node->list);
 	free(node->data);
 	free(node);
-}
-
-struct ts_node * read_ts_data(struct big_pool_t * pool)
-{
-	struct ts_node *node = NULL;
-	
-	if(!list_empty(&pool->ts_list))
-		return list_first_entry(&pool->ts_list, struct ts_node, list);
-
-	return NULL;
 }
 
 /* find next TS packet start
@@ -329,7 +400,7 @@ int next_ts_off(unsigned char *buf, size_t size)
 	return -1;
 }
 
-int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data, int size)
+int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 {
 	struct ts_node *node = NULL, *tmp = NULL;
 	int off = 0, len = 0, res_off = 0, pid = 0;
@@ -339,30 +410,37 @@ int read_ts_data_pid(struct big_pool_t *pool, int req_pid, unsigned char *data, 
 	if (!data)
 		return -EINVAL;
 
-	// TODO: rework this to condwait
-	while(list_empty(&pool->ts_list))
-		usleep(1000);
+	while(remain) {
+		// get node from the list with locking (safe)
+		pthread_mutex_lock(&pool->mux_all);
+		if(list_empty(&pool->ts_list_all))
+			pthread_cond_wait(&pool->cond_all, &pool->mux_all);
+		
+		if(!list_empty(&pool->ts_list_all)) {
+			jdebug("req:%d \n", size);
+			list_for_each_entry_safe(node, tmp, &pool->ts_list_all, list)
+			{
+				jdebug("	node=%d size:%d read_off=%d\n", node->counter, node->size, node->read_off);
+				if (remain > (node->size - node->read_off)) {
+					// copy all node to output
+					memcpy(data + res_off, node->data + node->read_off, node->size - node->read_off);
+					// node fully processed. drop it
+					remain -= (node->size - node->read_off);
+					res_off += (node->size - node->read_off);
+					pool->ts_list_size -= node->size;
+					drop_ts_data(node);
+				} else {
+					memcpy(data + res_off, node->data + node->read_off, remain);
+					node->read_off += remain;
+					res_off += remain;
+					remain = 0;
+				}
 
-	jdebug("req:%d \n", size);
-	list_for_each_entry_safe(node, tmp, &pool->ts_list, list)
-	{
-		jdebug("	node=%d size:%d read_off=%d\n", node->counter, node->size, node->read_off);
-		if (remain > (node->size - node->read_off)) {
-			// copy all node to output
-			memcpy(data + res_off, node->data + node->read_off, node->size - node->read_off);
-			// node fully processed. drop it
-			remain -= (node->size - node->read_off);
-			res_off += (node->size - node->read_off);
-			drop_ts_data(node);
-		} else {
-			memcpy(data + res_off, node->data + node->read_off, remain);
-			node->read_off += remain;
-			res_off += remain;
-			remain = 0;
+				if(!remain)
+					break;
+			}
 		}
-
-		if(!remain)
-			break;
+		pthread_mutex_unlock(&pool->mux_all);
 	}
 
 	return res_off;

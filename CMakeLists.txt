@@ -37,7 +37,7 @@ set(PC_LIBUSB_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb/li
 # build libdvbpsi for TS processing
 include(ExternalProject)
 ExternalProject_Add(libdvbpsi
-	GIT_REPOSITORY http://git.videolan.org/git/libdvbpsi.git
+	GIT_REPOSITORY https://code.videolan.org/videolan/libdvbpsi.git
 	CONFIGURE_COMMAND ./bootstrap COMMAND ./configure --enable-static --with-pic
 	UPDATE_COMMAND ""
 	INSTALL_COMMAND ""

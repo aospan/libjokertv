@@ -19,6 +19,20 @@
 
 #define BIG_POOL_GAIN	16
 
+// Max size (in bytes) for TS storage (list)
+// default 2MB
+#define TS_LIST_SIZE_DEFAULT 1024*1024*2
+
+// hook function
+struct big_pool_t;
+struct program_t;
+typedef void(*ts_hook_t)(struct big_pool_t *, unsigned char *pkt);
+typedef void(*service_name_callback_t)(struct program_t *program);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct ts_node {
 	int counter;
 	unsigned char * data;
@@ -39,10 +53,17 @@ struct big_pool_t {
 	uint8_t *usb_buffers[NUM_USB_BUFS];
 	struct libusb_transfer *transfers[NUM_USB_BUFS];
 
-	/* threads stuff */
-	pthread_t thread;
+	/* USB processing thread */
+	pthread_t usb_thread;
+	/* TS processing thread */
+	pthread_t ts_thread;
+	pthread_cond_t cond_all;
+	pthread_mutex_t mux_all;
 	pthread_cond_t cond;
 	pthread_mutex_t mux;
+
+	/* hooks */
+	ts_hook_t hooks[8192];
 
 	/* statistics */
 	int pkt_count;
@@ -52,17 +73,19 @@ struct big_pool_t {
 
 	/* TS list */
 	struct list_head ts_list;
+	struct list_head ts_list_all;
 	int tail_size;
 	unsigned char tail[TS_SIZE];
 	int cancel;
+	int ts_list_size;
+	int ts_list_size_max;
 
 	/* PSI related stuff */
 	struct list_head programs_list;
+	service_name_callback_t service_name_callback;
+	void *pat_dvbpsi;
+	void *sdt_dvbpsi;
 };
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* init pool */
 int pool_init(struct big_pool_t * pool);
@@ -75,18 +98,16 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool);
 int stop_ts(struct joker_t *joker, struct big_pool_t * pool);
 
 int next_ts_off(unsigned char *buf, size_t size);
-struct ts_node * read_ts_data(struct big_pool_t * pool);
 void drop_ts_data(struct ts_node * node);
 
 /* read TS data
- * pid - desired PID. can be TS_WILDCARD_PID for all pids
  * data - output buffer for data. should be allocated by caller and at least
  * size bytes long
  * size - maximum available space in data
  *
  * return - copied bytes into data (can be less than requested size or zero if
  * no data available) */
-int read_ts_data_pid(struct big_pool_t *pool, int pid, unsigned char *data, int size);
+int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size);
 
 #ifdef __cplusplus
 }
