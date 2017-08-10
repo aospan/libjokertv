@@ -24,7 +24,6 @@
 #include <stdbool.h>
 #include <dvbpsi.h>
 #include <psi.h>
-#include <chain.h>
 #include <pat.h>
 #include <descriptor.h>
 #include <demux.h>
@@ -168,21 +167,6 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 }
 
 /*****************************************************************************
- * AttachPAT
- *****************************************************************************/
-static void AttachPAT(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_extension,
-		void *data)
-{
-	if (!dvbpsi_pat_attach(p_dvbpsi, i_table_id, i_extension, DumpPAT, data))
-		fprintf(stderr, "Failed to attach PAT decoder\n");
-}
-
-static void DetachPAT(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_extension)
-{
-	dvbpsi_pat_detach(p_dvbpsi, i_table_id, i_extension);
-}
-
-/*****************************************************************************
  * NewSubtable
  *****************************************************************************/
 static void NewSubtable(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_extension,
@@ -192,17 +176,6 @@ static void NewSubtable(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_exten
 	{  
 		if (!dvbpsi_sdt_attach(p_dvbpsi, i_table_id, i_extension, DumpSDT, data))
 			fprintf(stderr, "Failed to attach SDT subdecoder\n");
-	}
-}
-
-/*****************************************************************************
- * DelSubtable
- *****************************************************************************/
-static void DelSubtable(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_extension)
-{
-	if(i_table_id == 0x42)
-	{  
-		dvbpsi_sdt_detach(p_dvbpsi, i_table_id, i_extension);
 	}
 }
 
@@ -234,7 +207,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	if (pool->pat_dvbpsi == NULL)
 		goto out;
 
-	if (!dvbpsi_chain_demux_new(pool->pat_dvbpsi, AttachPAT, DetachPAT, pool))
+	if (!dvbpsi_pat_attach(pool->pat_dvbpsi, DumpPAT, pool))
 		goto out;
 
 	// Attach SDT
@@ -242,7 +215,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	if (pool->sdt_dvbpsi == NULL)
 		goto out;
 
-	if (!dvbpsi_chain_demux_new(pool->sdt_dvbpsi, NewSubtable, DelSubtable, pool))
+	if (!dvbpsi_AttachDemux(pool->sdt_dvbpsi, NewSubtable, pool))
 		goto out;
 
 	// install hooks
@@ -259,13 +232,13 @@ struct list_head * get_programs(struct big_pool_t *pool)
 out:
 	if (pool->pat_dvbpsi)
 	{
-		dvbpsi_chain_demux_delete(pool->pat_dvbpsi);
+		dvbpsi_pat_detach(pool->pat_dvbpsi);
 		dvbpsi_delete(pool->pat_dvbpsi);
 	}
 
 	if (pool->sdt_dvbpsi)
 	{
-		dvbpsi_chain_demux_delete(pool->sdt_dvbpsi);
+		dvbpsi_DetachDemux(pool->sdt_dvbpsi);
 		dvbpsi_delete(pool->sdt_dvbpsi);
 	}
 
