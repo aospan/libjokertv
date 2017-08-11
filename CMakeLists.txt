@@ -9,6 +9,7 @@ set(CMAKE_BUILD_TYPE Release)
 
 find_package( Threads REQUIRED)
 find_package( PkgConfig )
+pkg_check_modules(PC_LIBDVBPSI libdvbpsi)
 
 # unser OSx we need some system libs for libusb functionality
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -33,19 +34,6 @@ ExternalProject_Add(libusb
 	)
 set(PC_LIBUSB_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb//libusb")
 set(PC_LIBUSB_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb/libusb/.libs/libusb-1.0${CMAKE_STATIC_LIBRARY_SUFFIX}")
-
-# build libdvbpsi for TS processing
-include(ExternalProject)
-ExternalProject_Add(libdvbpsi
-	GIT_REPOSITORY https://code.videolan.org/videolan/libdvbpsi.git
-	CONFIGURE_COMMAND ./bootstrap COMMAND ./configure --enable-static --with-pic
-	UPDATE_COMMAND ""
-	INSTALL_COMMAND ""
-	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
-	BUILD_IN_SOURCE 1
-	)
-set(PC_LIBDVBPSI_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/" "${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/tables/")
-set(PC_LIBDVBPSI_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/.libs/libdvbpsi${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 #set sources list
 SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
@@ -73,7 +61,7 @@ set(KOPTIONS
 	-include ./include/linux/types.h")
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
-set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${PC_LIBDVBPSI_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
+set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${PC_LIBDVBPSI_INCLUDEDIR}/dvbpsi ${CMAKE_SOURCE_DIR}/include)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES}
 	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBUDEV})
 
