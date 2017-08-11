@@ -102,6 +102,7 @@ void show_help() {
 	printf("	-w filename	Update firmware on flash. Default: none\n");
 	printf("	-p		Decode programs info (DVB PSI tables). Default: no\n");
 	printf("	-z l,h,s	LNB settings: low/high/switch frequency. Example: -z 9750,10600,11700\n");
+	printf("	-e		Enable 22 kHz tone (continuous). Default: disabled\n");
 
 	exit(0);
 }
@@ -131,7 +132,7 @@ int main (int argc, char **argv)
 	struct program_t *program = NULL, *tmp = NULL;
 	bool decode_program = false;
 	int64_t total_len = 0, limit = 0;
-	int voltage = 0;
+	int voltage = 0, tone = 1;
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
@@ -145,7 +146,7 @@ int main (int argc, char **argv)
 
 	pool.service_name_callback = &service_name_update;
 
-	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nh")) != -1)
+	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nhe")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -153,6 +154,9 @@ int main (int argc, char **argv)
 				break;
 			case 'y':
 				voltage = atoi(optarg);
+				break;
+			case 'e':
+				tone = 0; /* 0 - mean tone on */
 				break;
 			case 'z':
 				sscanf(optarg, "%d,%d,%d", &info.lnb.lowfreq, &info.lnb.highfreq, &info.lnb.switchfreq);
@@ -254,6 +258,7 @@ int main (int argc, char **argv)
 		info.frequency = freq;
 		info.symbol_rate = sr;
 		info.modulation = (joker_fe_modulation)mod;
+		info.tone = (joker_fe_sec_tone_mode)tone;
 
 		/* set LNB voltage for satellite */
 		if (voltage == 13)

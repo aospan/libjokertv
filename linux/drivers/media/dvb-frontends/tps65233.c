@@ -124,8 +124,8 @@ static int tps65233_set_voltage(struct dvb_frontend *fe,
 			break;
 	}
 
-	dev_info(&priv->i2c->dev, "%s() voltage (%d) set done. config[0] = 0x%x\n",
-			__func__, voltage, priv->config[0]);
+	dev_info(&priv->i2c->dev, "%s() voltage (%d) set done. config = 0x%.2x 0x%.2x\n",
+			__func__, voltage, priv->config[0], priv->config[1]);
 	tps65233_write_reg(priv, 0x0, priv->config[0]);
 
 	msleep(10);
@@ -181,6 +181,7 @@ struct dvb_frontend *tps65233_attach(struct dvb_frontend *fe,
 	priv->i2c = i2c;
 	priv->config[0] = TPS65233_I2C_CONTROL | TPS65233_TONE_GATE;
 	priv->config[1] = TPS65233_LIMIT_600;
+
 	fe->sec_priv = priv;
 
 	/* set registers */

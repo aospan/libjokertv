@@ -69,6 +69,12 @@ struct joker_lnb_t {
 	int switchfreq;
 };
 
+/* 22 kHz tone */
+enum joker_fe_sec_tone_mode { 
+	JOKER_SEC_TONE_ON,
+	JOKER_SEC_TONE_OFF
+};
+
 /* frontend parameters (standard, freq, etc)
  * copy from Linux: drivers/media/dvb-core/dvb_frontend.h
  */
@@ -76,6 +82,7 @@ struct tune_info_t {
   enum	joker_fe_delivery_system delivery_system;
   enum	joker_fe_modulation      modulation;
   enum	joker_fe_sec_voltage	voltage;
+  enum joker_fe_sec_tone_mode	tone;
   struct joker_lnb_t	lnb;
   uint32_t	frequency; /* in HZ */
   uint32_t	symbol_rate;

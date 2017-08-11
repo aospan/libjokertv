@@ -467,6 +467,8 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			return -1;
 		}
 
+		fe->ops.set_tone(fe, info->tone);
+
 		while (cnt-- > 0) {
 			if(!fe->ops.set_voltage(fe, info->voltage))
 				break;
