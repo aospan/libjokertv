@@ -85,7 +85,7 @@ target_link_libraries(jokertv
 	PRIVATE ${PC_LIBUSB_LIBRARIES}
 	)
 target_include_directories(jokertv PUBLIC
-	$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include ${PC_LIBUSB_INCLUDE_DIR}>
+	$<BUILD_INTERFACE:include ${PC_LIBUSB_INCLUDE_DIR}>
 	${INCLUDE_USER}
 	)
 
