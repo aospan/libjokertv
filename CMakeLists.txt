@@ -1,5 +1,10 @@
 cmake_minimum_required (VERSION 2.8.12)
-project (joker-tv)
+project (joker_tv)
+set (joker_tv_VERSION_MAJOR 0)
+set (joker_tv_VERSION_MINOR 9)
+set (joker_tv_VERSION_PATCH 1)
+set (joker_tv_VERSION
+	${joker_tv_VERSION_MAJOR}.${joker_tv_VERSION_MINOR}.${joker_tv_VERSION_PATCH})
 
 set(CMAKE_MACOSX_RPATH 1)
 
@@ -61,28 +66,33 @@ set(KOPTIONS
 	-include ./include/linux/types.h")
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
-set(INCLUDE_USER ${PC_LIBUSB_INCLUDE_DIR} ${PC_LIBDVBPSI_INCLUDEDIR}/dvbpsi ${CMAKE_SOURCE_DIR}/include)
-set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT} ${PC_LIBUSB_LIBRARIES}
+set(INCLUDE_USER ${PC_LIBDVBPSI_INCLUDEDIR}/dvbpsi)
+set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
 	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBUDEV})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
-          FILES_MATCHING PATTERN "*.h")
+	FILES_MATCHING PATTERN "*.h")
 
 #combined shared lib
 add_library (jokertv SHARED ${LINUX_SRC} ${JOKERTV_SRC})
+set_property(TARGET jokertv PROPERTY VERSION ${joker_tv_VERSION})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 set_source_files_properties(${LINUX_SRC} PROPERTIES COMPILE_FLAGS ${KOPTIONS})
-target_link_libraries(jokertv ${EXT_LIBS})
-target_include_directories(jokertv PUBLIC ${INCLUDE_USER})
 add_dependencies(jokertv libusb)
-install(TARGETS jokertv DESTINATION lib)
+target_link_libraries(jokertv
+	PUBLIC ${EXT_LIBS} 
+	PRIVATE ${PC_LIBUSB_LIBRARIES}
+	)
+target_include_directories(jokertv PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include ${PC_LIBUSB_INCLUDE_DIR}>
+	${INCLUDE_USER}
+	)
 
 #simple program: tune and save TS to file
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 target_link_libraries(joker-tv jokertv ${EXT_LIBS})
-add_dependencies(joker-tv libusb)
 target_include_directories(joker-tv PUBLIC ${INCLUDE_USER})
 install(TARGETS joker-tv DESTINATION bin)
 
@@ -100,12 +110,59 @@ target_include_directories(tsgen PUBLIC ${INCLUDE_USER})
 add_executable(tscheck src/tscheck.c)
 target_include_directories(tscheck PUBLIC ${INCLUDE_USER})
 
-#Installers generator
+##############################################
+# prepare cmake files for downstream projects
+##############################################
+install(TARGETS jokertv EXPORT jokertvTargets
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib
+	RUNTIME DESTINATION bin
+	INCLUDES DESTINATION include
+	)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+	"${CMAKE_CURRENT_BINARY_DIR}/jokertv/jokertvConfigVersion.cmake"
+	VERSION ${joker_tv_VERSION}
+	COMPATIBILITY AnyNewerVersion
+	)
+
+export(EXPORT jokertvTargets
+	FILE
+	"${CMAKE_CURRENT_BINARY_DIR}/jokertv/jokertvTargets.cmake"
+	)
+
+configure_file(cmake/jokertvConfig.cmake
+	"${CMAKE_CURRENT_BINARY_DIR}/jokertv/jokertvConfig.cmake"
+	COPYONLY
+	)
+
+set(ConfigPackageLocation lib/cmake/jokertv)
+install(EXPORT jokertvTargets
+	FILE
+	jokertvTargets.cmake
+	DESTINATION
+	${ConfigPackageLocation}
+	)
+
+install(
+	FILES
+	cmake/jokertvConfig.cmake
+	"${CMAKE_CURRENT_BINARY_DIR}/jokertv/jokertvConfigVersion.cmake"
+	DESTINATION
+	${ConfigPackageLocation}
+	COMPONENT
+	Devel
+	)
+
+######################
+# Installers generator
+######################
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Joker TV")
 SET(CPACK_PACKAGE_VENDOR "Joker Systems Inc.")
-SET(CPACK_PACKAGE_VERSION_MAJOR "0")
-SET(CPACK_PACKAGE_VERSION_MINOR "9")
-SET(CPACK_PACKAGE_VERSION_PATCH "0")
+SET(CPACK_PACKAGE_VERSION_MAJOR ${joker_tv_VERSION_MAJOR})
+SET(CPACK_PACKAGE_VERSION_MINOR ${joker_tv_VERSION_MINOR})
+SET(CPACK_PACKAGE_VERSION_PATCH ${joker_tv_VERSION_PATCH})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(CPACK_GENERATOR "DragNDrop;TGZ")
