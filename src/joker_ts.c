@@ -107,8 +107,8 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 			//	service_name_length
 			//	for (i=0;i<N;i++){ }
 			provider_len = p_descriptor->p_data[1];
-			name_len = p_descriptor->p_data[provider_len + 2] - 1;
-			ptr = p_descriptor->p_data + provider_len + 4;
+			name_len = p_descriptor->p_data[provider_len + 2];
+			ptr = p_descriptor->p_data + provider_len + 3;
 			jdebug("provider_len=%d name_len=%d ptr=%d \n", provider_len, name_len, provider_len + 3);
 			for (i = 0; i < name_len; i++) {
 				// special chars. ignore it
