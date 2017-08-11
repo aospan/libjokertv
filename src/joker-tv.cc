@@ -92,6 +92,7 @@ void show_help() {
 			%d-VSB8 (for ATSC) 0-AUTO\n", JOKER_VSB_8);
 	printf("	-f freq		Frequency in Hz. Example: 1402000000\n");
 	printf("	-s symbol_rate	Symbol rate. Options: 0-AUTO. Example: 20000000\n");
+	printf("	-y voltage	LNB voltage. Options: 13-Vert/Right, 18-Horiz/Left, 0-OFF. Example: -y 18\n");
 	printf("	-b bandwidth	Bandwidth in Hz. Example: 8000000\n");
 	printf("	-o filename	Output TS filename. Default: out.ts\n");
 	printf("	-t		Enable TS generator. Default: disabled\n");
@@ -128,6 +129,7 @@ int main (int argc, char **argv)
 	struct program_t *program = NULL, *tmp = NULL;
 	bool decode_program = false;
 	int64_t total_len = 0, limit = 0;
+	int voltage = 0;
 
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
@@ -141,11 +143,14 @@ int main (int argc, char **argv)
 
 	pool.service_name_callback = &service_name_update;
 
-	while ((c = getopt (argc, argv, "d:m:f:s:o:b:l:tpu:w:nh")) != -1)
+	while ((c = getopt (argc, argv, "d:y:m:f:s:o:b:l:tpu:w:nh")) != -1)
 		switch (c)
 		{
 			case 'd':
 				delsys = atoi(optarg);
+				break;
+			case 'y':
+				voltage = atoi(optarg);
 				break;
 			case 'm':
 				mod = atoi(optarg);
@@ -237,6 +242,14 @@ int main (int argc, char **argv)
 		info.frequency = freq;
 		info.symbol_rate = sr;
 		info.modulation = (joker_fe_modulation)mod;
+
+		/* set LNB voltage for satellite */
+		if (voltage == 13)
+			info.voltage = JOKER_SEC_VOLTAGE_13;
+		else if (voltage == 18)
+			info.voltage = JOKER_SEC_VOLTAGE_18;
+		else
+			info.voltage = JOKER_SEC_VOLTAGE_OFF;
 
 		printf("TUNE start \n");
 		if (tune(joker, &info))

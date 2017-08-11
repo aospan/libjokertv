@@ -48,8 +48,7 @@ unsigned long phys_base = 0;
 // const struct kernel_param_ops param_ops_int;
 
 static struct tps65233_config lnb_config = {
-	.i2c_address = 0x60,
-	.data2_config = 0
+	.i2c_address = 0x60
 };
 
 static struct cxd2841er_config demod_config = {
@@ -318,6 +317,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	unsigned char buf[BUF_LEN];
 	int reset = 0xFF; /* reset all components on the board */
 	int input = 0, need_lnb = 0;
+	int cnt = 5; /* 5 times try to set LNB voltage */
 
 	struct dvb_diseqc_master_cmd dcmd = {
 		.msg = {0xFF},
@@ -466,10 +466,18 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			printf("can't attach LNB\n");
 			return -1;
 		}
+
+		while (cnt-- > 0) {
+			if(!fe->ops.set_voltage(fe, info->voltage))
+				break;
+
+			sleep (1);
+		}
 	}
 
 	/* actual tune call */
 	fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
+
 
 	/* TODO */
 #if 0

@@ -52,17 +52,24 @@ enum joker_fe_modulation {
   JOKER_QAM_4_NR,
 };
 
+enum joker_fe_sec_voltage {
+	JOKER_SEC_VOLTAGE_13,
+	JOKER_SEC_VOLTAGE_18,
+	JOKER_SEC_VOLTAGE_OFF
+};
+
 /* frontend parameters (standard, freq, etc)
  * copy from Linux: drivers/media/dvb-core/dvb_frontend.h
  */
 struct tune_info_t {
-  enum joker_fe_delivery_system delivery_system;
-  enum joker_fe_modulation      modulation;
-  uint32_t                     frequency; /* in HZ */
-  uint32_t                     symbol_rate;
-  uint32_t                     bandwidth_hz;   /* 0 = AUTO */
-  void * fe_opaque;
-  int				refresh; /* status refresh interval in ms */
+  enum	joker_fe_delivery_system delivery_system;
+  enum	joker_fe_modulation      modulation;
+  enum	joker_fe_sec_voltage	voltage;
+  uint32_t	frequency; /* in HZ */
+  uint32_t	symbol_rate;
+  uint32_t	bandwidth_hz;   /* 0 = AUTO */
+  void*		fe_opaque;
+  int		refresh; /* status refresh interval in ms */
 };
 
 struct stat_t {
