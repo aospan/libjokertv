@@ -75,14 +75,14 @@ set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 set_source_files_properties(${LINUX_SRC} PROPERTIES COMPILE_FLAGS ${KOPTIONS})
 target_link_libraries(jokertv ${EXT_LIBS})
 target_include_directories(jokertv PUBLIC ${INCLUDE_USER})
-add_dependencies(jokertv libusb libdvbpsi)
+add_dependencies(jokertv libusb)
 install(TARGETS jokertv DESTINATION lib)
 
 #simple program: tune and save TS to file
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 target_link_libraries(joker-tv jokertv ${EXT_LIBS})
-add_dependencies(joker-tv libusb libdvbpsi)
+add_dependencies(joker-tv libusb)
 target_include_directories(joker-tv PUBLIC ${INCLUDE_USER})
 install(TARGETS joker-tv DESTINATION bin)
 
