@@ -45,6 +45,12 @@ example tune to DTMB on 650MHz
 ./joker-tv -d 13 -f 650000000
 ```
 
+example tune to DVB-S on Galaxy 19 satellite. Frequency 12152 MHz, Horizontal
+polarization (18V), symbol rate 20000, LNB settings 10750,10750,11600
+```
+./joker-tv -d 5 -f 12152000000 -s 20000000 -y 18 -p -z 10750,10750,11600
+```
+
 if everything is fine then you can see progress. Something like this:
 ```
 usb device found

@@ -455,9 +455,9 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	/* set tune info */
 	fe->dtv_property_cache.delivery_system = info->delivery_system;
 	fe->dtv_property_cache.bandwidth_hz = info->bandwidth_hz;
-	fe->dtv_property_cache.frequency = info->frequency; 
 	fe->dtv_property_cache.modulation = info->modulation;
 	fe->dtv_property_cache.symbol_rate = info->symbol_rate;
+	fe->dtv_property_cache.frequency = info->frequency; 
 
 	/* enable LNB */
 	if (need_lnb) {
@@ -473,6 +473,15 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 			sleep (1);
 		}
+
+		/* use LNB settings to calculate correct frequency */
+		if (info->lnb.switchfreq) {
+			if (info->frequency > info->lnb.switchfreq*1000*1000)
+				fe->dtv_property_cache.frequency = info->frequency - info->lnb.highfreq*1000*1000;
+			else
+				fe->dtv_property_cache.frequency = info->frequency - info->lnb.lowfreq*1000*1000;
+		}
+		printf("final freq %d \n", fe->dtv_property_cache.frequency);
 	}
 
 	/* actual tune call */

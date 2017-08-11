@@ -101,6 +101,7 @@ void show_help() {
 	printf("	-u level	Libusb verbose level (0 - less, 4 - more verbose). Default: 0\n");
 	printf("	-w filename	Update firmware on flash. Default: none\n");
 	printf("	-p		Decode programs info (DVB PSI tables). Default: no\n");
+	printf("	-z l,h,s	LNB settings: low/high/switch frequency. Example: -z 9750,10600,11700\n");
 
 	exit(0);
 }
@@ -144,7 +145,7 @@ int main (int argc, char **argv)
 
 	pool.service_name_callback = &service_name_update;
 
-	while ((c = getopt (argc, argv, "d:y:m:f:s:o:b:l:tpu:w:nh")) != -1)
+	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nh")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -152,6 +153,9 @@ int main (int argc, char **argv)
 				break;
 			case 'y':
 				voltage = atoi(optarg);
+				break;
+			case 'z':
+				sscanf(optarg, "%d,%d,%d", &info.lnb.lowfreq, &info.lnb.highfreq, &info.lnb.switchfreq);
 				break;
 			case 'm':
 				mod = atoi(optarg);
