@@ -106,9 +106,11 @@ install(TARGETS i2c-scan DESTINATION bin)
 # TS stream generate/validate utilities
 add_executable(tsgen src/tsgen.c)
 target_include_directories(tsgen PUBLIC ${INCLUDE_USER})
+install(TARGETS tsgen DESTINATION bin)
 
 add_executable(tscheck src/tscheck.c)
 target_include_directories(tscheck PUBLIC ${INCLUDE_USER})
+install(TARGETS tscheck DESTINATION bin)
 
 ##############################################
 # prepare cmake files for downstream projects
