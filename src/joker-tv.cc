@@ -120,6 +120,7 @@ int main (int argc, char **argv)
 	FILE * out = NULL;
 	char filename[FNAME_LEN] = "out.ts";
 	char fwfilename[FNAME_LEN] = "";
+	char confirm[FNAME_LEN];
 	int signal = 0;
 	int disable_data = 0;
 	struct ts_node * node = NULL;
@@ -210,8 +211,15 @@ int main (int argc, char **argv)
 			printf("SPI flash id check failed. Cancelling fw update.\n");
 			return -1;
 		}
-		printf("SPI flash id check success. Starting fw update.\n");
+		printf("SPI flash id check success. Please enter 'yes' to continue: ");
 
+		if (!fgets(confirm, FNAME_LEN, stdin))
+			return -1;
+
+		if (strncmp(confirm, "yes", 3))
+			return -1;
+
+		printf("\nStarting fw update.\n");
 		if(joker_flash_write(joker, fwfilename)) {
 			printf("Can't write fw to flash !\n");
 			return -1;
