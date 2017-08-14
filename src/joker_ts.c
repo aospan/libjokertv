@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <iconv.h>
 #include <sys/types.h>
 #include <joker_tv.h>
 #include <joker_ts.h>
@@ -82,44 +83,142 @@ static void DumpDescriptors(const char* str, dvbpsi_descriptor_t* p_descriptor)
 	// Parse according DVB Document A038 (July 2014)
 	while(p_descriptor_l)
 	{ 
-		printf("	tag=0x%02x : \n", p_descriptor_l->i_tag);
+		printf("	tag=0x%02x : len=%d \n", p_descriptor_l->i_tag, p_descriptor_l->i_length );
 		hexdump(p_descriptor_l->p_data, p_descriptor_l->i_length);
 		p_descriptor_l = p_descriptor_l->p_next;
 	}
 };
 
+// convert name to utf-8
+static void to_utf(char * buf, int maxlen, uint8_t codepage)
+{
+	iconv_t cd;
+	char outbuf[maxlen];
+	char * outptr = &outbuf[0];
+	char * charset = "ISO6937";
+	char *inbuf = buf;
+	size_t nconv = 0, insize = 0, avail = maxlen;
+
+	insize = strlen(buf);
+	memset(outbuf, 0x0, maxlen);
+
+	// Values used from DVB Document A038 (July 2014)
+	// Table A.3: Character coding tables
+	switch (codepage) {
+		case 0x01:
+			// Latin/Cyrillic
+			charset = "ISO8859-5"; break;
+		case 0x02:
+			// Latin/Arabic
+			charset = "ISO8859-6"; break;
+		case 0x03:
+			// Latin/Greek
+			charset = "ISO8859-7"; break;
+		case 0x04:
+			// Latin/Hebrew
+			charset = "ISO8859-8"; break;
+		case 0x05:
+			// Latin alphabet No. 5
+			charset = "ISO8859-9"; break;
+		case 0x06:
+			// Latin alphabet No. 6
+			charset = "ISO8859-10"; break;
+		case 0x07:
+			// Latin/Thai
+			charset = "ISO8859-11"; break;
+		case 0x09:
+			// Latin alphabet No. 7
+			charset = "ISO8859-13"; break;
+		case 0x0a:
+			// Latin alphabet No. 8 (Celtic)
+			charset = "ISO8859-14"; break;
+		case 0x0b:
+			// Latin alphabet No. 9
+			charset = "ISO8859-15"; break;
+		case 0x11:
+		case 0x14: // Big5 subset of ISO/IEC 10646 [16] Traditional Chinese
+		case 0x15: // UTF-8 encoding of ISO/IEC 10646 [16] Basic Multilingual Plane (BMP)
+			// Basic Multilingual Plane (BMP)
+			charset = "ISO-10646"; break;
+		case 0x13:
+			// Simplified Chinese Character
+			charset = "GB2312"; break;
+		case 0x00:
+		default:
+			// default codepage  ISO/IEC 6937
+			charset = "ISO6937";
+			break;
+	}
+
+	cd = iconv_open ("UTF-8", charset);
+	if (cd == (iconv_t) -1)
+	{
+		printf("can't open iconv for charset conversion\n");
+		return;
+	}
+
+
+	nconv = iconv (cd, &inbuf, &insize, &outptr, &avail);
+	if (nconv == -1)
+		printf("iconv conversion may be failed. But we use result anyway ... \n");
+
+	jdebug("iconv: insize=%zd avail=%zd nconv=%zd \n", insize, avail, nconv );
+	// copy result 
+	memset(buf, 0, maxlen);
+	memcpy(buf, outbuf, maxlen - avail);
+	iconv_close (cd);
+}
+
 static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_descriptor)
 { 
-	int i = 0, off = 0, provider_len = 0, name_len = 0;
-	unsigned char *ptr = NULL;
+	int i = 0, off = 0, service_provider_name_length = 0, service_name_length = 0;
+	unsigned char *service_name_ptr = NULL;
+	uint8_t codepage = 0;
+	uint8_t service_type = 0;
 
 	memset(&program->name, 0, SERVICE_NAME_LEN);
 	
 	// Parse according DVB Document A038 (July 2014)
+	// Specification for Service Information (SI)
+	// in DVB systems)
 	while(p_descriptor)
 	{ 
 		if (p_descriptor->i_tag == 0x48 /* Table 12. service_descriptor */) {
 			// 6.2.33 Service descriptor
-			// p_data:
-			// service_type
-			//	service_provider_name_length
-			//	for (i=0;i<N;i++){ }
-			//	service_name_length
-			//	for (i=0;i<N;i++){ }
-			provider_len = p_descriptor->p_data[1];
-			name_len = p_descriptor->p_data[provider_len + 2];
-			ptr = p_descriptor->p_data + provider_len + 3;
-			jdebug("provider_len=%d name_len=%d ptr=%d \n", provider_len, name_len, provider_len + 3);
-			for (i = 0; i < name_len; i++) {
+			// Table 86: Service descriptor
+			//	byte0 - service_type
+			//	byte1 - service_provider_name_length
+			//		0 ... N - provider_name
+			//	byteN + 2 - service_name_length
+			//		0 ... N - service_name
+			service_type = p_descriptor->p_data[0];
+			service_provider_name_length = p_descriptor->p_data[1];
+			service_name_length = p_descriptor->p_data[service_provider_name_length + 2];
+			service_name_ptr = p_descriptor->p_data + service_provider_name_length + 3;
+
+			// sanity check
+			if (!service_name_length)
+				return;
+
+			// Text fields can optionally start with non-spacing,
+			// non-displayed data which specifies the
+			// alternative character table to be used for the
+			// remainder of the text item.
+			codepage = p_descriptor->p_data[service_provider_name_length + 3];
+			jdebug("provider_len=%d service_name_length=%d service_name_ptr=%d codepage=0x%x\n",
+					service_provider_name_length, service_name_length, service_provider_name_length + 3, codepage);
+			for (i = 1; i < service_name_length; i++) {
 				// special chars. ignore it
-				if (ptr[i] >= 0x80 && ptr[i] <= 0x8B)
+				if (service_name_ptr[i] >= 0x80 && service_name_ptr[i] <= 0x8B)
 					continue;
 
-				program->name[off] = ptr[i];
+				program->name[off] = service_name_ptr[i];
 				off++;
 			}
-			
 			jdebug("program=%d new name=%s \n", program->number, program->name);
+
+			// convert name to utf-8
+			to_utf(program->name, SERVICE_NAME_LEN, codepage);
 		}
 		p_descriptor = p_descriptor->p_next;
 	}
@@ -148,6 +247,7 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 	while(p_service)
 	{
 		jdebug("service_id=0x%02x\n", p_service->i_service_id);
+		// DumpDescriptors("	", p_service->p_first_descriptor);
 		if(!list_empty(&pool->programs_list)) {
 			list_for_each_entry(program, &pool->programs_list, list) {
 				if (program->number == p_service->i_service_id) {
@@ -160,7 +260,6 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 			}
 		}
 
-		// DumpDescriptors("	", p_service->p_first_descriptor);
 		p_service = p_service->p_next;
 	}
 	dvbpsi_sdt_delete(p_sdt);
