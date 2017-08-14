@@ -25,7 +25,7 @@ void hexdump(unsigned char * buf, int size)
 	unsigned char * ptr = txt;
 
 	printf("%.8x  ", i);
-	for(i = 0; i < size; i ++){
+	for(i = 0; i < size; i++){
 		if (i && !(i%8))
 			printf("   ");
 		if (i && !(i%16)) {
@@ -38,6 +38,7 @@ void hexdump(unsigned char * buf, int size)
 		if (printed > 0)
 			ptr += printed;
 	}
+	printf("  %s\n", txt);
 
 	printf("\n");
 }
