@@ -20,6 +20,7 @@ pkg_check_modules(PC_LIBDVBPSI libdvbpsi)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	find_library(LIBIOKit IOKit)
 	find_library(LIBCoreFoundation CoreFoundation)
+	find_library(LIBICONV iconv)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_library(LIBUDEV udev)
 endif()
@@ -68,7 +69,7 @@ set(KOPTIONS
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER ${PC_LIBDVBPSI_INCLUDEDIR}/dvbpsi)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
-	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBUDEV})
+	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBUDEV} ${LIBICONV})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
