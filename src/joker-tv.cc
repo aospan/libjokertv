@@ -141,9 +141,6 @@ int main (int argc, char **argv)
 	memset(in_buf, 0, JCMD_BUF_LEN);
 	memset(buf, 0, JCMD_BUF_LEN);
 
-	if (pool_init(&pool))
-		return -1;
-
 	pool.service_name_callback = &service_name_update;
 
 	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nhe")) != -1)

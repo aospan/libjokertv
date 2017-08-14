@@ -60,6 +60,8 @@ int pool_init(struct big_pool_t * pool)
 	memset(&pool->hooks, 0, sizeof(pool->hooks));
 	memset(&pool->transfers, 0, sizeof(pool->transfers));
 
+	pool->initialized = BIG_POOL_MAGIC;
+
 	return 0;
 }
 
@@ -296,6 +298,10 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	if (!dev)
 		return EINVAL;
 
+	// sanity check
+	if (pool->initialized != BIG_POOL_MAGIC)
+		pool_init(pool);
+
 #ifdef __linux__ 
 	/* set FIFO schedule priority
 	 * for faster USB ISOC transfer processing */
@@ -410,6 +416,10 @@ int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 	int remain = size;
 
 	if (!data)
+		return -EINVAL;
+
+	// sanity check
+	if (pool->initialized != BIG_POOL_MAGIC)
 		return -EINVAL;
 
 	while(remain) {

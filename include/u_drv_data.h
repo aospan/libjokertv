@@ -41,6 +41,8 @@ struct ts_node {
 	struct list_head list;
 };
 
+#define BIG_POOL_MAGIC 0xbb0000aa
+
 /* ring buffer for TS data */
 struct big_pool_t {
 	unsigned char * ptr;
@@ -85,6 +87,8 @@ struct big_pool_t {
 	service_name_callback_t service_name_callback;
 	void *pat_dvbpsi;
 	void *sdt_dvbpsi;
+
+	uint32_t initialized;
 };
 
 /* init pool */
