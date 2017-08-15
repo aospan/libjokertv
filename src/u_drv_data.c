@@ -58,6 +58,7 @@ int pool_init(struct big_pool_t * pool)
 	pthread_cond_init(&pool->cond, NULL);
 
 	memset(&pool->hooks, 0, sizeof(pool->hooks));
+	memset(&pool->hooks_opaque, 0, sizeof(pool->hooks_opaque));
 	memset(&pool->transfers, 0, sizeof(pool->transfers));
 
 	pool->initialized = BIG_POOL_MAGIC;
@@ -96,7 +97,8 @@ void* process_ts(void * data) {
 
 			if(pool->hooks[pid]) {
 				jdebug("calling hook pid=0x%x pool=%p pkt=%p\n", pid, pool, pkt);
-				pool->hooks[pid](pool, pkt);
+				pool->hooks[pid]( pool->hooks_opaque [ pid ] ?
+						pool->hooks_opaque[pid] : pool, pkt);
 			}
 		}
 

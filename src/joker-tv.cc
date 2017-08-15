@@ -78,8 +78,18 @@ void * print_stat(void *data)
 // this callback will be called when new service name arrived
 void service_name_update(struct program_t *program)
 {
-	printf("callback:%s program number=%d name=%s \n",
-			__func__, program->number, program->name);
+	struct program_es_t*es = NULL;
+	printf("callback:%s program number=%d name=%s type=0x%x. video:%s audio:%s\n",
+			__func__, program->number, program->name, program->service_type,
+			program->has_video ? "yes" : "",
+			program->has_audio ? "yes" : "");
+
+	if(!list_empty(&program->es_list)) {
+		list_for_each_entry(es, &program->es_list, list) {
+			printf("	ES pid=0x%x type=0x%x\n",
+					es->pid, es->type);
+		}
+	}
 }
 
 void show_help() {

@@ -25,38 +25,12 @@
 #include <stdbool.h>
 #include <dvbpsi.h>
 #include <psi.h>
-#include <pat.h>
 #include <descriptor.h>
+#include <pat.h>
+#include <pmt.h>
+#include <dr.h>
 #include <demux.h>
 #include <sdt.h>
-
-static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
-{
-	struct program_t *program = NULL;
-	struct big_pool_t *pool = (struct big_pool_t *)data;
-	dvbpsi_pat_program_t* p_program = p_pat->p_first_program;
-	jdebug(  "\n");
-	jdebug(  "New PAT. pool=%p\n", pool);
-	jdebug(  "  transport_stream_id : %d\n", p_pat->i_ts_id);
-	jdebug(  "  version_number      : %d\n", p_pat->i_version);
-	jdebug(  "    | program_number @ [NIT|PMT]_PID\n");
-	while(p_program)
-	{
-		program = (struct program_t*)malloc(sizeof(*program));
-		if (!program)
-			break;
-
-		memset(&program->name, 0, SERVICE_NAME_LEN);
-		program->number = p_program->i_number;
-		list_add_tail(&program->list, &pool->programs_list);
-
-		jdebug("    | %14d @ 0x%x (%d)\n",
-				p_program->i_number, p_program->i_pid, p_program->i_pid);
-		p_program = p_program->p_next;
-	}
-	jdebug(  "  active              : %d\n", p_pat->b_current_next);
-	dvbpsi_pat_delete(p_pat);
-}
 
 static void message(dvbpsi_t *handle, const dvbpsi_msg_level_t level, const char* msg)
 {
@@ -72,6 +46,179 @@ static void message(dvbpsi_t *handle, const dvbpsi_msg_level_t level, const char
 			return;
 	}
 	jdebug("%s\n", msg);
+}
+
+// this hook will be called when TS packet with desired pid received
+void pmt_hook(void *opaque, unsigned char *pkt)
+{
+	struct program_t *program = (struct program_t *)opaque;
+	jdebug("%s:program=%p pkt=%p\n", __func__, program, pkt);
+	if (!program)
+		return;
+
+	dvbpsi_packet_push(program->pmt_dvbpsi, pkt);
+}
+
+char * parse_type(uint8_t type, int *_audio, int *_video)
+{   
+	switch (type)
+	{
+		case 0x00:
+			return "Reserved";
+		case 0x01:
+			*_video = 1;
+			return "ISO/IEC 11172 Video";
+		case 0x02:
+			*_video = 1;
+			return "ISO/IEC 13818-2 Video";
+		case 0x03:
+			*_audio = 1;
+			return "ISO/IEC 11172 Audio";
+		case 0x04:
+			*_audio = 1;
+			return "ISO/IEC 13818-3 Audio";
+		case 0x05:
+			return "ISO/IEC 13818-1 Private Section";
+		case 0x06:
+			return "ISO/IEC 13818-1 Private PES data packets";
+		case 0x07:
+			return "ISO/IEC 13522 MHEG";
+		case 0x08:
+			return "ISO/IEC 13818-1 Annex A DSM CC";
+		case 0x09:
+			return "H222.1";
+		case 0x0A:
+			return "ISO/IEC 13818-6 type A";
+		case 0x0B:
+			return "ISO/IEC 13818-6 type B";
+		case 0x0C:
+			return "ISO/IEC 13818-6 type C";
+		case 0x0D:
+			return "ISO/IEC 13818-6 type D";
+		case 0x0E:
+			return "ISO/IEC 13818-1 auxillary";
+		case 0x1B:
+			*_video = 1;
+			return "AVC video stream as defined in ITU-T Rec. H.264 | ISO/IEC 14496-10 Video";
+		default:
+			if (type < 0x80)
+				return "ISO/IEC 13818-1 reserved";
+			else
+				return "User Private";
+	}
+}
+
+/*****************************************************************************
+ * DumpPMT
+ *****************************************************************************/
+static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
+{
+	struct program_t *program = (struct program_t *)data;
+	struct program_es_t*es = NULL;
+	int audio = 0, video = 0;
+	dvbpsi_pmt_es_t* p_es = p_pmt->p_first_es;
+
+	jdebug(  "\n");
+	jdebug(  "New active PMT\n");
+	jdebug(  "  program_number : %d\n",
+			p_pmt->i_program_number);
+	jdebug(  "  version_number : %d\n",
+			p_pmt->i_version);
+	jdebug(  "  PCR_PID        : 0x%x (%d)\n",
+			p_pmt->i_pcr_pid, p_pmt->i_pcr_pid);
+	jdebug(  "    | type @ elementary_PID\n");
+
+	while(p_es)
+	{
+		// avoid duplicates
+		if(!list_empty(&program->es_list)) {
+			list_for_each_entry(es, &program->es_list, list) {
+				if (es->pid == p_es->i_pid) 
+					continue; // ignore, already in the list
+			}
+		}
+
+		es = (struct program_es_t*)malloc(sizeof(*es));
+		if (!es)
+			break;
+
+		es->pid = p_es->i_pid;
+		es->type = p_es->i_type;
+
+		audio = 0;
+		video = 0;
+		parse_type(p_es->i_type, &audio, &video);
+
+		if (video)
+			program->has_video = 1;
+
+		if (audio)
+			program->has_audio = 1;
+
+		list_add_tail(&es->list, &program->es_list);
+
+		jdebug("    | 0x%02x (%s) @ 0x%x (%d)\n",
+				p_es->i_type, GetTypeName(p_es->i_type),
+				p_es->i_pid, p_es->i_pid);
+		p_es = p_es->p_next;
+	}
+	dvbpsi_pmt_delete(p_pmt);
+}
+
+static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
+{
+	struct program_t *program = NULL;
+	struct big_pool_t *pool = (struct big_pool_t *)data;
+	dvbpsi_pat_program_t* p_program = p_pat->p_first_program;
+	jdebug(  "\n");
+	jdebug(  "New PAT. pool=%p\n", pool);
+	jdebug(  "  transport_stream_id : %d\n", p_pat->i_ts_id);
+	jdebug(  "  version_number      : %d\n", p_pat->i_version);
+	jdebug(  "    | program_number @ [NIT|PMT]_PID\n");
+	while(p_program)
+	{
+		// avoid duplicates
+		if(!list_empty(&pool->programs_list)) {
+			list_for_each_entry(program, &pool->programs_list, list) {
+				if (program->number == p_program->i_number) 
+					continue; // ignore, already in the list
+			}
+		}
+
+		program = (struct program_t*)malloc(sizeof(*program));
+		if (!program)
+			break;
+
+		memset(&program->name, 0, SERVICE_NAME_LEN);
+		program->number = p_program->i_number;
+		INIT_LIST_HEAD(&program->es_list);
+		list_add_tail(&program->list, &pool->programs_list);
+
+		jdebug("    | %14d @ 0x%x (%d)\n",
+				p_program->i_number, p_program->i_pid, p_program->i_pid);
+		program->pmt_pid = p_program->i_pid;
+
+		// attach PMT parser
+		program->pmt_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_DEBUG);
+		if (program->pmt_dvbpsi == NULL) {
+			printf("Can't attach PMT pid 0x%x to program 0x%x \n",
+					p_program->i_pid, p_program->i_number);
+			p_program = p_program->p_next;
+			continue;
+		}
+
+		if (!dvbpsi_pmt_attach(program->pmt_dvbpsi, p_program->i_number, DumpPMT, program)) {
+			dvbpsi_delete(program->pmt_dvbpsi);
+			p_program = p_program->p_next;
+			continue;
+		}
+
+		pool->hooks[p_program->i_pid] = &pmt_hook;
+		pool->hooks_opaque[p_program->i_pid] = program;
+		p_program = p_program->p_next;
+	}
+	jdebug(  "  active              : %d\n", p_pat->b_current_next);
+	dvbpsi_pat_delete(p_pat);
 }
 
 /*****************************************************************************
@@ -174,7 +321,6 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 	int i = 0, off = 0, service_provider_name_length = 0, service_name_length = 0;
 	unsigned char *service_name_ptr = NULL;
 	uint8_t codepage = 0;
-	uint8_t service_type = 0;
 
 	memset(&program->name, 0, SERVICE_NAME_LEN);
 	
@@ -191,10 +337,12 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 			//		0 ... N - provider_name
 			//	byteN + 2 - service_name_length
 			//		0 ... N - service_name
-			service_type = p_descriptor->p_data[0];
+			program->service_type = p_descriptor->p_data[0];
 			service_provider_name_length = p_descriptor->p_data[1];
 			service_name_length = p_descriptor->p_data[service_provider_name_length + 2];
 			service_name_ptr = p_descriptor->p_data + service_provider_name_length + 3;
+
+			jdebug("service_type=%d \n", service_type );
 
 			// sanity check
 			if (!service_name_length)
@@ -281,14 +429,16 @@ static void NewSubtable(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_exten
 // this hooks will be called when TS packet with desired pid received
 // 0x00 - PAT pid
 // 0x11 - SDT pid
-void pat_hook(struct big_pool_t * pool, unsigned char *pkt)
+void pat_hook(void *data, unsigned char *pkt)
 {
+	struct big_pool_t * pool = (struct big_pool_t *)data;
 	jdebug("%s:pool=%p pkt=%p\n", __func__, pool, pkt);
 	dvbpsi_packet_push(pool->pat_dvbpsi, pkt);
 }
 
-void sdt_hook(struct big_pool_t * pool, unsigned char *pkt)
+void sdt_hook(void *data, unsigned char *pkt)
 {
+	struct big_pool_t * pool = (struct big_pool_t *)data;
 	jdebug("%s:pool=%p pkt=%p\n", __func__, pool, pkt);
 	dvbpsi_packet_push(pool->sdt_dvbpsi, pkt);
 }
@@ -300,6 +450,9 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	struct list_head *result = NULL;
 	unsigned char *pkt = NULL;
 	int pid = 0;
+	struct program_t *program = NULL;
+	struct program_es_t *es = NULL;
+	int notready = 0, cnt = 1000;
 
 	// Attach PAT
 	pool->pat_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
@@ -321,8 +474,26 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	pool->hooks[0x00] = &pat_hook;
 	pool->hooks[0x11] = &sdt_hook;
 
+	// check program list (PAT parse)
 	while (list_empty(&pool->programs_list))
 		usleep(1000);
+
+	// check ES streams (PMT parse)
+	jdebug("is PMT done ? \n");
+	while (cnt-- > 0 ) {	
+		// we are ready when all programs PMT parsed
+		notready = 0;
+		list_for_each_entry(program, &pool->programs_list, list) {
+			if(list_empty(&program->es_list))
+				notready = 1;
+		}
+
+		if (!notready)
+			break;
+			
+		usleep(1000);
+	}
+	printf("All PAT/PMT parse done. Program list is ready now.\n");
 
 	// OK exit
 	return &pool->programs_list;

@@ -26,7 +26,7 @@
 // hook function
 struct big_pool_t;
 struct program_t;
-typedef void(*ts_hook_t)(struct big_pool_t *, unsigned char *pkt);
+typedef void(*ts_hook_t)(void *opaque, unsigned char *pkt);
 typedef void(*service_name_callback_t)(struct program_t *program);
 
 #ifdef __cplusplus
@@ -66,6 +66,7 @@ struct big_pool_t {
 
 	/* hooks */
 	ts_hook_t hooks[8192];
+	void * hooks_opaque[8192];
 
 	/* statistics */
 	int pkt_count;
