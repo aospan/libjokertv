@@ -472,7 +472,6 @@ struct list_head * get_programs(struct big_pool_t *pool)
 
 	// install hooks
 	pool->hooks[0x00] = &pat_hook;
-	pool->hooks[0x11] = &sdt_hook;
 
 	// check program list (PAT parse)
 	while (list_empty(&pool->programs_list))
@@ -494,6 +493,9 @@ struct list_head * get_programs(struct big_pool_t *pool)
 		usleep(1000);
 	}
 	printf("All PAT/PMT parse done. Program list is ready now.\n");
+
+	// parse SDT only after PAT and PMT !
+	pool->hooks[0x11] = &sdt_hook;
 
 	// OK exit
 	return &pool->programs_list;
