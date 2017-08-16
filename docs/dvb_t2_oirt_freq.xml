@@ -1,0 +1,430 @@
+<document>
+ <!--
+ <row>
+  <Col0>delivery_system</Col0 >
+  <Col1>frequency_mhz</Col1 >
+  <Col2>bandwidth</Col2 >
+  <Col3>modulation</Col3 >
+ </row>
+ -->
+ <row>
+  <Col0>16</Col0 >
+  <Col1>306</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>314</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>322</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>330</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>338</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>346</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>354</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>362</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>370</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>378</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>386</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>394</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>402</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>410</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>418</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>426</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>434</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>442</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>450</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>458</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>466</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>474</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>482</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>490</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>498</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>506</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>514</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>522</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>530</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>538</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>546</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>554</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>562</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>570</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>578</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>586</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>594</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>602</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>610</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>618</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>626</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>634</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>642</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>650</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>658</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>666</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>674</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>682</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>690</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>698</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>706</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>714</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>722</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>730</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>738</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>746</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>754</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>762</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>770</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>778</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>786</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>794</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>802</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>810</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>818</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>826</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>834</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>842</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>850</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+ <row>
+  <Col0>16</Col0 >
+  <Col1>858</Col1 >
+  <Col2>8</Col2 >
+  <Col3>0</Col3 >
+ </row>
+</document>
