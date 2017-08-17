@@ -1,423 +1,76 @@
-<!-- Frequencies for TV channels ( according OIRT freq plan -->
+<!-- Frequencies for TV channels ( according OIRT freq plan ) -->
+<?xml version="1.0" encoding="utf-8"?>
 <document>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>306</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>314</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>322</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>330</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>338</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>346</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>354</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>362</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>370</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>378</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>386</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>394</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>402</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>410</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>418</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>426</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>434</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>442</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>450</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>458</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>466</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>474</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>482</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>490</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>498</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>506</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>514</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>522</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>530</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>538</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>546</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>554</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>562</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>570</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>578</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>586</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>594</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>602</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>610</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>618</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>626</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>634</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>642</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>650</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>658</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>666</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>674</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>682</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>690</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>698</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>706</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>714</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>722</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>730</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>738</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>746</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>754</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>762</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>770</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>778</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>786</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>794</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>802</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>810</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>818</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>826</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>834</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>842</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>850</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
- <row>
-  <delivery_system>16</delivery_system>
-  <frequency_mhz>858</frequency_mhz>
-  <bandwidth>8</bandwidth>
-  <modulation>0</modulation>
- </row>
+	<delivery_system standard="16">
+		<freq bandwidth="8" frequency_mhz="306" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="314" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="322" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="330" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="338" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="346" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="354" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="362" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="370" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="378" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="386" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="394" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="402" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="410" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="418" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="426" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="434" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="442" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="450" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="458" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="466" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="474" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="482" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="490" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="498" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="506" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="514" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="522" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="530" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="538" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="546" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="554" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="562" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="570" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="578" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="586" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="594" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="602" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="610" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="618" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="626" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="634" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="642" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="650" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="658" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="666" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="674" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="682" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="690" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="698" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="706" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="714" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="722" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="730" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="738" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="746" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="754" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="762" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="770" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="778" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="786" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="794" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="802" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="810" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="818" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="826" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="834" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="842" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="850" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="858" modulation="0"></freq>
+	</delivery_system>
 </document>
