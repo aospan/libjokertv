@@ -46,6 +46,7 @@ void * print_stat(void *data)
 	unsigned char in_buf[JCMD_BUF_LEN];
 	uint16_t level = 0;
 	int ret = 0;
+	int32_t rssi = 0;
 
 	if(!stat)
 		return NULL;
@@ -61,8 +62,10 @@ void * print_stat(void *data)
 			status = read_status(info);
 			ucblocks = read_ucblocks(info);
 			signal = read_signal(info);
-			printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d\n", 
-					status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF, ucblocks );
+			read_rf_level(info, &rssi);
+			printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d rflevel=%.3f dBm\n", 
+					status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF,
+					ucblocks, (double)rssi/1000 );
 		}
 
 		buf[0] = J_CMD_TSFIFO_LEVEL;

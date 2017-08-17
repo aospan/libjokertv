@@ -227,6 +227,26 @@ int read_status(struct tune_info_t *info)
 	return EAGAIN;
 }
 
+/* read RF level
+ * rssi pointer to int32_t where RF level will be stored
+ * RF level given in dBm * 1000
+ *
+ * return 0 if success
+ * other values is errors */
+int read_rf_level(struct tune_info_t *info, int32_t *rssi)
+{
+	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
+	uint8_t ifagcreg = 0, rfagcreg = 0, if_bpf_gain = 0;
+
+	if (!fe)
+		return -EINVAL;
+
+	if (fe->ops.tuner_ops.get_rssi)
+		fe->ops.tuner_ops.get_rssi(fe, rssi);
+
+	jdebug("RF Level %f dBm \n", (double)*rssi/1000);
+}
+
 /* return signal strength
  * range 0x0000 - 0xffff
  * 0x0000 - weak signal
@@ -236,6 +256,7 @@ int read_signal(struct tune_info_t *info)
 {
 	u16 strength = 0;
 	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
+	int32_t rssi = 0;
 
 	if (!fe)
 		return -EINVAL;

@@ -60,13 +60,13 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_utils.c
 	src/joker_ts.c)
 
-set(KOPTIONS
-	"-I ${CMAKE_SOURCE_DIR}/linux/ \
-	-I ${CMAKE_SOURCE_DIR}/linux/include/ \
-	-I ${CMAKE_SOURCE_DIR}/linux/include/uapi \
-	-I ${CMAKE_SOURCE_DIR}/linux/include/uapi/linux/dvb/ \
-	-I ${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/ \
-	-include ./include/linux/types.h")
+set(KOPTIONS "-include ${CMAKE_SOURCE_DIR}/linux/include/linux/types.h")
+set(KINCLUDE_DIRS
+	${CMAKE_SOURCE_DIR}/linux/
+	${CMAKE_SOURCE_DIR}/linux/include/
+	${CMAKE_SOURCE_DIR}/linux/include/uapi
+	${CMAKE_SOURCE_DIR}/linux/include/uapi/linux/dvb/
+	${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/)
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER ${PC_LIBDVBPSI_INCLUDEDIR}/dvbpsi)
@@ -77,14 +77,20 @@ set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
 	FILES_MATCHING PATTERN "*.h")
 
+#static lib with kernel stuff
+add_library (jokertv_linux STATIC ${LINUX_SRC})
+target_include_directories(jokertv_linux PRIVATE ${KINCLUDE_DIRS})
+set_source_files_properties(${LINUX_SRC} PROPERTIES COMPILE_FLAGS ${KOPTIONS})
+set_target_properties(jokertv_linux PROPERTIES COMPILE_FLAGS "-fPIC")
+
 #combined shared lib
-add_library (jokertv SHARED ${LINUX_SRC} ${JOKERTV_SRC})
+add_library (jokertv SHARED ${JOKERTV_SRC})
 set_property(TARGET jokertv PROPERTY VERSION ${joker_tv_VERSION})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
-set_source_files_properties(${LINUX_SRC} PROPERTIES COMPILE_FLAGS ${KOPTIONS})
-add_dependencies(jokertv libusb)
+add_dependencies(jokertv libusb jokertv_linux)
+SET (LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 target_link_libraries(jokertv
-	PUBLIC ${EXT_LIBS} 
+	PRIVATE ${LINUXLIB}
 	PRIVATE ${PC_LIBUSB_LIBRARIES}
 	)
 target_include_directories(jokertv PUBLIC
@@ -109,6 +115,7 @@ install(TARGETS i2c-scan DESTINATION bin)
 # TS stream generate/validate utilities
 add_executable(tsgen src/tsgen.c)
 target_include_directories(tsgen PUBLIC ${INCLUDE_USER})
+target_link_libraries(tsgen ${PC_LIBDVBPSI_LIBRARIES})
 install(TARGETS tsgen DESTINATION bin)
 
 add_executable(tscheck src/tscheck.c)
