@@ -1,430 +1,423 @@
+<!-- Frequencies for TV channels ( according OIRT freq plan -->
 <document>
- <!--
  <row>
-  <Col0>delivery_system</Col0 >
-  <Col1>frequency_mhz</Col1 >
-  <Col2>bandwidth</Col2 >
-  <Col3>modulation</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>306</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
- -->
  <row>
-  <Col0>16</Col0 >
-  <Col1>306</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>314</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>314</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>322</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>322</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>330</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>330</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>338</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>338</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>346</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>346</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>354</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>354</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>362</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>362</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>370</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>370</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>378</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>378</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>386</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>386</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>394</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>394</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>402</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>402</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>410</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>410</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>418</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>418</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>426</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>426</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>434</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>434</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>442</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>442</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>450</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>450</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>458</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>458</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>466</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>466</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>474</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>474</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>482</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>482</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>490</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>490</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>498</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>498</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>506</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>506</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>514</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>514</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>522</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>522</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>530</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>530</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>538</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>538</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>546</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>546</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>554</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>554</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>562</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>562</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>570</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>570</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>578</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>578</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>586</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>586</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>594</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>594</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>602</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>602</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>610</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>610</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>618</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>618</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>626</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>626</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>634</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>634</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>642</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>642</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>650</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>650</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>658</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>658</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>666</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>666</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>674</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>674</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>682</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>682</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>690</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>690</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>698</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>698</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>706</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>706</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>714</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>714</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>722</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>722</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>730</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>730</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>738</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>738</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>746</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>746</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>754</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>754</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>762</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>762</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>770</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>770</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>778</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>778</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>786</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>786</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>794</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>794</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>802</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>802</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>810</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>810</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>818</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>818</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>826</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>826</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>834</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>834</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>842</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>842</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>850</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
  <row>
-  <Col0>16</Col0 >
-  <Col1>850</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
- </row>
- <row>
-  <Col0>16</Col0 >
-  <Col1>858</Col1 >
-  <Col2>8</Col2 >
-  <Col3>0</Col3 >
+  <delivery_system>16</delivery_system>
+  <frequency_mhz>858</frequency_mhz>
+  <bandwidth>8</bandwidth>
+  <modulation>0</modulation>
  </row>
 </document>
