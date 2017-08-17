@@ -446,7 +446,7 @@ static int helene_leave_power_save(struct helene_priv *priv)
 	helene_write_reg(priv, 0x87, 0xC4);
 
 	/* Standby setting for CPU */
-	helene_write_reg(priv, 0x88, 0x40);
+	helene_write_reg(priv, 0x88, 0x41);
 
 	priv->state = STATE_ACTIVE;
 	return 0;
@@ -538,7 +538,7 @@ static enum helene_tv_system_t helene_get_tv_system(struct dvb_frontend *fe)
 		else if (p->bandwidth_hz <= 8000000)
 			system = SONY_HELENE_DTV_DVBC_8;
 	}
-	dev_dbg(&priv->i2c->dev,
+	dev_info(&priv->i2c->dev,
 			"%s(): HELENE DTV system %d (delsys %d, bandwidth %d)\n",
 			__func__, (int)system, p->delivery_system,
 			p->bandwidth_hz);
@@ -695,6 +695,172 @@ static int helene_set_params_s(struct dvb_frontend *fe)
 	return 0;
 }
 
+// read RF and IF gains from ADC
+// only for terrestrial/cable
+static int helene_read_agc(struct dvb_frontend *fe, uint8_t *ifagcreg, uint8_t *rfagcreg, uint8_t *if_bpf_gain)
+{
+	u8 data[MAX_WRITE_REGSIZE];
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	struct helene_priv *priv = fe->tuner_priv;
+
+	if (p->delivery_system == SYS_DVBS || p->delivery_system == SYS_DVBS2) {
+		dev_err(&priv->i2c->dev, "%s(): supports only Terrestrial/Cable\n",
+				__func__);
+		return -EINVAL;
+	}
+	helene_leave_power_save(priv);
+	
+	/* Connect IFAGC, Start ADC (0x59, 0x5A) */
+	data[0] = 0x05;
+	data[1] = 0x01;
+	helene_write_regs(priv, 0x59, data, 2);
+
+	/* ADC read out (0x5B) */
+	helene_read_reg(priv, 0x5b, ifagcreg);
+
+	/* Connect RFAGC, Start ADC (0x59, 0x5A) */
+	data[0] = 0x03;
+	data[1] = 0x01;
+	helene_write_regs(priv, 0x59, data, 2);
+
+	/* ADC read out (0x5B) */
+	helene_read_reg(priv, 0x5b, rfagcreg);
+	
+	/* read if bpf gain */
+	helene_read_reg(priv, 0x69, if_bpf_gain);
+
+	helene_enter_power_save(priv);
+
+	dev_dbg(&priv->i2c->dev, "%s(): done. ifagcreg=0x%x rfagcreg=0x%x if_bpf_gain=0x%x \n",
+			__func__, *ifagcreg, *rfagcreg, *if_bpf_gain);
+	return 0;
+}
+
+// read RSSI (Received Signal Strength Indicator)
+// only for terrestrial/cable
+static int helene_read_rssi(struct dvb_frontend *fe, int32_t *rssi)
+{
+	u8 data[MAX_WRITE_REGSIZE];
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	struct helene_priv *priv = fe->tuner_priv;
+	int32_t ifgain = 0;
+	int32_t rfgain = 0;
+	int32_t if_bpf_gc_x100 = 0;
+	int32_t agcreg_x140 = 0;
+	int32_t maxagcreg_x140 = 0;
+	int32_t rfgainmax_x100 = 0;
+	uint8_t ifagcreg = 0, rfagcreg = 0, if_bpf_gain = 0;
+	int32_t if_bpf_gc_table[] = {0, 0, 0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 20};
+	int frequencykHz = p->frequency / 1000;
+
+	if (p->delivery_system == SYS_DVBS || p->delivery_system == SYS_DVBS2) {
+		dev_err(&priv->i2c->dev, "%s(): supports only Terrestrial/Cable\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	if (helene_read_agc(fe, &ifagcreg, &rfagcreg, &if_bpf_gain))
+		return -EINVAL;
+
+	agcreg_x140 = ifagcreg * 140;
+	if_bpf_gc_x100 = if_bpf_gc_table[if_bpf_gain & 0x0F] * 100;
+	if(agcreg_x140 > 9945){
+		ifgain = 870 + if_bpf_gc_x100;
+	}else{
+		ifgain = 870 + if_bpf_gc_x100 + (769 * (9945 - agcreg_x140) + 1275) / 2550; /* Round */
+	}
+
+	if(ifagcreg > rfagcreg){
+		maxagcreg_x140 = ifagcreg * 140;
+	}else{
+		maxagcreg_x140 = rfagcreg * 140;
+	}
+
+	if(frequencykHz > 700000){
+		rfgainmax_x100 = 4150;
+	}else if(frequencykHz > 600000){
+		rfgainmax_x100 = 4130;
+	}else if(frequencykHz > 532000){
+		rfgainmax_x100 = 4170;
+	}else if(frequencykHz > 464000){
+		rfgainmax_x100 = 4050;
+	}else if(frequencykHz > 400000){
+		rfgainmax_x100 = 4280;
+	}else if(frequencykHz > 350000){
+		rfgainmax_x100 = 4260;
+	}else if(frequencykHz > 320000){
+		rfgainmax_x100 = 4110;
+	}else if(frequencykHz > 285000){
+		rfgainmax_x100 = 4310;
+	}else if(frequencykHz > 215000){
+		rfgainmax_x100 = 4250;
+	}else if(frequencykHz > 184000){
+		rfgainmax_x100 = 4020;
+	}else if(frequencykHz > 172000){
+		rfgainmax_x100 = 3920;
+	}else if(frequencykHz > 150000){
+		rfgainmax_x100 = 4080;
+	}else if(frequencykHz > 86000){
+		rfgainmax_x100 = 4180;
+	}else if(frequencykHz > 65000){
+		rfgainmax_x100 = 4200;
+	}else if(frequencykHz > 50000){
+		rfgainmax_x100 = 4020;
+	}else{
+		rfgainmax_x100 = 4020;
+	}
+
+
+	if(maxagcreg_x140 < 4896){
+		rfgain = rfgainmax_x100;
+	}else if(maxagcreg_x140 < 5457){
+		rfgain = rfgainmax_x100 - (70 * (maxagcreg_x140 - 4896) + 127) / 255; /* Round */
+	}else if(maxagcreg_x140 < 8823){
+		/* 154 = 70 * 2.2 */
+		rfgain = rfgainmax_x100 - 154;
+	}else if(maxagcreg_x140 < 24786){
+		rfgain = rfgainmax_x100 - 154 - (70 * (maxagcreg_x140 - 8823) + 127) / 255; /* Round */
+	}else if(maxagcreg_x140 < 30090){
+		/* 4536 = 70 * 64.8 */
+		rfgain = rfgainmax_x100 - 4536 - (57 * (maxagcreg_x140 - 24786) + 127) / 255; /* Round */
+	}else{
+		/* 1185.6 = 57 * 20.8 */
+		rfgain = rfgainmax_x100 - 4536 - 1186 - (160 * (maxagcreg_x140 - 30090) + 127) / 255; /* Round */
+	}
+
+	*rssi = - ifgain - rfgain;
+
+	dev_dbg(&priv->i2c->dev, "%s(): rssi=%d (before modification) \n",
+			__func__, *rssi);
+
+	*rssi *= 10; /* dB x 1000 value should be returned. */
+
+	/* Add IFOUT value */
+	switch (p->delivery_system) {
+		case SYS_DVBT:
+		case SYS_DVBT2:
+		/* TODO: case SYS_DVBC2: */
+			*rssi -= 4000; /* -4.0dBm */
+			break;
+
+		case SYS_DVBC_ANNEX_A:
+			*rssi -= 1500; /* -1.5dBm */
+			break;
+
+		case SYS_ISDBT:
+			*rssi -= 4500; /* -4.5dBm */
+			break;
+
+		default:
+			break;
+	}
+
+	dev_dbg(&priv->i2c->dev, "%s(): rssi=%d (final) \n",
+			__func__, *rssi);
+	return 0;
+}
+
+
 static int helene_set_params(struct dvb_frontend *fe)
 {
 	u8 data[MAX_WRITE_REGSIZE];
@@ -704,12 +870,12 @@ static int helene_set_params(struct dvb_frontend *fe)
 	struct helene_priv *priv = fe->tuner_priv;
 	int frequencykHz = p->frequency / 1000;
 
-	dev_dbg(&priv->i2c->dev, "%s(): tune frequency %dkHz\n",
+	dev_info(&priv->i2c->dev, "%s(): tune frequency %dkHz\n",
 			__func__, frequencykHz);
 	tv_system = helene_get_tv_system(fe);
 
 	if (tv_system == SONY_HELENE_TV_SYSTEM_UNKNOWN) {
-		dev_dbg(&priv->i2c->dev, "%s(): unknown DTV system\n",
+		dev_err(&priv->i2c->dev, "%s(): unknown DTV system\n",
 				__func__);
 		return -EINVAL;
 	}
@@ -891,6 +1057,7 @@ static struct dvb_tuner_ops helene_tuner_ops = {
 	.sleep = helene_sleep,
 	.set_params = helene_set_params,
 	.get_frequency = helene_get_frequency,
+	.get_rssi = helene_read_rssi,
 };
 
 static struct dvb_tuner_ops helene_tuner_ops_s = {
