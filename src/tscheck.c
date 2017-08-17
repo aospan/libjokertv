@@ -150,5 +150,5 @@ int main(int argc, char **argv) {
 	if (check_counter)
 		printf("%" PRId64 " counters OK, %" PRId64 " FAIL\n", success_counter, fail_counter);
 	if (check_pattern)
-		printf("%" PRId64 " pattern OK, %" PRId64 " FAIL\n", success_pattern, fail_pattern);
+		printf("%" PRId64 " pattern OK, %" PRId64 " FAIL (%.2f %%)\n", success_pattern, fail_pattern, 100*(double)fail_pattern/(success_pattern+fail_pattern));
 }
