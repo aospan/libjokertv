@@ -108,6 +108,14 @@ struct stat_t {
 	/* SNR or CNR 
 	 * given in dB*1000 */
 	int32_t snr;
+
+	/* uncorrected blocks
+	 * can happen if signal is weak or noisy
+	 */
+	int32_t ucblocks;
+
+	/* Signal quality
+	 */
 };
 
 /* tune to specified source (DVB, ATSC, etc)
@@ -124,18 +132,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info);
  * return negative error code if error
  */
 int read_status(struct tune_info_t *info);
-
-/* return signal strength
- * range 0x0000 - 0xffff
- * 0x0000 - weak signal
- * 0xffff - stong signal
- * */
-int read_signal(struct tune_info_t *info);
-
-/* return uncorrected blocks
- * can happen if signal is weak or noisy
- */
-int read_ucblocks(struct tune_info_t *info);
 
 /* Read all stats related to receiving signal
  * RF level

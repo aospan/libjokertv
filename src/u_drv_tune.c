@@ -245,11 +245,13 @@ int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
 	// cleanup previous readings
 	prop->strength.stat[0].uvalue = 0;
 	prop->cnr.stat[0].svalue = 0;
+	prop->block_error.stat[0].uvalue = 0;
 
 	// read all stats from frontend
 	fe->ops.get_frontend(fe, prop);
 
 	// if we have special method to read RSSI from tuner
+	// overwrite values obtained from demod then
 	if (fe->ops.tuner_ops.get_rssi) {
 		fe->ops.tuner_ops.get_rssi(fe, &rssi);
 		prop->strength.stat[0].uvalue = rssi;
@@ -258,6 +260,7 @@ int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
 	/* transfer values to stat_t */
 	stat->rf_level = (int32_t)prop->strength.stat[0].uvalue;
 	stat->snr = (int32_t)prop->cnr.stat[0].svalue;
+	stat->ucblocks = prop->block_error.stat[0].uvalue;
 
 	jdebug("RF Level %f dBm\n", (double)rssi/1000);
 
@@ -283,26 +286,6 @@ int read_signal(struct tune_info_t *info)
 	jdebug("strength=0x%x \n", strength);
 
 	return (int)strength;
-}
-
-/* return uncorrected blocks
- * can happen if signal is weak or noisy
- */
-int read_ucblocks(struct tune_info_t *info)
-{
-	int ucblocks = 0;
-	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
-
-	if (!fe)
-		return -EINVAL;
-
-	if (fe->ops.read_ucblocks)
-		fe->ops.read_ucblocks(fe, (u32*)&ucblocks);
-	else 
-		ucblocks = -1;
-	jdebug("ucblocks=%d \n", ucblocks);
-
-	return ucblocks;
 }
 
 /* enable/disable i2c gate

@@ -37,7 +37,6 @@
 void * print_stat(void *data)
 {
 	int status = 0;
-	int ucblocks = 0;
 	int signal = 0;
 	struct stat_t * stat = (struct stat_t *)data;
 	struct tune_info_t * info = NULL;
@@ -60,13 +59,11 @@ void * print_stat(void *data)
 	while(!stat->cancel) {
 		if (info->fe_opaque) {
 			status = read_status(info);
-			ucblocks = read_ucblocks(info);
-			signal = read_signal(info);
 			read_signal_stat(info, stat);
 
-			printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d rflevel=%.3f dBm SNR %.3f dB\n", 
-					status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF,
-					ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000);
+			printf("INFO: status=%d (%s) uncorrected blocks=%d rflevel=%.3f dBm SNR %.3f dB\n", 
+					status, status ? "NOLOCK" : "LOCK",
+					stat->ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000);
 		}
 
 		buf[0] = J_CMD_TSFIFO_LEVEL;
@@ -288,11 +285,10 @@ int main (int argc, char **argv)
 		fflush(stdout);
 		while (1) {
 			status = read_status(&info);
-			signal = read_signal(&info);
 			read_signal_stat(&info, &stat);
 			if(!(i%10)) {
-				printf("Waiting lock. status=%d (%s) signal=%d (%d %%) rf_level=%.3f dBm \n", 
-						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF,
+				printf("Waiting lock. status=%d (%s) rf_level=%.3f dBm \n", 
+						status, status ? "NOLOCK" : "LOCK", 
 						(double)stat.rf_level/1000);
 				fflush(stdout);
 			}
