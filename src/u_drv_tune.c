@@ -42,6 +42,8 @@ typedef unsigned int            uint32_t;
 #include "joker_fpga.h"
 #include "u_drv_tune.h"
 
+static int joker_i2c_gate_ctrl(struct dvb_frontend *fe, int enable);
+
 unsigned long phys_base = 0;
 // const struct kernel_param_ops param_ops_int;
 
