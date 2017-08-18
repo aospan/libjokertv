@@ -62,6 +62,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 
 set(KOPTIONS "-include ${CMAKE_SOURCE_DIR}/linux/include/linux/types.h")
 set(KINCLUDE_DIRS
+	${CMAKE_SOURCE_DIR}/include/
 	${CMAKE_SOURCE_DIR}/linux/
 	${CMAKE_SOURCE_DIR}/linux/include/
 	${CMAKE_SOURCE_DIR}/linux/include/uapi
