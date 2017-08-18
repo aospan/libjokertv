@@ -61,9 +61,10 @@ void * print_stat(void *data)
 			status = read_status(info);
 			read_signal_stat(info, stat);
 
-			printf("INFO: status=%d (%s) uncorrected blocks=%d rflevel=%.3f dBm SNR %.3f dB\n", 
+			printf("INFO: status=%d (%s) ucblocks=%d, rflevel=%.3f dBm, SNR %.3f dB, BER %.2e \n", 
 					status, status ? "NOLOCK" : "LOCK",
-					stat->ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000);
+					stat->ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000,
+					(double)stat->bit_error/stat->bit_count);
 		}
 
 		buf[0] = J_CMD_TSFIFO_LEVEL;

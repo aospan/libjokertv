@@ -115,7 +115,19 @@ struct stat_t {
 	int32_t ucblocks;
 
 	/* Signal quality
+	 * 0 - 'bad' or no signal
+	 * 1 - 'weak'
+	 * 2 - 'good'
 	 */
+	int32_t signal_quality;
+
+	/* BER (bit error rate)
+	 *
+	 * calculate BER as:
+	 * BER = bit_error/bit_count
+	 */
+	int bit_error;
+	int bit_count;
 };
 
 /* tune to specified source (DVB, ATSC, etc)
@@ -137,7 +149,8 @@ int read_status(struct tune_info_t *info);
  * RF level
  * SNR (CNR)
  * Quality
- 
+ * Uncorrected blocks
+ *
  * return 0 if success
  * other values is errors */
 int read_signal_stat(struct tune_info_t *info, struct stat_t *stat);

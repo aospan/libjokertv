@@ -261,31 +261,12 @@ int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
 	stat->rf_level = (int32_t)prop->strength.stat[0].uvalue;
 	stat->snr = (int32_t)prop->cnr.stat[0].svalue;
 	stat->ucblocks = prop->block_error.stat[0].uvalue;
+	stat->bit_error = prop->post_bit_error.stat[0].uvalue;
+	stat->bit_count = prop->post_bit_count.stat[0].uvalue;
 
 	jdebug("RF Level %f dBm\n", (double)rssi/1000);
 
 	return 0;
-}
-
-/* return signal strength
- * range 0x0000 - 0xffff
- * 0x0000 - weak signal
- * 0xffff - stong signal
- * */
-int read_signal(struct tune_info_t *info)
-{
-	u16 strength = 0;
-	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
-	int32_t rssi = 0;
-
-	if (!fe)
-		return -EINVAL;
-
-	if (fe->ops.read_signal_strength)
-		fe->ops.read_signal_strength(fe, &strength);
-	jdebug("strength=0x%x \n", strength);
-
-	return (int)strength;
 }
 
 /* enable/disable i2c gate
