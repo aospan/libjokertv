@@ -1573,7 +1573,83 @@ static int cxd2841er_mon_read_ber_s2(struct cxd2841er_priv *priv,
 	return -EINVAL;
 }
 
+/* reading BER for DVB-T2
+ * DVB-T2 demod "flow":
+ * FFT -> PLP -> Demapping -> LDPC decoding -> BCH decoding -> BB frames -> TS output
+ *
+ * we can read BER in three points:
+ * pre-LDPC
+ * pre-BCH
+ * post-BCH
+ */
+
+/* Read pre-BCH (post-LDPC) BER */
 static int cxd2841er_read_ber_t2(struct cxd2841er_priv *priv,
+				 u32 *bit_error, u32 *bit_count)
+{
+	u8 data[4];
+	u8 plp_fec_type, plp_cr;
+	uint32_t n_bch;
+	u32 period_exp, n_ldpc;
+	uint16_t nBCHBitsLookup[2][8] = {
+		/* R1_2   R3_5   R2_3   R3_4   R4_5   R5_6
+		 * R1_3   R2_5 */
+		{7200,  9720,  10800, 11880, 12600, 13320, 5400,  6480}, /* 16K FEC */
+		{32400, 38880, 43200, 48600, 51840, 54000, 21600, 25920} /* 64k FEC */
+	};
+
+
+	if (priv->state != STATE_ACTIVE_TC) {
+		dev_dbg(&priv->i2c->dev,
+			"%s(): invalid state %d\n", __func__, priv->state);
+		return -EINVAL;
+	}
+
+	cxd2841er_freeze_regs(priv);
+
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x24);
+	cxd2841er_read_regs(priv, I2C_SLVT, 0x40, data, sizeof(data));
+	if (!(data[0] & 0x01)) {
+		cxd2841er_unfreeze_regs(priv);
+		dev_dbg(&priv->i2c->dev,
+			"%s(): no valid BER data\n", __func__);
+		return -EINVAL;
+	}
+	*bit_error = ((u32)(data[1] & 0x3f) << 16) |
+		     ((u32)data[2] << 8) |
+		     (u32)data[3];
+
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x22);
+	cxd2841er_read_reg(priv, I2C_SLVT, 0x5e, data);
+	plp_fec_type = data[0] & 0x03;
+	cxd2841er_read_reg(priv, I2C_SLVT, 0x5b, data);
+	plp_cr = data[0] & 0x07;
+
+	/* read 4-bit measurement period */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x20);
+	cxd2841er_read_reg(priv, I2C_SLVT, 0x72, data);
+	period_exp = data[0] & 0x0f;
+
+	cxd2841er_unfreeze_regs(priv);
+
+	/* Confirm FEC Type / Code Rate */
+	if (plp_fec_type > 1 || plp_cr > 7)
+		return -EINVAL;
+
+	n_bch = nBCHBitsLookup[plp_fec_type][plp_cr];
+
+	if (*bit_error > ((1U << period_exp) * n_bch)) {
+		dev_dbg(&priv->i2c->dev,
+			"%s(): invalid BER value\n", __func__);
+		return -EINVAL;
+	}
+
+	*bit_count = (1U << period_exp) * n_bch;
+
+	return 0;
+}
+
+static int cxd2841er_read_pre_ldpc_ber_t2(struct cxd2841er_priv *priv,
 				 u32 *bit_error, u32 *bit_count)
 {
 	u8 data[4];
