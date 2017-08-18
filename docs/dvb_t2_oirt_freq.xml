@@ -1,5 +1,5 @@
-<!-- Frequencies for TV channels ( according OIRT freq plan ) -->
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Frequencies for TV channels ( according OIRT freq plan ) -->
 <document>
 	<delivery_system standard="16">
 		<freq bandwidth="8" frequency_mhz="306" modulation="0"></freq>
