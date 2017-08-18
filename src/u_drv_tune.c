@@ -35,9 +35,7 @@ typedef unsigned int            uint32_t;
 #include <drivers/media/dvb-frontends/atbm888x.h>
 #include <drivers/media/dvb-frontends/tps65233.h>
 #include <drivers/media/dvb-core/dvb_frontend.h>
-// #include <drivers/media/pci/netup_unidvb/netup_unidvb.h>
 #include <linux/dvb/frontend.h>
-// #include <linux/moduleparam.h>
 #include <time.h>
 #include <linux/i2c.h>
 #include "joker_i2c.h"
@@ -53,7 +51,7 @@ static struct tps65233_config lnb_config = {
 
 static struct cxd2841er_config demod_config = {
 	.i2c_addr = 0xc8,
-	.ts_mode = SONY_TS_SERIAL,
+	.flags = CXD2841ER_TS_SERIAL | CXD2841ER_TSBITS,
 	.xtal = SONY_XTAL_24000
 };
 
@@ -227,24 +225,43 @@ int read_status(struct tune_info_t *info)
 	return EAGAIN;
 }
 
-/* read RF level
- * rssi pointer to int32_t where RF level will be stored
- * RF level given in dBm * 1000
+/* Read all stats related to receiving signal
+ * RF level
+ * SNR (CNR)
+ * Quality
  *
  * return 0 if success
  * other values is errors */
-int read_rf_level(struct tune_info_t *info, int32_t *rssi)
+int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
 {
 	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
+	struct dtv_frontend_properties *prop = &fe->dtv_property_cache;
 	uint8_t ifagcreg = 0, rfagcreg = 0, if_bpf_gain = 0;
+	int32_t rssi = 0;
 
 	if (!fe)
 		return -EINVAL;
 
-	if (fe->ops.tuner_ops.get_rssi)
-		fe->ops.tuner_ops.get_rssi(fe, rssi);
+	// cleanup previous readings
+	prop->strength.stat[0].uvalue = 0;
+	prop->cnr.stat[0].svalue = 0;
 
-	jdebug("RF Level %f dBm \n", (double)*rssi/1000);
+	// read all stats from frontend
+	fe->ops.get_frontend(fe, prop);
+
+	// if we have special method to read RSSI from tuner
+	if (fe->ops.tuner_ops.get_rssi) {
+		fe->ops.tuner_ops.get_rssi(fe, &rssi);
+		prop->strength.stat[0].uvalue = rssi;
+	}
+
+	/* transfer values to stat_t */
+	stat->rf_level = (int32_t)prop->strength.stat[0].uvalue;
+	stat->snr = (int32_t)prop->cnr.stat[0].svalue;
+
+	jdebug("RF Level %f dBm\n", (double)rssi/1000);
+
+	return 0;
 }
 
 /* return signal strength
@@ -422,31 +439,15 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			helene_attach(fe, &helene_conf, i2c);
 			break;
 		case JOKER_SYS_ISDBT:
-			fe = cxd2841er_attach_i(&demod_config, i2c);
-			if (!fe) {
-				printf("Can't attach SONY demod\n");
-				return ENODEV;
-			}
-			/* attach HELENE universal tuner in TERR mode */
-			helene_attach(fe, &helene_conf, i2c);
-			break;
 		case JOKER_SYS_DVBT:
 		case JOKER_SYS_DVBT2:
-			fe = cxd2841er_attach_t(&demod_config, i2c);
+		case JOKER_SYS_DVBC_ANNEX_A:
+			fe = cxd2841er_attach_t_c(&demod_config, i2c);
 			if (!fe) {
 				printf("Can't attach SONY demod\n");
 				return ENODEV;
 			}
 			/* attach HELENE universal tuner in TERR mode */
-			helene_attach(fe, &helene_conf, i2c);
-			break;
-		case JOKER_SYS_DVBC_ANNEX_A:
-			fe = cxd2841er_attach_c(&demod_config, i2c);
-			if (!fe) {
-				printf("Can't attach SONY demod\n");
-				return ENODEV;
-			}
-			/* attach HELENE universal tuner in CABLE mode */
 			helene_attach(fe, &helene_conf, i2c);
 			break;
 		case JOKER_SYS_DVBS:

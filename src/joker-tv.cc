@@ -62,19 +62,20 @@ void * print_stat(void *data)
 			status = read_status(info);
 			ucblocks = read_ucblocks(info);
 			signal = read_signal(info);
-			read_rf_level(info, &rssi);
-			printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d rflevel=%.3f dBm\n", 
+			read_signal_stat(info, stat);
+
+			printf("INFO: status=%d (%s) signal=%d (%d %%) uncorrected blocks=%d rflevel=%.3f dBm SNR %.3f dB\n", 
 					status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF,
-					ucblocks, (double)rssi/1000 );
+					ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000);
 		}
 
 		buf[0] = J_CMD_TSFIFO_LEVEL;
 		if ((ret = joker_cmd(joker, buf, 2, in_buf, 3)))
 			continue;
 		level = (in_buf[1] << 8) | in_buf[2];
-		printf("INFO: TSFIFO cmd=0x%x level=0x%x \n", in_buf[0], level );
+		jdebug("INFO: TSFIFO cmd=0x%x level=0x%x \n", in_buf[0], level );
 
-		usleep(1000 * info->refresh);
+		usleep(500 * info->refresh);
 	}
 }
 
@@ -284,13 +285,15 @@ int main (int argc, char **argv)
 		printf("TUNE done \n");
 
 		i = 0;
+		fflush(stdout);
 		while (1) {
-			i++;
 			status = read_status(&info);
 			signal = read_signal(&info);
+			read_signal_stat(&info, &stat);
 			if(!(i%10)) {
-				printf("Waiting lock. status=%d (%s) signal=%d (%d %%) \n", 
-						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF);
+				printf("Waiting lock. status=%d (%s) signal=%d (%d %%) rf_level=%.3f dBm \n", 
+						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF,
+						(double)stat.rf_level/1000);
 				fflush(stdout);
 			}
 			if (!status /* LOCKED */) {
@@ -300,6 +303,7 @@ int main (int argc, char **argv)
 				break;
 			}
 			usleep(100*1000);
+			i++;
 		}
 	}
 

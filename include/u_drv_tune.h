@@ -95,7 +95,19 @@ struct tune_info_t {
 struct stat_t {
 	struct joker_t *joker;
 	struct tune_info_t *info;
-	int cancel;
+	int32_t cancel;
+
+	/* signal monitoring */
+
+	/* RF level
+	 * RF level given in dBm*1000 
+	 * signed value
+	 */
+	int32_t rf_level;
+
+	/* SNR or CNR 
+	 * given in dB*1000 */
+	int32_t snr;
 };
 
 /* tune to specified source (DVB, ATSC, etc)
@@ -125,13 +137,14 @@ int read_signal(struct tune_info_t *info);
  */
 int read_ucblocks(struct tune_info_t *info);
 
-/* read RF level
- * rssi pointer to int32_t where RF level will be stored
- * RF level given in dBm * 1000
- *
+/* Read all stats related to receiving signal
+ * RF level
+ * SNR (CNR)
+ * Quality
+ 
  * return 0 if success
  * other values is errors */
-int read_rf_level(struct tune_info_t *info, int32_t *rssi);
+int read_signal_stat(struct tune_info_t *info, struct stat_t *stat);
 
 /* stop tune */
 // int stop(struct joker_t *joker);
