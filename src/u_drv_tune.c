@@ -51,7 +51,7 @@ static struct tps65233_config lnb_config = {
 
 static struct cxd2841er_config demod_config = {
 	.i2c_addr = 0xc8,
-	.flags = CXD2841ER_TS_SERIAL | CXD2841ER_TSBITS,
+	.flags = CXD2841ER_TS_SERIAL | CXD2841ER_TSBITS | CXD2841ER_USE_GATECTRL,
 	.xtal = SONY_XTAL_24000
 };
 
@@ -253,7 +253,9 @@ int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
 	// if we have special method to read RSSI from tuner
 	// overwrite values obtained from demod then
 	if (fe->ops.tuner_ops.get_rssi) {
+		joker_i2c_gate_ctrl(fe, 1);
 		fe->ops.tuner_ops.get_rssi(fe, &rssi);
+		joker_i2c_gate_ctrl(fe, 0);
 		prop->strength.stat[0].uvalue = rssi;
 	}
 
