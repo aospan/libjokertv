@@ -1088,8 +1088,10 @@ static int cxd2841er_read_status_tc(struct dvb_frontend *fe,
 				priv, &sync, &tslock, &unlock);
 			if (ret)
 				goto done;
-			if (unlock)
+			if (unlock) {
+				ret = -EIO;
 				goto done;
+			}
 			if (sync)
 				*status = FE_HAS_SIGNAL |
 					FE_HAS_CARRIER |
