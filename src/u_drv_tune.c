@@ -264,6 +264,18 @@ int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
 	stat->bit_error = prop->post_bit_error.stat[0].uvalue;
 	stat->bit_count = prop->post_bit_count.stat[0].uvalue;
 
+	/* make signal quality decision using RF Level
+	 * this is very 'shallow' estimations
+	 *
+	 * TODO: rework signal quality using BER, SNR, modulation parameters
+	 */
+	if (stat->ucblocks > 0 || stat->rf_level < -70000) // very bad
+		stat->signal_quality = SIGNAL_BAD;
+	else if (stat->rf_level > -40000) /* -40 dBm or greater is good */
+		stat->signal_quality = SIGNAL_GOOD;
+	else 
+		stat->signal_quality = SIGNAL_WEAK;
+
 	jdebug("RF Level %f dBm\n", (double)rssi/1000);
 
 	return 0;

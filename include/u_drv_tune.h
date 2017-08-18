@@ -91,6 +91,10 @@ struct tune_info_t {
   int		refresh; /* status refresh interval in ms */
 };
 
+#define SIGNAL_BAD 0
+#define SIGNAL_WEAK 1
+#define SIGNAL_GOOD 2
+
 /* struct used to periodic status checking */
 struct stat_t {
 	struct joker_t *joker;
@@ -115,9 +119,9 @@ struct stat_t {
 	int32_t ucblocks;
 
 	/* Signal quality
-	 * 0 - 'bad' or no signal
-	 * 1 - 'weak'
-	 * 2 - 'good'
+	 * SIGNAL_BAD - 'bad' or no signal
+	 * SIGNAL_WEAK - 'weak'
+	 * SIGNAL_GOOD - 'good'
 	 */
 	int32_t signal_quality;
 
