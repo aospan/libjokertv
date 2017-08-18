@@ -1621,7 +1621,57 @@ static int cxd2841er_read_ber_t2(struct cxd2841er_priv *priv,
 	return 0;
 }
 
+/* Read pre RS BER
+ * this is post-Viterbi BER */
 static int cxd2841er_read_ber_t(struct cxd2841er_priv *priv,
+				u32 *bit_error, u32 *bit_count)
+{
+	u8 data[3];
+	u32 period;
+	u32 bit_err, period_exp;
+
+	if (priv->state != STATE_ACTIVE_TC) {
+		dev_dbg(&priv->i2c->dev,
+			"%s(): invalid state %d\n", __func__, priv->state);
+		return -EINVAL;
+	}
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x10);
+	cxd2841er_read_regs(priv, I2C_SLVT, 0x62, data, sizeof(data));
+	if (!(data[0] & 0x80)) {
+		dev_dbg(&priv->i2c->dev,
+			"%s(): no valid BER data\n", __func__);
+		return 0;
+	}
+
+	bit_err = ((data[0] & 0x3F) << 16) | (data[1] << 8) | data[2];
+
+	/* read period */
+	cxd2841er_read_regs(priv, I2C_SLVT, 0x60, data, 1);
+	period_exp = data[0] & 0x1f;
+
+	if ((period_exp <= 11) && (bit_err > (1 << period_exp) * 204 * 8)) {
+		dev_dbg(&priv->i2c->dev,
+				"%s(): period_exp(%u) or bit_err(%u)  not in range. no valid BER data\n",
+				__func__, period_exp, bit_err);
+		return -EINVAL;
+	}
+
+	dev_dbg(&priv->i2c->dev,
+			"%s(): period_exp(%u) or bit_err(%u) count=%d\n",
+			__func__, period_exp, bit_err,
+			((1 << period_exp) * 204 * 8));
+
+	*bit_error = bit_err;
+	*bit_count = ((1 << period_exp) * 204 * 8);
+
+	return 0;
+}
+
+/* read pre-Viterbi BER 
+ * Viterbi next to analog level
+ * expect high probability of bit corruption (this is ok)
+ */
+static int cxd2841er_read_pre_viterbi_ber_t(struct cxd2841er_priv *priv,
 				u32 *bit_error, u32 *bit_count)
 {
 	u8 data[2];
