@@ -165,7 +165,7 @@ void record_callback(struct libusb_transfer *transfer)
 		return;
 
 	/* update statistics */
-	if ( pool->pkt_count && !(pool->pkt_count%1000) ){
+	if ( (getus() - pool->start_time) > 2000000 ) {
 		printf("USB ISOC: all/complete=%f/%f transfer/sec %.2f MBytes %f mbits/sec \n", 
 				(double)((int64_t)1000000*pool->pkt_count)/(getus() - pool->start_time),
 				(double)((int64_t)1000000*pool->pkt_count_complete)/(getus() - pool->start_time),
