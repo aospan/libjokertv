@@ -920,6 +920,14 @@ static void cxd2841er_set_ts_clock_mode(struct cxd2841er_priv *priv,
 	 */
 	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4,
 		((priv->flags & CXD2841ER_TS_SERIAL) ? 0x01 : 0x00), 0x03);
+
+	cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4,
+		((priv->flags & CXD2841ER_TS_SERIAL) ? 0x80 : 0x00), 0x80);
+
+	/* clear TSCFG bits 3+4 */
+	if (priv->flags & CXD2841ER_TSBITS)
+		cxd2841er_set_reg_bits(priv, I2C_SLVT, 0xc4, 0x00, 0x18);
+
 	/*
 	 * slave    Bank    Addr    Bit    default    Name
 	 * <SLV-T>  00h     D1h     [1:0]  2'b??      OSERDUTYMODE
