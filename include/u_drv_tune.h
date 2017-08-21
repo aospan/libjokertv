@@ -84,7 +84,7 @@ struct tune_info_t {
   enum	joker_fe_sec_voltage	voltage;
   enum joker_fe_sec_tone_mode	tone;
   struct joker_lnb_t	lnb;
-  uint32_t	frequency; /* in HZ */
+  uint64_t	frequency; /* in HZ, 64-bit int used for freqs higher than 4GHz */
   uint32_t	symbol_rate;
   uint32_t	bandwidth_hz;   /* 0 = AUTO */
   void*		fe_opaque;

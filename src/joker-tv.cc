@@ -131,7 +131,8 @@ int main (int argc, char **argv)
 	unsigned char in_buf[JCMD_BUF_LEN];
 	pthread_t stat_thread;
 	int c, tsgen = 0;
-	int delsys = 0, mod = 0, freq = 0, sr = 0, bw = 0;
+	int delsys = 0, mod = 0, sr = 0, bw = 0;
+	uint64_t freq = 0;
 	FILE * out = NULL;
 	char filename[FNAME_LEN] = "out.ts";
 	char fwfilename[FNAME_LEN] = "";
@@ -175,7 +176,7 @@ int main (int argc, char **argv)
 				mod = atoi(optarg);
 				break;
 			case 'f':
-				freq = atoi(optarg);
+				freq = strtoull(optarg, NULL, 10);
 				break;
 			case 's':
 				sr = atoi(optarg);
@@ -278,6 +279,7 @@ int main (int argc, char **argv)
 		else
 			info.voltage = JOKER_SEC_VOLTAGE_OFF;
 
+		printf("Tuning to %llu Hz\n", freq);
 		printf("TUNE start \n");
 		if (tune(joker, &info))
 			return -1;
