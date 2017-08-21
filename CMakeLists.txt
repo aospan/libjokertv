@@ -27,6 +27,23 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_library(LIBUDEV udev)
 endif()
 
+# build libdvbpsi for TS processing
+include(ExternalProject)
+ExternalProject_Add(libdvbpsi
+	GIT_REPOSITORY https://code.videolan.org/videolan/libdvbpsi.git
+	GIT_TAG "1.3.0"
+	CONFIGURE_COMMAND ./bootstrap COMMAND ./configure --enable-static
+	--with-pic
+	UPDATE_COMMAND ""
+	INSTALL_COMMAND ""
+	BUILD_COMMAND MACOSX_DEPLOYMENT_TARGET=10.6 make
+	BUILD_IN_SOURCE 1
+	)
+set(PC_LIBDVBPSI_INCLUDE_DIR
+	"${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/"
+	"${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/tables/")
+set(PC_LIBDVBPSI_LIBRARIES
+	"${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/.libs/libdvbpsi${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 # Add libusb
 # we should build our own libusb with patches for Isoc transfers
@@ -88,11 +105,12 @@ set_target_properties(jokertv_linux PROPERTIES COMPILE_FLAGS "-fPIC")
 add_library (jokertv SHARED ${JOKERTV_SRC})
 set_property(TARGET jokertv PROPERTY VERSION ${joker_tv_VERSION})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
-add_dependencies(jokertv libusb jokertv_linux)
+add_dependencies(jokertv libusb libdvbpsi jokertv_linux)
 SET (LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 target_link_libraries(jokertv
 	PRIVATE ${LINUXLIB}
 	PRIVATE ${PC_LIBUSB_LIBRARIES}
+	PRIVATE ${PC_LIBDVBPSI_LIBRARIES}
 	)
 target_include_directories(jokertv PUBLIC
 	$<BUILD_INTERFACE:include ${PC_LIBUSB_INCLUDE_DIR}>
