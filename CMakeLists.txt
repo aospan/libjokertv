@@ -14,7 +14,6 @@ set(CMAKE_BUILD_TYPE Release)
 
 find_package( Threads REQUIRED)
 find_package( PkgConfig )
-pkg_check_modules(PC_LIBDVBPSI libdvbpsi)
 
 # unser OSx we need some system libs for libusb functionality
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -41,6 +40,7 @@ ExternalProject_Add(libdvbpsi
 	)
 set(PC_LIBDVBPSI_INCLUDE_DIR
 	"${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/"
+	"${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/descriptors/"
 	"${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/tables/")
 set(PC_LIBDVBPSI_LIBRARIES
 	"${CMAKE_CURRENT_BINARY_DIR}/libdvbpsi-prefix/src/libdvbpsi/src/.libs/libdvbpsi${CMAKE_STATIC_LIBRARY_SUFFIX}")
@@ -87,7 +87,7 @@ set(KINCLUDE_DIRS
 	${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/)
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
-set(INCLUDE_USER ${PC_LIBDVBPSI_INCLUDEDIR}/dvbpsi)
+set(INCLUDE_USER $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}>)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
 	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBUDEV} ${LIBICONV})
 
@@ -114,6 +114,7 @@ target_link_libraries(jokertv
 	)
 target_include_directories(jokertv PUBLIC
 	$<BUILD_INTERFACE:include ${PC_LIBUSB_INCLUDE_DIR}>
+	#$<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}/dvbpsi>
 	${INCLUDE_USER}
 	)
 
@@ -135,6 +136,7 @@ install(TARGETS i2c-scan DESTINATION bin)
 add_executable(tsgen src/tsgen.c)
 target_include_directories(tsgen PUBLIC ${INCLUDE_USER})
 target_link_libraries(tsgen ${PC_LIBDVBPSI_LIBRARIES})
+add_dependencies(tsgen libdvbpsi)
 install(TARGETS tsgen DESTINATION bin)
 
 add_executable(tscheck src/tscheck.c)
