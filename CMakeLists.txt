@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8.12)
 project (joker_tv)
 set (joker_tv_VERSION_MAJOR 0)
 set (joker_tv_VERSION_MINOR 9)
-set (joker_tv_VERSION_PATCH 1)
+set (joker_tv_VERSION_PATCH 3)
 set (joker_tv_VERSION
 	${joker_tv_VERSION_MAJOR}.${joker_tv_VERSION_MINOR}.${joker_tv_VERSION_PATCH})
 
@@ -21,7 +21,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	find_library(LIBCoreFoundation CoreFoundation)
 	find_library(LIBICONV iconv)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-	find_library(LIBICONV libiconv.a)
+	find_library(LIBICONV libiconv.a REQUIRED)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_library(LIBUDEV udev)
 endif()
@@ -111,6 +111,7 @@ target_link_libraries(jokertv
 	PRIVATE ${LINUXLIB}
 	PRIVATE ${PC_LIBUSB_LIBRARIES}
 	PRIVATE ${PC_LIBDVBPSI_LIBRARIES}
+	PRIVATE ${LIBICONV}
 	)
 target_include_directories(jokertv PUBLIC
 	$<BUILD_INTERFACE:include ${PC_LIBUSB_INCLUDE_DIR}>
