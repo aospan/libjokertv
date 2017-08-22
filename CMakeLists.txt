@@ -115,7 +115,7 @@ target_link_libraries(jokertv
 	PRIVATE ${LIBICONV}
 	PRIVATE ${WINPTHREAD_LIB}
 	)
-target_include_directories(jokertv PUBLIC
+target_include_directories(jokertv PRIVATE
 	$<BUILD_INTERFACE:include ${PC_LIBUSB_INCLUDE_DIR}>
 	#$<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}/dvbpsi>
 	${INCLUDE_USER}
@@ -125,7 +125,7 @@ target_include_directories(jokertv PUBLIC
 add_executable(joker-tv src/joker-tv.cc)
 set_target_properties(joker-tv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 target_link_libraries(joker-tv jokertv ${EXT_LIBS})
-target_include_directories(joker-tv PUBLIC ${INCLUDE_USER})
+target_include_directories(joker-tv PUBLIC ${INCLUDE_USER} ${PC_LIBUSB_INCLUDE_DIR})
 install(TARGETS joker-tv DESTINATION bin)
 
 #simple program to scan i2c bus
