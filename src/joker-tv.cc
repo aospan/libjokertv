@@ -74,7 +74,8 @@ void * print_stat(void *data)
 		level = (in_buf[1] << 8) | in_buf[2];
 		jdebug("INFO: TSFIFO cmd=0x%x level=0x%x \n", in_buf[0], level );
 
-		usleep(500 * info->refresh);
+		/* note: usleep() doesn't work under Windows */
+		sleep(info->refresh/1000);
 	}
 }
 
