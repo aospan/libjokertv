@@ -155,6 +155,7 @@ int main (int argc, char **argv)
 	memset(joker, 0, sizeof(struct joker_t));
 	memset(in_buf, 0, JCMD_BUF_LEN);
 	memset(buf, 0, JCMD_BUF_LEN);
+	memset(&pool, 0, sizeof(struct big_pool_t));
 
 	pool.service_name_callback = &service_name_update;
 

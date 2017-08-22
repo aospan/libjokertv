@@ -45,7 +45,7 @@ int pool_init(struct big_pool_t * pool)
 	pool->node_counter = 0;
 	pool->tail_size = 0;
 	pool->ts_list_size = 0;
-	if (pool->ts_list_size_max <= 0)
+	if (pool->ts_list_size_max <= TS_LIST_SIZE_DEFAULT)
 		pool->ts_list_size_max = TS_LIST_SIZE_DEFAULT;
 
 	INIT_LIST_HEAD(&pool->ts_list);
