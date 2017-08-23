@@ -83,6 +83,19 @@ int pool_init(struct big_pool_t * pool)
 	return 0;
 }
 
+int pool_uninit(struct big_pool_t * pool)
+{
+	// sanity check
+	if (pool && pool->initialized != BIG_POOL_MAGIC)
+		return -EINVAL;
+
+	// TODO: clean programs_list, ts_list*
+
+	free(pool->threading);
+	pool->threading = NULL;
+	pool->initialized = 0;
+}
+
 /* thread for processing Transport Stream packets
  */
 void* process_ts(void * data) {
@@ -397,8 +410,7 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	// lock until thread ended
 	pthread_join(pool->threading->usb_thread, NULL);
 
-	free(pool->threading);
-	pool->threading = NULL;
+	pool_uninit(pool);
 
 	return 0;
 }
