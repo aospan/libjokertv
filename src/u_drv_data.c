@@ -379,7 +379,7 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	int index = 0;
 
 	// sanity check
-	if (pool->initialized != BIG_POOL_MAGIC || !joker)
+	if (pool->initialized != BIG_POOL_MAGIC || !joker || pool->cancel)
 		return -EINVAL;
 
 	for (index = 0; index < NUM_USB_BUFS; index++) {
