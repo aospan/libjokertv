@@ -378,6 +378,10 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 {
 	int index = 0;
 
+	// sanity check
+	if (pool->initialized != BIG_POOL_MAGIC || !joker)
+		return -EINVAL;
+
 	for (index = 0; index < NUM_USB_BUFS; index++) {
 		if(pool->transfers[index] && libusb_cancel_transfer(pool->transfers[index]))
 			printf("can't cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
