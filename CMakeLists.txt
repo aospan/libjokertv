@@ -20,10 +20,14 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	find_library(LIBIOKit IOKit)
 	find_library(LIBCoreFoundation CoreFoundation)
 	find_library(LIBICONV iconv)
+	set(PTHREADS_LIB "pthread")
+	set(LINUXLIB -Wl,-force_load,${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	find_library(LIBICONV libiconv.a REQUIRED)
-	set(WINPTHREAD_LIB "-Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+	set(PTHREADS_LIB "-Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 	find_library(LIBUDEV udev)
 endif()
 
@@ -107,13 +111,13 @@ add_library (jokertv SHARED ${JOKERTV_SRC})
 set_property(TARGET jokertv PROPERTY VERSION ${joker_tv_VERSION})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
 add_dependencies(jokertv libusb libdvbpsi jokertv_linux)
-SET (LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 target_link_libraries(jokertv
 	PRIVATE ${LINUXLIB}
 	PRIVATE ${PC_LIBUSB_LIBRARIES}
 	PRIVATE ${PC_LIBDVBPSI_LIBRARIES}
 	PRIVATE ${LIBICONV}
-	PRIVATE ${WINPTHREAD_LIB}
+	PRIVATE ${PTHREADS_LIB}
+	PRIVATE ${EXT_LIBS}
 	)
 target_include_directories(jokertv PRIVATE
 	$<BUILD_INTERFACE:include ${PC_LIBUSB_INCLUDE_DIR}>
@@ -208,7 +212,6 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(CPACK_GENERATOR "NSIS;ZIP")
 	set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
 	include(InstallRequiredSystemLibraries)
-	FIND_FILE(WINPTHREAD_LIB libwinpthread-1.dll)
 	INSTALL(TARGETS jokertv DESTINATION "bin")
 	install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION programs COMPONENT applications)
 endif()
