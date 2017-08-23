@@ -8,7 +8,6 @@
 #ifndef _U_DRV_DATA
 #define _U_DRV_DATA	1
 
-#include <pthread.h>
 #include "joker_list.h"
 
 #define NUM_USB_BUFS 16
@@ -43,6 +42,9 @@ struct ts_node {
 
 #define BIG_POOL_MAGIC 0xbb0000aa
 
+/* threading stuff "masked" inside */
+struct thread_opaq_t;
+
 /* ring buffer for TS data */
 struct big_pool_t {
 	unsigned char * ptr;
@@ -55,14 +57,8 @@ struct big_pool_t {
 	uint8_t *usb_buffers[NUM_USB_BUFS];
 	struct libusb_transfer *transfers[NUM_USB_BUFS];
 
-	/* USB processing thread */
-	pthread_t usb_thread;
-	/* TS processing thread */
-	pthread_t ts_thread;
-	pthread_cond_t cond_all;
-	pthread_mutex_t mux_all;
-	pthread_cond_t cond;
-	pthread_mutex_t mux;
+	/* threading stuff "masked" inside */
+	struct thread_opaq_t *threading;
 
 	/* hooks */
 	ts_hook_t hooks[8192];

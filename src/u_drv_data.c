@@ -28,6 +28,18 @@
 #include "u_drv_data.h"
 #include "joker_utils.h"
 
+struct thread_opaq_t
+{
+	/* USB processing thread */
+	pthread_t usb_thread;
+	/* TS processing thread */
+	pthread_t ts_thread;
+	pthread_cond_t cond_all;
+	pthread_mutex_t mux_all;
+	pthread_cond_t cond;
+	pthread_mutex_t mux;
+};
+
 /* helper func 
  * get current time in usec */
 uint64_t getus() {
@@ -52,10 +64,15 @@ int pool_init(struct big_pool_t * pool)
 	INIT_LIST_HEAD(&pool->ts_list_all);
 	INIT_LIST_HEAD(&pool->programs_list);
 
-	pthread_mutex_init(&pool->mux_all, NULL);
-	pthread_mutex_init(&pool->mux, NULL);
-	pthread_cond_init(&pool->cond_all, NULL);
-	pthread_cond_init(&pool->cond, NULL);
+	// alloc threading stuff
+	pool->threading = malloc(sizeof(struct thread_opaq_t));
+	if (!pool->threading)
+		return -ENOMEM;
+
+	pthread_mutex_init(&pool->threading->mux_all, NULL);
+	pthread_mutex_init(&pool->threading->mux, NULL);
+	pthread_cond_init(&pool->threading->cond_all, NULL);
+	pthread_cond_init(&pool->threading->cond, NULL);
 
 	memset(&pool->hooks, 0, sizeof(pool->hooks));
 	memset(&pool->hooks_opaque, 0, sizeof(pool->hooks_opaque));
@@ -76,16 +93,16 @@ void* process_ts(void * data) {
 
 	while(!pool->cancel) {
 		// get node from the list with locking (safe)
-		pthread_mutex_lock(&pool->mux);
+		pthread_mutex_lock(&pool->threading->mux);
 		if(list_empty(&pool->ts_list))
-			pthread_cond_wait(&pool->cond, &pool->mux);
+			pthread_cond_wait(&pool->threading->cond, &pool->threading->mux);
 		if(!list_empty(&pool->ts_list)) {
 			node = list_first_entry(&pool->ts_list, struct ts_node, list);
 			list_del(&node->list);
 		} else {
 			node = NULL;
 		}
-		pthread_mutex_unlock(&pool->mux);
+		pthread_mutex_unlock(&pool->threading->mux);
 
 		if (!node)
 			continue;
@@ -103,7 +120,7 @@ void* process_ts(void * data) {
 		}
 
 		// save node to list 
-		pthread_mutex_lock(&pool->mux_all);
+		pthread_mutex_lock(&pool->threading->mux_all);
 		list_add_tail(&node->list, &pool->ts_list_all);
 		pool->ts_list_size += node->size;
 
@@ -117,8 +134,8 @@ void* process_ts(void * data) {
 		}
 
 		jdebug("TS:all: node %p inserted. ts_list_size=%d\n", node, pool->ts_list_size);
-		pthread_mutex_unlock(&pool->mux_all);
-		pthread_cond_signal(&pool->cond_all); // wakeup read threads
+		pthread_mutex_unlock(&pool->threading->mux_all);
+		pthread_cond_signal(&pool->threading->cond_all); // wakeup read threads
 	}
 }
 
@@ -255,10 +272,10 @@ void record_callback(struct libusb_transfer *transfer)
 	}
 
 	// add node to the list with locking (safe)
-	pthread_mutex_lock(&pool->mux);
+	pthread_mutex_lock(&pool->threading->mux);
 	list_add_tail(&node->list, &pool->ts_list);
-	pthread_mutex_unlock(&pool->mux);
-	pthread_cond_signal(&pool->cond); // wakeup ts procesing thread
+	pthread_mutex_unlock(&pool->threading->mux);
+	pthread_cond_signal(&pool->threading->cond); // wakeup ts procesing thread
 	jdebug("TSLIST:added to tslist. total_len=%d \n", total_len);
 
 	// TODO: delete old nodes in TS list
@@ -338,14 +355,14 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	pool->bytes = 0;
 	pool->cancel = 0;
 
-	rc = pthread_create(&pool->usb_thread, NULL, process_usb, (void *)pool);
+	rc = pthread_create(&pool->threading->usb_thread, NULL, process_usb, (void *)pool);
 	if (rc){
 		printf("ERROR: can't start USB processing thread. code=%d\n", rc);
 		return rc;
 	}
 
 	// start TS processing thread
-	rc = pthread_create(&pool->ts_thread, NULL, process_ts, (void *)pool);
+	rc = pthread_create(&pool->threading->ts_thread, NULL, process_ts, (void *)pool);
 	if (rc){
 		printf("ERROR: can't start TS processing thread. code=%d\n", rc);
 		pool->cancel = 1; // will stop usb processing
@@ -371,10 +388,13 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 
 	// stop USB and TS processing threads
 	pool->cancel = 1;
-	pthread_cond_signal(&pool->cond); // wakeup TS procesing thread
+	pthread_cond_signal(&pool->threading->cond); // wakeup TS procesing thread
 
 	// lock until thread ended
-	pthread_join(pool->usb_thread, NULL);
+	pthread_join(pool->threading->usb_thread, NULL);
+
+	free(pool->threading);
+	pool->threading = NULL;
 
 	return 0;
 }
@@ -426,9 +446,9 @@ int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 
 	while(remain) {
 		// get node from the list with locking (safe)
-		pthread_mutex_lock(&pool->mux_all);
+		pthread_mutex_lock(&pool->threading->mux_all);
 		if(list_empty(&pool->ts_list_all))
-			pthread_cond_wait(&pool->cond_all, &pool->mux_all);
+			pthread_cond_wait(&pool->threading->cond_all, &pool->threading->mux_all);
 		
 		if(!list_empty(&pool->ts_list_all)) {
 			jdebug("req:%d \n", size);
@@ -454,7 +474,7 @@ int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 					break;
 			}
 		}
-		pthread_mutex_unlock(&pool->mux_all);
+		pthread_mutex_unlock(&pool->threading->mux_all);
 	}
 
 	return res_off;
