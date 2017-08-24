@@ -113,12 +113,16 @@ void __dynamic_dev_dbg(const struct device *dev, const char *fmt, ...)
 
 void *__kmalloc(size_t size, gfp_t flags)
 {
-	return malloc(size);
+	void *ptr = malloc(size);
+	if (!ptr)
+		return ptr;
+	memset(ptr, 0, size);
+	return ptr;
 }
 
 void *kzalloc(size_t size, gfp_t flags)
 {
-	return malloc(size);
+	return __kmalloc(size, flags);
 }
 
 void kfree(const void *p)
