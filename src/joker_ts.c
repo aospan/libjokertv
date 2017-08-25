@@ -106,6 +106,14 @@ char * parse_type(uint8_t type, int *_audio, int *_video)
 		case 0x1B:
 			*_video = 1;
 			return "AVC video stream as defined in ITU-T Rec. H.264 | ISO/IEC 14496-10 Video";
+		case 0x81:
+			// from ATSC A/53 Part 3:2013 Service Multiplex and
+			// Transport 
+			*_audio = 1;
+			return "AC-3 Audio";
+		case 0x87:
+			*_audio = 1;
+			return "E-AC-3 Audio";
 		default:
 			if (type < 0x80)
 				return "ISO/IEC 13818-1 reserved";
