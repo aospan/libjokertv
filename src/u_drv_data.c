@@ -407,8 +407,9 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	pool->cancel = 1;
 	pthread_cond_signal(&pool->threading->cond); // wakeup TS procesing thread
 
-	// lock until thread ended
+	// lock until threads ended
 	pthread_join(pool->threading->usb_thread, NULL);
+	pthread_join(pool->threading->ts_thread, NULL);
 
 	pool_uninit(pool);
 
