@@ -263,46 +263,46 @@ int get_charset_name(uint8_t codepage, char * charset)
 	switch (codepage) {
 		case 0x01:
 			// Latin/Cyrillic
-			charset = "ISO8859-5"; break;
+			strncpy(charset, "ISO8859-5", SERVICE_NAME_LEN); break;
 		case 0x02:
 			// Latin/Arabic
-			charset = "ISO8859-6"; break;
+			strncpy(charset, "ISO8859-6", SERVICE_NAME_LEN); break;
 		case 0x03:
 			// Latin/Greek
-			charset = "ISO8859-7"; break;
+			strncpy(charset, "ISO8859-7", SERVICE_NAME_LEN); break;
 		case 0x04:
 			// Latin/Hebrew
-			charset = "ISO8859-8"; break;
+			strncpy(charset, "ISO8859-8", SERVICE_NAME_LEN); break;
 		case 0x05:
 			// Latin alphabet No. 5
-			charset = "ISO8859-9"; break;
+			strncpy(charset, "ISO8859-9", SERVICE_NAME_LEN); break;
 		case 0x06:
 			// Latin alphabet No. 6
-			charset = "ISO8859-10"; break;
+			strncpy(charset, "ISO8859-10", SERVICE_NAME_LEN); break;
 		case 0x07:
 			// Latin/Thai
-			charset = "ISO8859-11"; break;
+			strncpy(charset, "ISO8859-11", SERVICE_NAME_LEN); break;
 		case 0x09:
 			// Latin alphabet No. 7
-			charset = "ISO8859-13"; break;
+			strncpy(charset, "ISO8859-13", SERVICE_NAME_LEN); break;
 		case 0x0a:
 			// Latin alphabet No. 8 (Celtic)
-			charset = "ISO8859-14"; break;
+			strncpy(charset, "ISO8859-14", SERVICE_NAME_LEN); break;
 		case 0x0b:
 			// Latin alphabet No. 9
-			charset = "ISO8859-15"; break;
+			strncpy(charset, "ISO8859-15", SERVICE_NAME_LEN); break;
 		case 0x11:
 		case 0x14: // Big5 subset of ISO/IEC 10646 [16] Traditional Chinese
 		case 0x15: // UTF-8 encoding of ISO/IEC 10646 [16] Basic Multilingual Plane (BMP)
 			// Basic Multilingual Plane (BMP)
-			charset = "ISO-10646"; break;
+			strncpy(charset, "ISO-10646", SERVICE_NAME_LEN); break;
 		case 0x13:
 			// Simplified Chinese Character
-			charset = "GB2312"; break;
+			strncpy(charset, "GB2312", SERVICE_NAME_LEN); break;
 		case 0x00:
 		default:
 			// default codepage  ISO/IEC 6937
-			charset = "ISO6937";
+			strncpy(charset, "ISO6937", SERVICE_NAME_LEN);
 			break;
 	}
 
@@ -335,7 +335,8 @@ int to_utf(char * buf, size_t insize, int maxlen, char *charset)
 	if (nconv == -1)
 		printf("iconv conversion may be failed. But we use result anyway ... \n");
 
-	jdebug("iconv: insize=%zd avail=%zd nconv=%zd \n", insize, avail, nconv );
+	jdebug("iconv: charset=%s insize=%zd avail=%zd nconv=%zd \n",
+			charset, insize, avail, nconv );
 	// copy result 
 	memset(buf, 0, maxlen);
 	memcpy(buf, outbuf, maxlen - avail);
