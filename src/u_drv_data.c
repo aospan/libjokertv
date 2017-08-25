@@ -123,7 +123,7 @@ void* process_ts(void * data) {
 		// process hooks
 		for (i = 0; i < node->size; i += TS_SIZE) {
 			pkt = node->data + i;
-			pid = (pkt[1]&0xf) << 8 | pkt[2];
+			pid = (pkt[1]&0x1f) << 8 | pkt[2];
 
 			if(pool->hooks[pid]) {
 				jdebug("calling hook pid=0x%x pool=%p pkt=%p\n", pid, pool, pkt);
