@@ -62,7 +62,7 @@ void * print_stat(void *data)
 			read_signal_stat(info, stat);
 
 			printf("INFO: status=%d (%s) ucblocks=%d, rflevel=%.3f dBm, SNR %.3f dB, BER %.2e, quality %d \n", 
-					status, status ? "NOLOCK" : "LOCK",
+					status, status == JOKER_LOCK ? "LOCK" : "NOLOCK",
 					stat->ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000,
 					(double)stat->bit_error/stat->bit_count,
 					stat->signal_quality);
@@ -298,7 +298,7 @@ int main (int argc, char **argv)
 						(double)stat.rf_level/1000);
 				fflush(stdout);
 			}
-			if (!status /* LOCKED */) {
+			if (status == JOKER_LOCK) {
 				printf("status=%d (%s) signal=%d (%d %%) \n", 
 						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF);
 				fflush(stdout);

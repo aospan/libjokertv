@@ -91,6 +91,9 @@ struct tune_info_t {
   int		refresh; /* status refresh interval in ms */
 };
 
+#define JOKER_LOCK 0
+#define JOKER_NOLOCK 11
+
 #define SIGNAL_BAD 0
 #define SIGNAL_WEAK 1
 #define SIGNAL_GOOD 2

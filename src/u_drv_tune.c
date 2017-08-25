@@ -210,8 +210,8 @@ ssize_t __modver_version_show(struct module_attribute *mattr,
 }
 
 /* read status 
- * return 0 if LOCKed 
- * return -EAGAIN if NOLOCK
+ * return JOKER_LOCK if LOCKed 
+ * return JOKER_NOLOCK if NOLOCK
  * return negative error code if error
  */
 int read_status(struct tune_info_t *info)
@@ -220,15 +220,15 @@ int read_status(struct tune_info_t *info)
 	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
 
 	if (!fe)
-		return EINVAL;
+		return -EINVAL;
 
 	fe->ops.read_status(fe, &status);
 	jdebug("%s: status=0x%x \n", __func__, status);
 
 	if (status == 0x1f)
-		return 0;
+		return JOKER_LOCK;
 
-	return EAGAIN;
+	return JOKER_NOLOCK;
 }
 
 /* Read all stats related to receiving signal
