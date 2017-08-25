@@ -31,6 +31,12 @@
 #include <dr.h>
 #include <demux.h>
 #include <sdt.h>
+/*  ATSC PSI Tables */
+#include <atsc_eit.h>
+#include <atsc_ett.h>
+#include <atsc_mgt.h>
+#include <atsc_stt.h>
+#include <atsc_vct.h>
 
 static void message(dvbpsi_t *handle, const dvbpsi_msg_level_t level, const char* msg)
 {
@@ -236,18 +242,13 @@ static void DumpDescriptors(const char* str, dvbpsi_descriptor_t* p_descriptor)
 	}
 };
 
-// convert name to utf-8
-static void to_utf(char * buf, int maxlen, uint8_t codepage)
+// get charset name from codepage
+// Values used from DVB Document A038 (July 2014)
+// Table A.3: Character coding tables
+int get_charset_name(uint8_t codepage, char * charset)
 {
-	iconv_t cd;
-	char outbuf[maxlen];
-	char * outptr = &outbuf[0];
-	char * charset = "ISO6937";
-	char *inbuf = buf;
-	size_t nconv = 0, insize = 0, avail = maxlen;
-
-	insize = strlen(buf);
-	memset(outbuf, 0x0, maxlen);
+	if (!charset)
+		return -EINVAL;
 
 	// Values used from DVB Document A038 (July 2014)
 	// Table A.3: Character coding tables
@@ -297,11 +298,28 @@ static void to_utf(char * buf, int maxlen, uint8_t codepage)
 			break;
 	}
 
+	return 0;
+}
+
+// convert name to utf-8
+int to_utf(char * buf, size_t insize, int maxlen, char *charset)
+{
+	iconv_t cd;
+	char outbuf[maxlen];
+	char * outptr = &outbuf[0];
+	char *inbuf = buf;
+	size_t nconv = 0, avail = maxlen;
+
+	if (!charset || !buf || maxlen <= 0)
+		return -EINVAL;
+
+	memset(outbuf, 0x0, maxlen);
+
 	cd = iconv_open ("UTF-8", charset);
 	if (cd == (iconv_t) -1)
 	{
 		printf("can't open iconv for charset conversion\n");
-		return;
+		return -EIO;
 	}
 
 
@@ -321,8 +339,10 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 	int i = 0, off = 0, service_provider_name_length = 0, service_name_length = 0;
 	unsigned char *service_name_ptr = NULL;
 	uint8_t codepage = 0;
+	unsigned char charset[SERVICE_NAME_LEN];
 
 	memset(&program->name, 0, SERVICE_NAME_LEN);
+	memset(&charset[0], 0, SERVICE_NAME_LEN);
 	
 	// Parse according DVB Document A038 (July 2014)
 	// Specification for Service Information (SI)
@@ -366,7 +386,8 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 			jdebug("program=%d new name=%s \n", program->number, program->name);
 
 			// convert name to utf-8
-			to_utf(program->name, SERVICE_NAME_LEN, codepage);
+			if (!get_charset_name(codepage, &charset[0]))
+				to_utf(program->name, off, SERVICE_NAME_LEN, charset);
 		}
 		p_descriptor = p_descriptor->p_next;
 	}
@@ -413,16 +434,111 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 	dvbpsi_sdt_delete(p_sdt);
 }
 
+/* example from real ATSC stream (575MHz Miami, FL)
+   ATSC VCT: Virtual Channel Table
+   Version number : 1
+   Current next   : yes
+   Protocol version: 0
+Type : Terrestrial Virtual Channel Table
+| Short name  : 
+| Major number: 6
+| Minor number: 1
+| Modulation  : ATSC (8 VSB) — The virtual channel uses the 8-VSB modulation method conforming to A/53 Part 2 [2].
+| Carrier     : 0
+| Transport id: 631
+| Program number: 3
+| ETM location: No ETM
+| Scrambled   : no
+| Path Select : yes
+| Out of band : yes
+| Hidden      : no
+| Hide guide  : no
+| Service type: 2
+| Source id   : 3
+|  ] 0xa1 : "<E0>1^C^B<E0>1^@^@^@<81><E0>4eng<81><E0>5spa" (User Private)
+*/
+static void DumpAtscVCTChannels(dvbpsi_atsc_vct_channel_t *p_vct_channels, struct big_pool_t *pool)
+{
+	struct program_t *program = NULL;
+	dvbpsi_atsc_vct_channel_t *p_channel = p_vct_channels;
+
+	while (p_channel)
+	{   
+		jdebug("\n");
+		jdebug("\t  | Short name  : %s\n", p_channel->i_short_name);
+		jdebug("\t  | Major number: %d\n", p_channel->i_major_number);
+		jdebug("\t  | Minor number: %d\n", p_channel->i_minor_number);
+		jdebug("\t  | Modulation  : %d\n", p_channel->i_modulation);
+		jdebug("\t  | Carrier     : %d\n", p_channel->i_carrier_freq);
+		jdebug("\t  | Transport id: %d\n", p_channel->i_channel_tsid);
+		jdebug("\t  | Program number: %d\n", p_channel->i_program_number);
+		jdebug("\t  | ETM location: %d\n", p_channel->i_etm_location);
+		jdebug("\t  | Scrambled   : %s\n", p_channel->b_access_controlled ? "yes" : "no");
+		jdebug("\t  | Path Select : %s\n", p_channel->b_path_select ? "yes" : "no");
+		jdebug("\t  | Out of band : %s\n", p_channel->b_out_of_band ? "yes" : "no");
+		jdebug("\t  | Hidden      : %s\n", p_channel->b_hidden ? "yes" : "no");
+		jdebug("\t  | Hide guide  : %s\n", p_channel->b_hide_guide ? "yes" : "no");
+		jdebug("\t  | Service type: %d\n", p_channel->i_service_type);
+		jdebug("\t  | Source id   : %d\n", p_channel->i_source_id);
+
+		jdebug("i_program_number=0x%02x\n", p_channel->i_program_number);
+		if(!list_empty(&pool->programs_list)) {
+			list_for_each_entry(program, &pool->programs_list, list) {
+				if (program->number == p_channel->i_program_number) {
+					// ATSC A/65:2013 Program and System
+					// Information Protocol
+					// short_name – The name of the virtual
+					// channel, represented as a sequence of
+					// one to seven 16-bit
+					// code values interpreted in accordance
+					// with the UTF-16 representation of
+					// Unicode character
+					// data. 
+					memcpy(program->name, p_channel->i_short_name, 14);
+					to_utf(program->name, 14, SERVICE_NAME_LEN, "UTF-16BE");
+
+					// call service name callback with new name
+					if (pool->service_name_callback)
+						pool->service_name_callback(program);
+				}
+			}
+		}
+		p_channel = p_channel->p_next;
+	}
+}
+
+static void handle_atsc_VCT(void* data, dvbpsi_atsc_vct_t *p_vct)
+{
+	struct big_pool_t *pool = (struct big_pool_t *)data;
+	jdebug("\n");
+	jdebug("  ATSC VCT: Virtual Channel Table\n");
+
+	jdebug("\tVersion number : %d\n", p_vct->i_version);
+	jdebug("\tCurrent next   : %s\n", p_vct->b_current_next ? "yes" : "no");
+	jdebug("\tProtocol version: %d\n", p_vct->i_protocol); /* PSIP protocol version */
+	jdebug("\tType : %s Virtual Channel Table\n", (p_vct->b_cable_vct) ? "Cable" : "Terrestrial" );
+
+	DumpAtscVCTChannels(p_vct->p_first_channel, pool);
+	dvbpsi_atsc_DeleteVCT(p_vct);
+}
+
 /*****************************************************************************
  * NewSubtable
  *****************************************************************************/
 static void NewSubtable(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_extension,
 		void * data)
 {
-	if(i_table_id == 0x42)
-	{  
-		if (!dvbpsi_sdt_attach(p_dvbpsi, i_table_id, i_extension, DumpSDT, data))
-			fprintf(stderr, "Failed to attach SDT subdecoder\n");
+	jdebug("%s: new i_table_id=0x%x\n", __func__, i_table_id);
+	switch (i_table_id) {
+		case 0x42: // SDT
+			if (!dvbpsi_sdt_attach(p_dvbpsi, i_table_id, i_extension, DumpSDT, data))
+				fprintf(stderr, "Failed to attach SDT subdecoder\n");
+			break;
+		case 0xC8: // ATSC VCT
+		case 0xC9: // ATSC VCT
+			if (!dvbpsi_atsc_AttachVCT(p_dvbpsi, i_table_id, i_extension, handle_atsc_VCT, data))
+				fprintf(stderr, "Failed to attach SDT subdecoder\n");
+			break;
 	}
 }
 
@@ -443,6 +559,13 @@ void sdt_hook(void *data, unsigned char *pkt)
 	dvbpsi_packet_push(pool->sdt_dvbpsi, pkt);
 }
 
+void atsc_hook(void *data, unsigned char *pkt)
+{
+	struct big_pool_t * pool = (struct big_pool_t *)data;
+	jdebug("%s:pool=%p pkt=%p\n", __func__, pool, pkt);
+	dvbpsi_packet_push(pool->atsc_dvbpsi, pkt);
+}
+
 struct list_head * get_programs(struct big_pool_t *pool)
 {
 	// unsigned char *res = NULL;
@@ -458,7 +581,6 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	pool->pat_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
 	if (pool->pat_dvbpsi == NULL)
 		goto out;
-
 	if (!dvbpsi_pat_attach(pool->pat_dvbpsi, DumpPAT, pool))
 		goto out;
 
@@ -466,8 +588,14 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	pool->sdt_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
 	if (pool->sdt_dvbpsi == NULL)
 		goto out;
-
 	if (!dvbpsi_AttachDemux(pool->sdt_dvbpsi, NewSubtable, pool))
+		goto out;
+
+	// Attach ATSC
+	pool->atsc_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
+	if (pool->atsc_dvbpsi == NULL)
+		goto out;
+	if (!dvbpsi_AttachDemux(pool->atsc_dvbpsi, NewSubtable, pool))
 		goto out;
 
 	// install hooks
@@ -497,6 +625,9 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	// parse SDT only after PAT and PMT !
 	pool->hooks[0x11] = &sdt_hook;
 
+	// parse ATSC channels
+	pool->hooks[0x1FFB] = &atsc_hook;
+
 	// OK exit
 	return &pool->programs_list;
 
@@ -512,6 +643,12 @@ out:
 	{
 		dvbpsi_DetachDemux(pool->sdt_dvbpsi);
 		dvbpsi_delete(pool->sdt_dvbpsi);
+	}
+
+	if (pool->atsc_dvbpsi)
+	{
+		dvbpsi_DetachDemux(pool->atsc_dvbpsi);
+		dvbpsi_delete(pool->atsc_dvbpsi);
 	}
 
 	return NULL;

@@ -84,6 +84,7 @@ struct big_pool_t {
 	service_name_callback_t service_name_callback;
 	void *pat_dvbpsi;
 	void *sdt_dvbpsi;
+	void *atsc_dvbpsi;
 
 	uint32_t initialized;
 };
