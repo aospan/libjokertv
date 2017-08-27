@@ -38,6 +38,7 @@ typedef unsigned int            uint32_t;
 #include <linux/dvb/frontend.h>
 #include <time.h>
 #include <linux/i2c.h>
+#include <sys/time.h>
 #include "pthread.h"
 #include "joker_i2c.h"
 #include "joker_fpga.h"
