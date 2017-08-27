@@ -125,6 +125,8 @@ int joker_close(struct joker_t * joker) {
 	if (!joker)
 		return EINVAL;
 
+	stop_service_thread(joker);
+
 	if((ret = joker_i2c_close(joker)))
 		return ret;
 

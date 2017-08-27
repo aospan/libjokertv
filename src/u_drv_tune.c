@@ -38,14 +38,94 @@ typedef unsigned int            uint32_t;
 #include <linux/dvb/frontend.h>
 #include <time.h>
 #include <linux/i2c.h>
+#include "pthread.h"
 #include "joker_i2c.h"
 #include "joker_fpga.h"
 #include "u_drv_tune.h"
 
 static int joker_i2c_gate_ctrl(struct dvb_frontend *fe, int enable);
 
+struct service_thread_opaq_t
+{
+	/* service thread for periodic tasks */
+	pthread_t service_thread;
+	pthread_cond_t cond;
+	pthread_mutex_t mux;
+	int cancel;
+};
+
+/* service thread for periodic tasks */
+void* process_service(void * data) {
+	struct joker_t * joker = (struct joker_t *)data;
+	struct timespec ts;
+	int rc = 0;
+	enum fe_status status = 0;
+	struct dvb_frontend *fe = NULL;
+
+	if (!joker) {
+		printf("%s: invalid args \n", __func__ );
+		return -EINVAL;
+	}
+
+	printf("process_service started \n");
+	while(!joker->service_threading->cancel) {
+		// wait until refresh not enabled
+		pthread_mutex_lock(&joker->service_threading->mux);
+		while (!joker->stat.refresh_enable)
+			pthread_cond_wait(&joker->service_threading->cond,
+					&joker->service_threading->mux);
+
+		// exit if cancelled
+		if (joker->service_threading->cancel) {
+			pthread_mutex_unlock(&joker->service_threading->mux);
+			break;
+		}
+
+		// get status
+		fe = (struct dvb_frontend *)joker->fe_opaque;
+		joker->stat.status = _read_status(joker);
+		jdebug("%s: status=0x%x \n", __func__, status);
+
+		// get statistics
+		_read_signal_stat(joker, &joker->stat);
+		pthread_mutex_unlock(&joker->service_threading->mux);
+
+		// call callback
+		if (joker->status_callback)
+			joker->status_callback(joker);
+
+		// TODO control LNB health, not too often
+		/* if ((time(0) - last_lnb_check) > LNB_HEALTH_INTERVAL) {
+			last_lnb_check = time(0);
+		} */
+
+		// wait signal or timeout
+		pthread_mutex_lock(&joker->service_threading->mux);
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_sec += joker->stat.refresh_ms/1000; 
+		ts.tv_nsec += 1000*1000*(joker->stat.refresh_ms%1000);
+		rc = pthread_cond_timedwait(&joker->service_threading->cond,
+				&joker->service_threading->mux, &ts);
+		pthread_mutex_unlock(&joker->service_threading->mux);
+	}
+	printf("process_service done\n");
+}
+
+// fast stop of service thread
+int stop_service_thread(struct joker_t * joker)
+{
+	int ret = 0;
+
+	if (!joker || !joker->service_threading)
+		return -EINVAL;
+
+	// fast stop of service thread
+	joker->service_threading->cancel = 1;
+	pthread_cond_signal(&joker->service_threading->cond);
+	ret = pthread_join(joker->service_threading->service_thread, NULL);
+}
+
 unsigned long phys_base = 0;
-// const struct kernel_param_ops param_ops_int;
 
 static struct tps65233_config lnb_config = {
 	.i2c_address = 0x60
@@ -214,10 +294,10 @@ ssize_t __modver_version_show(struct module_attribute *mattr,
  * return JOKER_NOLOCK if NOLOCK
  * return negative error code if error
  */
-int read_status(struct tune_info_t *info)
+int _read_status(struct joker_t *joker)
 {
 	enum fe_status status;
-	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
+	struct dvb_frontend *fe = (struct dvb_frontend *)joker->fe_opaque;
 
 	if (!fe)
 		return -EINVAL;
@@ -231,6 +311,16 @@ int read_status(struct tune_info_t *info)
 	return JOKER_NOLOCK;
 }
 
+/* safe read_status for external use */
+int read_status(struct joker_t *joker)
+{
+	int ret = 0;
+	pthread_mutex_lock(&joker->service_threading->mux);
+	ret = read_status(joker);
+	pthread_mutex_unlock(&joker->service_threading->mux);
+	return ret;
+}
+
 /* Read all stats related to receiving signal
  * RF level
  * SNR (CNR)
@@ -238,9 +328,9 @@ int read_status(struct tune_info_t *info)
  *
  * return 0 if success
  * other values is errors */
-int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
+int _read_signal_stat(struct joker_t *joker, struct stat_t *stat)
 {
-	struct dvb_frontend *fe = (struct dvb_frontend *)info->fe_opaque;
+	struct dvb_frontend *fe = (struct dvb_frontend *)joker->fe_opaque;
 	struct dtv_frontend_properties *prop = &fe->dtv_property_cache;
 	uint8_t ifagcreg = 0, rfagcreg = 0, if_bpf_gain = 0;
 	int32_t rssi = 0;
@@ -287,6 +377,16 @@ int read_signal_stat(struct tune_info_t *info, struct stat_t *stat)
 	jdebug("RF Level %f dBm\n", (double)rssi/1000);
 
 	return 0;
+}
+
+/* safe read_signal_stat for external use */
+int read_signal_stat(struct joker_t *joker, struct stat_t *stat)
+{
+	int ret = 0;
+	pthread_mutex_lock(&joker->service_threading->mux);
+	ret = _read_signal_stat(joker, stat);
+	pthread_mutex_unlock(&joker->service_threading->mux);
+	return ret;
 }
 
 /* enable/disable i2c gate
@@ -338,7 +438,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	int ret = 0;
 	unsigned char buf[BUF_LEN];
 	int reset = 0xFF; /* reset all components on the board */
-	int input = 0, need_lnb = 0;
+	int input = 0, need_lnb = 0, rc = 0;
 	int cnt = 5; /* 5 times try to set LNB voltage */
 
 	struct dvb_diseqc_master_cmd dcmd = {
@@ -352,6 +452,32 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 	if (!joker || !joker->i2c_opaque || !info)
 		return EINVAL;
+
+	/* start service thread to monitor status (lock), etc */
+	if (!joker->service_threading) {
+		joker->service_threading = malloc(sizeof(*joker->service_threading));
+		memset(joker->service_threading, 0, sizeof(*joker->service_threading));
+		pthread_mutex_init(&joker->service_threading->mux, NULL);
+		pthread_cond_init(&joker->service_threading->cond, NULL);
+		memset(&joker->stat, 0, sizeof(joker->stat));
+		joker->stat.refresh_ms = 200; // initial interval is 200 msec
+		joker->stat.refresh_enable = 0; // enable later 
+
+		pthread_attr_t attrs;
+		pthread_attr_init(&attrs);
+		pthread_attr_setdetachstate(&attrs, PTHREAD_CREATE_JOINABLE);
+		rc = pthread_create(&joker->service_threading->service_thread, &attrs, process_service, (void *)joker);
+		if (rc){
+			printf("ERROR: can't start service thread. code=%d\n", rc);
+			return rc;
+		}
+	}
+
+	// pause service thread while we configure frontend
+	pthread_mutex_lock(&joker->service_threading->mux);
+	joker->stat.refresh_enable = 0;
+	pthread_cond_signal(&joker->service_threading->cond);
+	pthread_mutex_unlock(&joker->service_threading->mux);
 
 	i2c->algo_data = (void*)joker;
 
@@ -454,7 +580,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	// disable i2c gate (will be enabled later when required)
 	joker_i2c_gate_ctrl(fe, 0);
 
-	info->fe_opaque = (void *)fe;
+	joker->fe_opaque = (void *)fe;
 
 	fe->ops.init(fe);
 
@@ -495,6 +621,12 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	/* actual tune call */
 	fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
 
+	// now wakeup service thread
+	printf("Wakeup service thread \n");
+	pthread_mutex_lock(&joker->service_threading->mux);
+	joker->stat.refresh_enable = 1;
+	pthread_cond_signal(&joker->service_threading->cond);
+	pthread_mutex_unlock(&joker->service_threading->mux);
 
 	/* TODO */
 #if 0

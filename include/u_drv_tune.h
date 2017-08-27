@@ -79,62 +79,15 @@ enum joker_fe_sec_tone_mode {
  * copy from Linux: drivers/media/dvb-core/dvb_frontend.h
  */
 struct tune_info_t {
-  enum	joker_fe_delivery_system delivery_system;
-  enum	joker_fe_modulation      modulation;
-  enum	joker_fe_sec_voltage	voltage;
-  enum joker_fe_sec_tone_mode	tone;
-  struct joker_lnb_t	lnb;
-  uint64_t	frequency; /* in HZ, 64-bit int used for freqs higher than 4GHz */
-  uint32_t	symbol_rate;
-  uint32_t	bandwidth_hz;   /* 0 = AUTO */
-  void*		fe_opaque;
-  int		refresh; /* status refresh interval in ms */
-};
+	enum	joker_fe_delivery_system delivery_system;
+	enum	joker_fe_modulation      modulation;
+	enum	joker_fe_sec_voltage	voltage;
+	enum joker_fe_sec_tone_mode	tone;
+	struct joker_lnb_t	lnb;
+	uint64_t	frequency; /* in HZ, 64-bit int used for freqs higher than 4GHz */
+	uint32_t	symbol_rate;
+	uint32_t	bandwidth_hz;   /* 0 = AUTO */
 
-#define JOKER_LOCK 0
-#define JOKER_NOLOCK 11
-
-#define SIGNAL_BAD 0
-#define SIGNAL_WEAK 1
-#define SIGNAL_GOOD 2
-
-/* struct used to periodic status checking */
-struct stat_t {
-	struct joker_t *joker;
-	struct tune_info_t *info;
-	int32_t cancel;
-
-	/* signal monitoring */
-
-	/* RF level
-	 * RF level given in dBm*1000 
-	 * signed value
-	 */
-	int32_t rf_level;
-
-	/* SNR or CNR 
-	 * given in dB*1000 */
-	int32_t snr;
-
-	/* uncorrected blocks
-	 * can happen if signal is weak or noisy
-	 */
-	int32_t ucblocks;
-
-	/* Signal quality
-	 * SIGNAL_BAD - 'bad' or no signal
-	 * SIGNAL_WEAK - 'weak'
-	 * SIGNAL_GOOD - 'good'
-	 */
-	int32_t signal_quality;
-
-	/* BER (bit error rate)
-	 *
-	 * calculate BER as:
-	 * BER = bit_error/bit_count
-	 */
-	int bit_error;
-	int bit_count;
 };
 
 /* tune to specified source (DVB, ATSC, etc)
@@ -150,7 +103,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info);
  * return -EAGAIN if NOLOCK
  * return negative error code if error
  */
-int read_status(struct tune_info_t *info);
+int read_status(struct joker_t *joker);
 
 /* Read all stats related to receiving signal
  * RF level
@@ -160,7 +113,10 @@ int read_status(struct tune_info_t *info);
  *
  * return 0 if success
  * other values is errors */
-int read_signal_stat(struct tune_info_t *info, struct stat_t *stat);
+int read_signal_stat(struct joker_t *joker, struct stat_t *stat);
+
+/* stop service thread */
+int stop_service_thread(struct joker_t * joker);
 
 /* stop tune */
 // int stop(struct joker_t *joker);

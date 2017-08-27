@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <libusb.h>
-#include <pthread.h>
 
 #include <queue>
 #include "joker_tv.h"
@@ -34,49 +33,27 @@
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 
-void * print_stat(void *data)
+// status & statistics callback
+// will be called periodically after 'tune' call
+void status_callback_f(void *data)
 {
-	int status = 0;
-	int signal = 0;
-	struct stat_t * stat = (struct stat_t *)data;
-	struct tune_info_t * info = NULL;
-	struct joker_t * joker = NULL;
-	unsigned char buf[JCMD_BUF_LEN];
-	unsigned char in_buf[JCMD_BUF_LEN];
-	uint16_t level = 0;
-	int ret = 0;
-	int32_t rssi = 0;
+	struct joker_t *joker= (struct joker_t *)data;
+	struct stat_t *stat = NULL;
 
-	if(!stat)
-		return NULL;
+	if (!joker)
+		return;
+		
+	stat = &joker->stat;
+	printf("INFO: status=%d (%s) ucblocks=%d, rflevel=%.3f dBm, SNR %.3f dB, BER %.2e, quality %d \n", 
+			stat->status, stat->status == JOKER_LOCK ? "LOCK" : "NOLOCK",
+			stat->ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000,
+			(double)stat->bit_error/stat->bit_count,
+			stat->signal_quality);
+	fflush(stdout);
 
-	info = stat->info;
-	joker = stat->joker;
-
-	if (info->refresh <= 0)
-		info->refresh = 1000; /* 1 sec refresh by default */
-
-	while(!stat->cancel) {
-		if (info->fe_opaque) {
-			status = read_status(info);
-			read_signal_stat(info, stat);
-
-			printf("INFO: status=%d (%s) ucblocks=%d, rflevel=%.3f dBm, SNR %.3f dB, BER %.2e, quality %d \n", 
-					status, status == JOKER_LOCK ? "LOCK" : "NOLOCK",
-					stat->ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000,
-					(double)stat->bit_error/stat->bit_count,
-					stat->signal_quality);
-		}
-
-		buf[0] = J_CMD_TSFIFO_LEVEL;
-		if ((ret = joker_cmd(joker, buf, 2, in_buf, 3)))
-			continue;
-		level = (in_buf[1] << 8) | in_buf[2];
-		jdebug("INFO: TSFIFO cmd=0x%x level=0x%x \n", in_buf[0], level );
-
-		/* note: usleep() doesn't work under Windows */
-		sleep(info->refresh/1000);
-	}
+	// less heavy refresh if status locked
+	if (stat->status == JOKER_LOCK)
+		stat->refresh_ms = 2000;
 }
 
 // this callback will be called when new service name arrived
@@ -124,13 +101,11 @@ void show_help() {
 int main (int argc, char **argv)
 {
 	struct tune_info_t info;
-	struct stat_t stat;
 	struct big_pool_t pool;
 	int status = 0, ret = 0, rbytes = 0, i = 0;
 	struct joker_t * joker = NULL;
 	unsigned char buf[JCMD_BUF_LEN];
 	unsigned char in_buf[JCMD_BUF_LEN];
-	pthread_t stat_thread;
 	int c, tsgen = 0;
 	int delsys = 0, mod = 0, sr = 0, bw = 0;
 	uint64_t freq = 0;
@@ -157,7 +132,9 @@ int main (int argc, char **argv)
 	memset(buf, 0, JCMD_BUF_LEN);
 	memset(&pool, 0, sizeof(struct big_pool_t));
 
+	// set callbacks
 	pool.service_name_callback = &service_name_update;
+	joker->status_callback = &status_callback_f;
 
 	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nhe")) != -1)
 		switch (c)
@@ -253,9 +230,6 @@ int main (int argc, char **argv)
 	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 )
 		show_help();
 
-	info.fe_opaque = NULL;
-	info.refresh = 3000; /* less heavy refresh */
-
 	if(tsgen) {
 		/* TS generator selected */
 		buf[0] = J_CMD_TS_INSEL_WRITE;
@@ -281,47 +255,18 @@ int main (int argc, char **argv)
 		else
 			info.voltage = JOKER_SEC_VOLTAGE_OFF;
 
-		printf("Tuning to %llu Hz\n", freq);
+		printf("########### Tuning to %llu Hz\n", (long long)freq);
 		printf("TUNE start \n");
 		if (tune(joker, &info))
 			return -1;
 		printf("TUNE done \n");
 
-		i = 0;
-		fflush(stdout);
-		while (1) {
-			status = read_status(&info);
-			read_signal_stat(&info, &stat);
-			if(!(i%10)) {
-				printf("Waiting lock. status=%d (%s) rf_level=%.3f dBm \n", 
-						status, status ? "NOLOCK" : "LOCK", 
-						(double)stat.rf_level/1000);
-				fflush(stdout);
-			}
-			if (status == JOKER_LOCK) {
-				printf("status=%d (%s) signal=%d (%d %%) \n", 
-						status, status ? "NOLOCK" : "LOCK", signal, 100*(int)(65535 - signal)/0xFFFF);
-				fflush(stdout);
-				break;
-			}
-			usleep(100*1000);
-			i++;
-		}
+		while (joker->stat.status != JOKER_LOCK)
+			usleep(1000*100);
 	}
 
-	/* start status printing thread */
-	stat.joker = joker;
-	stat.info = &info;
-	stat.cancel = 0;
-	if(pthread_create(&stat_thread, NULL, print_stat, &stat)) {
-		fprintf(stderr, "Error creating status thread\n");
-		return -1;
-	}
-
-	while(disable_data) {
-		info.refresh = 1000; /* more often refresh */
+	while(disable_data)
 		sleep(3600);
-	}
 
 	/* start TS collection */
 	if((ret = start_ts(joker, &pool))) {
@@ -358,10 +303,6 @@ int main (int argc, char **argv)
 	}
 	printf("Stopping TS ... \n");
 	stop_ts(joker, &pool);
-
-	printf("Stopping stat thread ... \n");
-	stat.cancel = 1;
-	pthread_join(stat_thread, NULL);
 
 	printf("Closing device ... \n");
 	joker_close(joker);
