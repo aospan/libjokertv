@@ -61,6 +61,7 @@ void* process_service(void * data) {
 	int rc = 0;
 	enum fe_status status = 0;
 	struct dvb_frontend *fe = NULL;
+	int last_lnb_check = time(0);
 
 	if (!joker) {
 		printf("%s: invalid args \n", __func__ );
@@ -88,16 +89,20 @@ void* process_service(void * data) {
 
 		// get statistics
 		_read_signal_stat(joker, &joker->stat);
-		pthread_mutex_unlock(&joker->service_threading->mux);
 
 		// call callback
 		if (joker->status_callback)
 			joker->status_callback(joker);
 
-		// TODO control LNB health, not too often
-		/* if ((time(0) - last_lnb_check) > LNB_HEALTH_INTERVAL) {
+		// control LNB health, not too often
+		if ((time(0) - last_lnb_check) > LNB_HEALTH_INTERVAL) {
+			// this call will update LNB settings
+			// if they lost during LNB chip reset (because of power failure)
+			if(fe->ops.set_voltage)
+				fe->ops.set_voltage(fe, joker->info->voltage);
 			last_lnb_check = time(0);
-		} */
+		}
+		pthread_mutex_unlock(&joker->service_threading->mux);
 
 		// wait signal or timeout
 		pthread_mutex_lock(&joker->service_threading->mux);
@@ -453,6 +458,14 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	if (!joker || !joker->i2c_opaque || !info)
 		return EINVAL;
 
+	// save tuning parameters for later use
+	if (!joker->info) {
+		joker->info = malloc(sizeof(struct tune_info_t));
+		if (!joker->info)
+			return -ENOMEM;
+	}
+	memcpy(joker->info, info, sizeof(*info));
+
 	/* start service thread to monitor status (lock), etc */
 	if (!joker->service_threading) {
 		joker->service_threading = malloc(sizeof(*joker->service_threading));
@@ -600,13 +613,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 		}
 
 		fe->ops.set_tone(fe, info->tone);
-
-		while (cnt-- > 0) {
-			if(!fe->ops.set_voltage(fe, info->voltage))
-				break;
-
-			sleep (1);
-		}
+		fe->ops.set_voltage(fe, info->voltage);
 
 		/* use LNB settings to calculate correct frequency */
 		if (info->lnb.switchfreq) {

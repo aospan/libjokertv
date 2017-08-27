@@ -29,6 +29,7 @@
 #define TS_WILDCARD_PID		0x2000
 
 typedef void(*status_callback_t)(void *data);
+struct tune_info_t;
 
 #define JOKER_LOCK 0
 #define JOKER_NOLOCK 11
@@ -36,6 +37,7 @@ typedef void(*status_callback_t)(void *data);
 #define SIGNAL_BAD 0
 #define SIGNAL_WEAK 1
 #define SIGNAL_GOOD 2
+
 
 /* struct used to periodic status checking */
 struct stat_t {
@@ -96,6 +98,8 @@ struct joker_t {
 	/* status callback */
 	status_callback_t status_callback;
 	struct stat_t stat;
+	/* last params used for tune call */
+	struct tune_info_t *info;
 };
 
 #ifdef __cplusplus

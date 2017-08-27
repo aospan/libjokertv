@@ -14,6 +14,8 @@
 extern "C" {
 #endif
 
+#define LNB_HEALTH_INTERVAL 2
+
 /* constants copy from Linux: include/uapi/linux/dvb/frontend.h 
  * do not change order !
  */
