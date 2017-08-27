@@ -109,12 +109,14 @@ void* process_service(void * data) {
 		// wait signal or timeout
 		pthread_mutex_lock(&joker->service_threading->mux);
 		gettimeofday(&now,NULL);
-		new_nsec = (joker->stat.refresh_ms/1000 + now.tv_sec) * 1000UL * 1000UL * 1000UL
-			+ (1000UL*(joker->stat.refresh_ms%1000) + now.tv_usec) * 1000UL;
+		new_nsec = (uint64_t)(joker->stat.refresh_ms/1000 + now.tv_sec) * 1000UL * 1000UL * 1000UL
+			+ (1000UL*(uint64_t)(joker->stat.refresh_ms%1000) + now.tv_usec) * 1000UL;
 		ts.tv_sec = new_nsec/(1000UL * 1000UL * 1000UL);
 		ts.tv_nsec = (new_nsec % (1000UL * 1000UL * 1000UL));
+		jdebug("now sec=%d usec=%d new_nsec=%llu\n", now.tv_sec, now.tv_usec, new_nsec);
 		rc = pthread_cond_timedwait(&joker->service_threading->cond,
 				&joker->service_threading->mux, &ts);
+		jdebug("timedwait rc=%d \n", rc);
 		pthread_mutex_unlock(&joker->service_threading->mux);
 	}
 	printf("process_service done\n");
