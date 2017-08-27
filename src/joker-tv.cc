@@ -54,6 +54,8 @@ void status_callback_f(void *data)
 	// less heavy refresh if status locked
 	if (stat->status == JOKER_LOCK)
 		stat->refresh_ms = 2000;
+	else
+		stat->refresh_ms = 500;
 }
 
 // this callback will be called when new service name arrived
