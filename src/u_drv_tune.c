@@ -58,10 +58,12 @@ struct service_thread_opaq_t
 void* process_service(void * data) {
 	struct joker_t * joker = (struct joker_t *)data;
 	struct timespec ts;
+	struct timeval now;
 	int rc = 0;
 	enum fe_status status = 0;
 	struct dvb_frontend *fe = NULL;
 	int last_lnb_check = time(0);
+	uint64_t new_nsec = 0;
 
 	if (!joker) {
 		printf("%s: invalid args \n", __func__ );
@@ -106,9 +108,11 @@ void* process_service(void * data) {
 
 		// wait signal or timeout
 		pthread_mutex_lock(&joker->service_threading->mux);
-		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec += joker->stat.refresh_ms/1000; 
-		ts.tv_nsec += 1000*1000*(joker->stat.refresh_ms%1000);
+		gettimeofday(&now,NULL);
+		new_nsec = (joker->stat.refresh_ms/1000 + now.tv_sec) * 1000UL * 1000UL * 1000UL
+			+ (1000UL*(joker->stat.refresh_ms%1000) + now.tv_usec) * 1000UL;
+		ts.tv_sec = new_nsec/(1000UL * 1000UL * 1000UL);
+		ts.tv_nsec = (new_nsec % (1000UL * 1000UL * 1000UL));
 		rc = pthread_cond_timedwait(&joker->service_threading->cond,
 				&joker->service_threading->mux, &ts);
 		pthread_mutex_unlock(&joker->service_threading->mux);
