@@ -190,6 +190,13 @@ void record_callback(struct libusb_transfer *transfer)
 	int total_len = 0;
 	int off = 0, cnt = 0, ts_off = 0, len = 0;
 
+	// free this transfer
+	if (!transfer->user_data) {
+		transfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+		libusb_free_transfer(transfer);
+		return;
+	}
+
 	// looks like we stopping TS processing. do not submit this transfer
 	if(transfer->status == LIBUSB_TRANSFER_CANCELLED)
 		return;
@@ -394,6 +401,7 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 {
 	int index = 0;
 	int ret = 0;
+	struct ts_node * node = NULL;
 
 	// sanity check
 	if (pool->initialized != BIG_POOL_MAGIC || !joker || pool->cancel)
@@ -402,8 +410,10 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	set_refresh(joker, 0);
 
 	for (index = 0; index < NUM_USB_BUFS; index++) {
+		// signal callback to free this transfer. We can't clean it here
+		// because this cancel is async and transaction actually cancelled later
 		if(pool->transfers[index])
-			pool->transfers[index]->callback = NULL; // avoid calling when cancelled
+			pool->transfers[index]->user_data = NULL;
 
 		if(pool->transfers[index] && libusb_cancel_transfer(pool->transfers[index]))
 			printf("can't cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
@@ -428,6 +438,14 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	if ((ret = libusb_claim_interface((struct libusb_device_handle *)joker->libusb_opaque, 0))) {
 		printf("%s: can't claim USB interface ! \n", __func__ );
 		return -EIO;
+	}
+
+	// cleanup collected TS data
+	while (!list_empty(&pool->ts_list_all)) {
+		node = list_first_entry(&pool->ts_list_all, struct ts_node, list);
+		pool->ts_list_size -= node->size;
+		drop_ts_data(node);
+		jdebug("TS:all: drop node %p. ts_list_size=%d\n", node, pool->ts_list_size);
 	}
 
 	pool_uninit(pool);
