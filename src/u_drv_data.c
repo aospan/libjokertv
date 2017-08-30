@@ -194,6 +194,9 @@ void record_callback(struct libusb_transfer *transfer)
 	if(transfer->status == LIBUSB_TRANSFER_CANCELLED)
 		return;
 
+	if(transfer->status == LIBUSB_TRANSFER_ERROR)
+		return;
+
 	/* update statistics */
 	if ( (getus() - pool->start_time) > 2000000 ) {
 		printf("USB ISOC: all/complete=%f/%f transfer/sec %.2f MBytes %f mbits/sec \n", 
@@ -390,12 +393,18 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 {
 	int index = 0;
+	int ret = 0;
 
 	// sanity check
 	if (pool->initialized != BIG_POOL_MAGIC || !joker || pool->cancel)
 		return -EINVAL;
 
+	set_refresh(joker, 0);
+
 	for (index = 0; index < NUM_USB_BUFS; index++) {
+		if(pool->transfers[index])
+			pool->transfers[index]->callback = NULL; // avoid calling when cancelled
+
 		if(pool->transfers[index] && libusb_cancel_transfer(pool->transfers[index]))
 			printf("can't cancel usb transfer %d (%p) \n", index, pool->transfers[index]);
 		else
@@ -410,6 +419,16 @@ int stop_ts(struct joker_t *joker, struct big_pool_t * pool)
 	// lock until threads ended
 	pthread_join(pool->threading->usb_thread, NULL);
 	pthread_join(pool->threading->ts_thread, NULL);
+
+	if ((ret = libusb_release_interface((struct libusb_device_handle *)joker->libusb_opaque, 0))) {
+		printf("%s: can't release USB interface ! \n", __func__ );
+		return -EIO;
+	}
+
+	if ((ret = libusb_claim_interface((struct libusb_device_handle *)joker->libusb_opaque, 0))) {
+		printf("%s: can't claim USB interface ! \n", __func__ );
+		return -EIO;
+	}
 
 	pool_uninit(pool);
 

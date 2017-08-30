@@ -431,6 +431,16 @@ static int joker_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	return 0;
 }
 
+int set_refresh(struct joker_t *joker, int enable)
+{
+	pthread_mutex_lock(&joker->service_threading->mux);
+	joker->stat.refresh_enable = enable;
+	pthread_cond_signal(&joker->service_threading->cond);
+	pthread_mutex_unlock(&joker->service_threading->mux);
+
+	return 0;
+}
+
 /* tune to specified source (DVB, ATSC, etc)
  * this call is non-blocking (returns after configuring frontend)
  * return negative error code if failed
