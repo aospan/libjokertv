@@ -433,6 +433,9 @@ static int joker_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 
 int set_refresh(struct joker_t *joker, int enable)
 {
+	if (!joker || !joker->service_threading)
+		return -EINVAL;
+
 	pthread_mutex_lock(&joker->service_threading->mux);
 	joker->stat.refresh_enable = enable;
 	pthread_cond_signal(&joker->service_threading->cond);
