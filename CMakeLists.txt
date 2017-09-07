@@ -23,6 +23,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	find_library(LIBIOKit IOKit)
 	find_library(LIBCoreFoundation CoreFoundation)
 	find_library(LIBICONV iconv)
+	find_library(LIBobjc objc)
 	set(PTHREADS_LIB "pthread")
 	set(LINUXLIB -Wl,-force_load,${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -97,7 +98,7 @@ set(KINCLUDE_DIRS
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}>)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
-	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBUDEV} ${LIBICONV})
+	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBobjc} ${LIBUDEV} ${LIBICONV})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
