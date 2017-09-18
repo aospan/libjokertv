@@ -610,8 +610,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 	fe->frontend_priv = joker;
 	fe->ops.i2c_gate_ctrl = joker_i2c_gate_ctrl;
-	// disable i2c gate (will be enabled later when required)
-	joker_i2c_gate_ctrl(fe, 0);
+	joker_i2c_gate_ctrl(fe, 1);
 
 	joker->fe_opaque = (void *)fe;
 
@@ -647,6 +646,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 	/* actual tune call */
 	fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
+	joker_i2c_gate_ctrl(fe, 0);
 
 	// now wakeup service thread
 	printf("Wakeup service thread \n");
