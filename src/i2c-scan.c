@@ -19,6 +19,7 @@ int main() {
 	struct joker_t joker;
 	joker.libusb_verbose = 0;
 
+	memset(&joker, 0, sizeof(joker));
 	if ((ret = joker_open(&joker)))
 		return ret;
 
