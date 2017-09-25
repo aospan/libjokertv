@@ -100,6 +100,10 @@ struct joker_t {
 	struct stat_t stat;
 	/* last params used for tune call */
 	struct tune_info_t *info;
+
+	/* CAM module */
+	void *joker_ci_opaque;
+	int ci_verbose; /* non 0 for debugging CI */
 };
 
 #ifdef __cplusplus
