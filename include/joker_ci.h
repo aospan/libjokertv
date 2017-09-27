@@ -20,7 +20,32 @@
 extern "C" {
 #endif
 
-#define TUPLE_MAX_SIZE 128
+#define TUPLE_MAX_SIZE	128
+#define JOKER_CI_IO	1
+#define JOKER_CI_MEM	0
+
+/* from Linux kernel:
+ * ./drivers/media/dvb-core/dvb_ca_en50221.c */
+#define CTRLIF_DATA      0
+#define CTRLIF_COMMAND   1
+#define CTRLIF_STATUS    1
+#define CTRLIF_SIZE_LOW  2
+#define CTRLIF_SIZE_HIGH 3
+
+#define CMDREG_HC        1      /* Host control */
+#define CMDREG_SW        2      /* Size write */
+#define CMDREG_SR        4      /* Size read */
+#define CMDREG_RS        8      /* Reset interface */
+#define CMDREG_FRIE   0x40      /* Enable FR interrupt */
+#define CMDREG_DAIE   0x80      /* Enable DA interrupt */
+#define IRQEN (CMDREG_DAIE)
+
+#define STATUSREG_RE     1      /* read error */
+#define STATUSREG_WE     2      /* write error */
+#define STATUSREG_FR  0x40      /* module free */
+#define STATUSREG_DA  0x80      /* data available */
+#define STATUSREG_TXERR (STATUSREG_RE|STATUSREG_WE)     /* general transfer error */
+
 
 struct ci_tuple_t {
 	int type;
