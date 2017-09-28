@@ -107,9 +107,6 @@ int joker_open(struct joker_t *joker)
 	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 		return ret;
 
-	/* init CI */
-	joker_ci(joker);
-
 	/* i2c core init */
 	if ((ret = joker_i2c_init(joker)))
 		return ret;

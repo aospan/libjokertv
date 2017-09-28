@@ -96,7 +96,8 @@ void show_help() {
 	printf("	-p		Decode programs info (DVB PSI tables). Default: no\n");
 	printf("	-z l,h,s	LNB settings: low/high/switch frequency. Example: -z 9750,10600,11700\n");
 	printf("	-e		Enable 22 kHz tone (continuous). Default: disabled\n");
-	printf("	-c		Enable CAM module verbose messages. Default: disabled\n");
+	printf("	-c		Enable CAM module. Default: disabled\n");
+	printf("	-j		Enable CAM module verbose messages. Default: disabled\n");
 
 	exit(0);
 }
@@ -139,7 +140,7 @@ int main (int argc, char **argv)
 	pool.service_name_callback = &service_name_update;
 	joker->status_callback = &status_callback_f;
 
-	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nhec")) != -1)
+	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nhecj")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -179,6 +180,9 @@ int main (int argc, char **argv)
 				joker->libusb_verbose = atoi(optarg);
 				break;
 			case 'c':
+				joker->ci_enable = 1;
+				break;
+			case 'j':
 				joker->ci_verbose = 1;
 				break;
 			case 'l':
@@ -208,6 +212,10 @@ int main (int argc, char **argv)
 	if ((ret = joker_open(joker)))
 		return ret;
 	printf("allocated joker=%p \n", joker);
+
+	/* init CI */
+	if (joker->ci_enable)
+		joker_ci(joker);
 
 	/* upgrade fw if selected */
 	if(strlen((const char*)fwfilename)) {
