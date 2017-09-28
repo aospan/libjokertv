@@ -19,6 +19,18 @@ extern "C" {
 
 void hexdump(unsigned char * buf, int size);
 
+/* put chips into reset state
+ * chips selected by mask
+ * return 0 if success
+ */
+int joker_reset(struct joker_t *joker, int mask);
+
+/* wakeup chips from reset
+ * chips selected by mask
+ * return 0 if success
+ */
+int joker_unreset(struct joker_t *joker, int mask);
+
 #ifdef __cplusplus
 }
 #endif

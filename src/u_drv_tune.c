@@ -413,20 +413,10 @@ static int joker_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	if (!joker)
 		return -EINVAL;
 
-	jdebug("%s(): 0. enable=%d unreset=0x%x \n",
-			__func__, enable, joker->unreset);
 	if (enable)
-		joker->unreset &= ~(OC_I2C_RESET_GATE);
+		joker_unreset(joker, OC_I2C_RESET_GATE);
 	else
-		joker->unreset |= OC_I2C_RESET_GATE;
-
-	jdebug("%s(): enable=%d unreset=0x%x\n", __func__, enable, joker->unreset);
-
-	buf[0] = J_CMD_RESET_CTRL_WRITE;
-	buf[1] = joker->unreset;
-
-	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
-		return ret;
+		joker_reset(joker, OC_I2C_RESET_GATE);
 
 	return 0;
 }
@@ -462,7 +452,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	unsigned int delay = 0;
 	int ret = 0;
 	unsigned char buf[BUF_LEN];
-	int reset = 0xFF; /* reset all components on the board */
 	int input = 0, need_lnb = 0, rc = 0;
 	int cnt = 5; /* 5 times try to set LNB voltage */
 
@@ -514,14 +503,16 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 	i2c->algo_data = (void*)joker;
 
+	joker_reset(joker, 0xFF /* switch all chips to reset */);
+
 	switch (info->delivery_system)
 	{
 		case JOKER_SYS_ATSC:
-			joker->unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG;
 			input = J_INSEL_LG;
+			joker_unreset(joker, OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG);
 			break;
 		case JOKER_SYS_DTMB:
-			joker->unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_ATBM;
+			joker_unreset(joker, OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_ATBM);
 			input = J_INSEL_ATBM;
 			break;
 		case JOKER_SYS_DVBS:
@@ -531,7 +522,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 		case JOKER_SYS_DVBT:
 		case JOKER_SYS_DVBT2:
 		case JOKER_SYS_ISDBT:
-			joker->unreset = OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY;
+			joker_unreset(joker, OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_SONY);
 			input = J_INSEL_SONY;
 			break;
 		default:
@@ -539,21 +530,8 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			return ENODEV;
 	}
 
-	joker->unreset |= OC_I2C_RESET_TPS_CI;
-	joker->unreset = ~joker->unreset;
-
-	/* reset tuner and demods */
-	buf[0] = J_CMD_RESET_CTRL_WRITE;
-	buf[1] = reset;
-	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
-		return ret;
-
-	msleep(50);
-
-	buf[0] = J_CMD_RESET_CTRL_WRITE;
-	buf[1] = joker->unreset;
-	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
-		return ret;
+	joker_unreset(joker, OC_I2C_RESET_TPS_CI);
+	msleep(50); /* wait chips to wakeup after reset */
 
 	/* choose TS input */
 	buf[0] = J_CMD_TS_INSEL_WRITE;

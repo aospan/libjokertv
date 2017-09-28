@@ -42,3 +42,50 @@ void hexdump(unsigned char * buf, int size)
 
 	printf("\n");
 }
+
+/* do actual reset control on device
+ * return 0 if success
+ */
+int joker_reset_write(struct joker_t *joker)
+{
+	unsigned char buf[BUF_LEN];
+	int ret = 0;
+
+	if (!joker)
+		return -EINVAL;
+
+	buf[0] = J_CMD_RESET_CTRL_WRITE;
+	buf[1] = joker->reset;
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		return ret;
+
+	return 0;
+}
+
+/* put chips into reset state
+ * chips selected by mask
+ * return 0 if success
+ */
+int joker_reset(struct joker_t *joker, int mask)
+{
+	if (!joker)
+		return -EINVAL;
+
+	joker->reset |= mask;
+	if (joker_reset_write(joker))
+		return -EIO;
+}
+
+/* wakeup chips from reset
+ * chips selected by mask
+ * return 0 if success
+ */
+int joker_unreset(struct joker_t *joker, int mask)
+{
+	if (!joker)
+		return -EINVAL;
+
+	joker->reset &= ~mask;
+	if (joker_reset_write(joker))
+		return -EIO;
+}

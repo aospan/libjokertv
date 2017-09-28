@@ -94,7 +94,8 @@ struct joker_t {
 	void *fe_opaque;
 	struct service_thread_opaq_t *service_threading;
 	int libusb_verbose;
-	int unreset;
+	/* hold chip list that should be in reset state */
+	int reset;
 	/* status callback */
 	status_callback_t status_callback;
 	struct stat_t stat;
@@ -104,6 +105,7 @@ struct joker_t {
 	/* CAM module */
 	void *joker_ci_opaque;
 	int ci_verbose; /* non 0 for debugging CI */
+	int ci_enable; /* enable CAM module */
 };
 
 #ifdef __cplusplus
