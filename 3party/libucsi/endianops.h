@@ -27,8 +27,15 @@ extern "C"
 #endif
 
 #include <stdint.h>
+#if defined(__APPLE__)
+#include <libkern/OSByteOrder.h>
+#define le32toh OSSwapLittleToHostInt32
+#define htole32 OSSwapHostToLittleInt32
+#define bswap_32 OSSwapInt32
+#else
 #include <byteswap.h>
 #include <endian.h>
+#endif
 
 #define __ucsi_packed __attribute__((packed))
 
