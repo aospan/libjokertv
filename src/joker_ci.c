@@ -22,6 +22,8 @@
 #include <joker_fpga.h>
 #include <joker_utils.h>
 
+int joker_ci_wait_status(struct joker_t * joker, uint8_t waitfor, int timeout);
+
 /* read from CAM at offset
  * if read_from=JOKER_CI_IO then read performed from IO space
  * if read_from=JOKER_CI_MEM then read performed from attributes memory
@@ -71,9 +73,151 @@ int joker_ci_write(struct joker_t * joker, int offset, int area, char data)
 	if ((ret = joker_cmd(joker, buf, 4, in_buf, 2 /* in_len */)))
 		return -EIO;
 
-	printf("CAM: write 0x%x to offset 0x%x at %s\n", buf[3], offset, (area == JOKER_CI_IO) ? "IO" : "MEM");
+	jdebug("CAM: write 0x%x to offset 0x%x at %s\n", buf[3], offset, (area == JOKER_CI_IO) ? "IO" : "MEM");
 
 	return 0;
+}
+
+/* EN50221 read data
+ * return read bytes if success
+ * or negative value if failed
+ */
+int joker_ci_read_data(struct joker_t * joker, unsigned char *buf, int size)
+{
+	int bytes_read = 0;
+	int ret = 0, i = 0;
+	struct joker_ci_t * ci = NULL;
+
+	if (!joker || !joker->joker_ci_opaque)
+		return -EINVAL;
+	ci = (struct joker_ci_t *)joker->joker_ci_opaque;
+
+	ret = joker_ci_wait_status(joker, STATUSREG_DA, 1000);
+	if (ret != 0) {
+		printf("CAM:%s: no data \n", __func__);
+		return -EIO;
+	}
+
+	ret = joker_ci_read(joker, CTRLIF_SIZE_HIGH, JOKER_CI_IO);
+	if (ret < 0) {
+		printf("CAM:%s: can't read CTRLIF_SIZE_HIGH\n", __func__);
+		return -EIO;
+	}
+	bytes_read = ret << 8;
+
+	ret = joker_ci_read(joker, CTRLIF_SIZE_LOW, JOKER_CI_IO);
+	if (ret < 0) {
+		printf("CAM:%s: can't read CTRLIF_SIZE_HIGH\n", __func__);
+		return -EIO;
+	}
+	bytes_read |= ret;
+
+	if (bytes_read > size) {
+		printf("CAM:%s: can't fit data to buffer\n", __func__);
+		return -ENOMEM;
+	}
+
+	if (ci->ci_verbose)
+		printf("CAM:%s: try to read %d bytes from CAM\n", __func__, bytes_read);
+
+	for (i = 0; i < bytes_read; i++) {
+		ret = joker_ci_read(joker, CTRLIF_DATA, JOKER_CI_IO);
+		if (ret < 0) {
+			printf("CAM:%s: can't read CTRLIF_DATA\n", __func__);
+			return -EIO;
+		}
+
+		buf[i] = ret;
+	}
+
+	if (ci->ci_verbose) {
+		printf("CAM:%s: %d bytes read from CAM. hexdump:\n", __func__, bytes_read);
+		hexdump(buf, bytes_read);
+	}
+
+	ret = joker_ci_read(joker, CTRLIF_STATUS, JOKER_CI_IO);
+	if (ret < 0)
+		return -EIO;
+
+	if (ret & STATUSREG_RE) {
+		printf("CAM:%s: read error indicated by cam. status=0x%x\n", __func__, ret);
+		return -EIO;
+	}
+
+	return bytes_read;
+}
+
+/* EN50221 write data
+ * return written bytes if success
+ * or negative value if failed
+ */
+int joker_ci_write_data(struct joker_t * joker, unsigned char *buf, int size)
+{
+	int bytes_read = 0;
+	int ret = 0, i = 0;
+	struct joker_ci_t * ci = NULL;
+
+	if (!joker || !joker->joker_ci_opaque)
+		return -EINVAL;
+	ci = (struct joker_ci_t *)joker->joker_ci_opaque;
+
+	/* TODO: read data from CAM first if DA bit set ! */
+
+	ret = joker_ci_wait_status(joker, STATUSREG_FR, 1000);
+	if (ret != 0) {
+		printf("CAM:%s: FR not set\n", __func__);
+		return -EIO;
+	}
+
+	/* set HC bit */
+	ret = joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN | CMDREG_HC);
+	if (ret < 0) {
+		printf("CAM:%s: can't set CMDREG_HC\n", __func__);
+		return -EIO;
+	}
+
+	/* is CAM still free ? */
+	ret = joker_ci_wait_status(joker, STATUSREG_FR, 1000);
+	if (ret != 0) {
+		printf("CAM:%s: FR not set\n", __func__);
+		return -EIO;
+	}
+
+	/* TODO: here the same ! read data from CAM first if DA bit set ! */
+
+	ret = joker_ci_write(joker, CTRLIF_SIZE_HIGH, JOKER_CI_IO, size >> 8);
+	if (ret < 0)
+		return -EIO;
+	ret = joker_ci_write(joker, CTRLIF_SIZE_LOW, JOKER_CI_IO, size & 0xff);
+	if (ret < 0)
+		return -EIO;
+
+	if (ci->ci_verbose)
+		printf("CAM:%s: try to write %d bytes to CAM\n", __func__, size);
+
+	for (i = 0; i < size; i++) {
+		ret = joker_ci_write(joker, CTRLIF_DATA, JOKER_CI_IO, buf[i]);
+		if (ret < 0) {
+			printf("CAM:%s: can't write to CAM\n", __func__);
+			return -EIO;
+		}
+	}
+
+	if (ci->ci_verbose) {
+		printf("CAM:%s: %d bytes written to CAM. hexdump:\n", __func__, size);
+		hexdump(buf, size);
+	}
+
+	ret = joker_ci_read(joker, CTRLIF_STATUS, JOKER_CI_IO);
+	if (ret < 0)
+		return -EIO;
+
+	if (ret & STATUSREG_WE) {
+		printf("CAM:%s: write error indicated by cam. status=0x%x\n", __func__, ret);
+		return -EIO;
+	}
+
+	return size;
 }
 
 int joker_ci_read_tuple(struct joker_t * joker, struct ci_tuple_t *tuple)
@@ -314,7 +458,7 @@ int joker_ci_wait_status(struct joker_t * joker, uint8_t waitfor, int timeout)
 			printf("CAM:ERROR: can't read status reg\n");
 			return -EIO;
 		}
-		printf("ret=0x%x waitfor=0x%x\n", ret, waitfor);
+		jdebug("ret=0x%x waitfor=0x%x\n", ret, waitfor);
 		if (ret & waitfor)
 			return 0;
 		msleep(1);
@@ -370,7 +514,7 @@ int joker_ci_init_interface(struct joker_t * joker)
 	 * CAM should respond in 10 sec */
 	ret = joker_ci_wait_status(joker, STATUSREG_FR, 10000);
 	if (ret != 0) {
-		printf("CAM:ERRROR: link FREE bit wait timeout \n");
+		printf("CAM:ERROR: link FREE bit wait timeout \n");
 		return -EIO;
 	}
 
@@ -385,6 +529,7 @@ int joker_ci_link_init(struct joker_t * joker)
 {
 	struct joker_ci_t * ci = NULL;
 	int ret;
+	unsigned char buf[2];
 
 	if (!joker || !joker->joker_ci_opaque)
 		return -EINVAL;
@@ -395,9 +540,29 @@ int joker_ci_link_init(struct joker_t * joker)
 	joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN | CMDREG_SR);
 	ret = joker_ci_wait_status(joker, STATUSREG_DA, 1000);
 	if (ret != 0) {
-		printf("CAM:ERRROR: link buffer size init\n");
+		printf("CAM:ERROR: link buffer size init\n");
 		return -EIO;
 	}
+	ret = joker_ci_read_data(joker, buf, 2);
+	if (ret != 2)
+		return -EIO;
+	joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN);
+
+	/* write the buffer size to the CAM */
+	joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN | CMDREG_SW);
+	ret = joker_ci_wait_status(joker, STATUSREG_FR, 100);
+	if (ret != 0) {
+		printf("CAM:ERROR: link buffer size write failed\n");
+		return -EIO;
+	}
+	printf("CAM:%s suggested buffer size %d bytes \n", __func__, ((int)buf[0] << 8 | buf[1]));
+	/* we can handle any buffer size
+	 * so, just write suggested buffer size back to CAM
+	 */
+	ret = joker_ci_write_data(joker, buf, 2);
+	if (ret != 2)
+		return -EIO;
+	joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN);
 
 	return 0;
 }
@@ -413,6 +578,7 @@ int joker_ci(struct joker_t * joker)
 	unsigned char in_buf[JCMD_BUF_LEN];
 	unsigned char mem[512];
 	struct joker_ci_t * ci = NULL;
+	int ci_timeout = 7; /* 700 msec timeout for CAM reset */
 
 	if (joker->joker_ci_opaque) {
 		printf("CAM already initialized ? Call joker_ci_close to deinit\n");
@@ -426,10 +592,23 @@ int joker_ci(struct joker_t * joker)
 	ci->ci_verbose = joker->ci_verbose;
 	joker->joker_ci_opaque = ci;
 
-	buf[0] = J_CMD_CI_STATUS;
-	if ((ret = joker_cmd(joker, buf, 1, in_buf, 2 /* in_len */)))
-		goto fail_out;
-	jdebug("CAM status 0x%x %x\n", in_buf[0], in_buf[1]);
+	/* power cycle for CAM */
+	joker_reset(joker, OC_I2C_RESET_TPS_CI);
+	msleep(10);
+	joker_unreset(joker, OC_I2C_RESET_TPS_CI);
+
+	// wait until cam status changed 
+	while(ci_timeout--) {
+		buf[0] = J_CMD_CI_STATUS;
+		if ((ret = joker_cmd(joker, buf, 1, in_buf, 2 /* in_len */)))
+			goto fail_out;
+		jdebug("CAM status 0x%x %x\n", in_buf[0], in_buf[1]);
+
+		if (in_buf[1] & 0x01)
+			break; /* CAM detected */
+		
+		msleep(100);
+	}
 
 	if (!(in_buf[1] & 0x01)) {
 		printf("CAM not detected\n");
