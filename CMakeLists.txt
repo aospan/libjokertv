@@ -18,7 +18,9 @@ endif(NOT CMAKE_BUILD_TYPE)
 find_package( Threads REQUIRED)
 find_package( PkgConfig )
 
-# unser OSx we need some system libs for libusb functionality
+add_subdirectory("3party/libdvben50221/")
+
+# under OSx we need some system libs for libusb functionality
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	find_library(LIBIOKit IOKit)
 	find_library(LIBCoreFoundation CoreFoundation)
@@ -32,6 +34,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
+	set(EN50221LIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a -Wl,--no-whole-archive)
 	find_library(LIBUDEV udev)
 endif()
 
@@ -84,6 +87,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_spi.c
 	src/joker_ci.c
 	src/joker_utils.c
+	src/joker_en50221.c
 	src/joker_ts.c)
 
 set(KOPTIONS "-include ${CMAKE_SOURCE_DIR}/linux/include/linux/types.h")
@@ -96,7 +100,7 @@ set(KINCLUDE_DIRS
 	${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/)
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
-set(INCLUDE_USER $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}>)
+set(INCLUDE_USER $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}> 3party)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
 	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBobjc} ${LIBUDEV} ${LIBICONV})
 
@@ -114,9 +118,10 @@ set_target_properties(jokertv_linux PROPERTIES COMPILE_FLAGS "-fPIC")
 add_library (jokertv SHARED ${JOKERTV_SRC})
 set_property(TARGET jokertv PROPERTY VERSION ${joker_tv_VERSION})
 set_target_properties(jokertv PROPERTIES COMPILE_FLAGS "${CFLAGS_USER}")
-add_dependencies(jokertv libusb libdvbpsi jokertv_linux)
+add_dependencies(jokertv libusb libdvbpsi jokertv_linux dvben50221)
 target_link_libraries(jokertv
 	PRIVATE ${LINUXLIB}
+	PRIVATE ${EN50221LIB}
 	PRIVATE ${PC_LIBUSB_LIBRARIES}
 	PRIVATE ${PC_LIBDVBPSI_LIBRARIES}
 	PRIVATE ${LIBICONV}

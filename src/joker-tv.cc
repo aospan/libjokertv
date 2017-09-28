@@ -28,6 +28,7 @@
 #include "joker_tv.h"
 #include "joker_fpga.h"
 #include "joker_ci.h"
+#include "joker_en50221.h"
 #include "joker_spi.h"
 #include "joker_ts.h"
 #include "u_drv_tune.h"
@@ -214,8 +215,10 @@ int main (int argc, char **argv)
 	printf("allocated joker=%p \n", joker);
 
 	/* init CI */
-	if (joker->ci_enable)
-		joker_ci(joker);
+	if (joker->ci_enable) {
+		if (!joker_ci(joker))
+			joker_ci_en50221(joker);
+	}
 
 	/* upgrade fw if selected */
 	if(strlen((const char*)fwfilename)) {
