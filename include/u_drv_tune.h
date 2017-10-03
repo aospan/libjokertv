@@ -123,6 +123,15 @@ int stop_service_thread(struct joker_t * joker);
 /* stop tune */
 // int stop(struct joker_t *joker);
 
+/* set LNB voltage directly to chip 
+ * return:
+ * -ENFILE for "LNB output voltage out of range"
+ * -ERANGE for "Output current less than 50 mA"
+ * -EMFILE for "Overcurrent protection triggered"
+ *  0 if no errors detected
+ */
+int set_lnb_voltage(struct joker_t * joker, enum joker_fe_sec_voltage voltage);
+
 #ifdef __cplusplus
 }
 #endif

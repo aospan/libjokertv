@@ -31,6 +31,28 @@ int joker_reset(struct joker_t *joker, int mask);
  */
 int joker_unreset(struct joker_t *joker, int mask);
 
+/* check TS packet pattern
+ * return 0 if TS pattern ok
+ * return 0 if TS pattern check failed
+ * */
+int check_pattern(struct joker_t *joker, unsigned char * pkt);
+
+/* receive TS and validate for patterns
+ * return 0 if success
+ *
+ * min_count - amount of TS packets should be received. return error if less
+ * max_err - maximum amount of errnous packets
+ * timeout - max time to analyze (in seconds)
+ *
+ * example:
+ * timout = 10
+ * min_count = 10000
+ * max_err = 10
+ * accceptable error rate 10/10000 ~ 0.1%
+ * expected minimum bitrate 188*10000/10 ~ 188KB/sec
+ */
+int validate_ts(struct joker_t * joker, int timeout, int min_count, int max_err);
+
 #ifdef __cplusplus
 }
 #endif

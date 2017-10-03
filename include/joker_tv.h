@@ -85,6 +85,9 @@ struct stat_t {
 	 */
 	int bit_error;
 	int bit_count;
+
+	/* LNB status */
+	int lnb_err;
 };
 
 /* main pointer to Joker TV */
@@ -93,6 +96,8 @@ struct joker_t {
 	void *i2c_opaque;
 	void *fe_opaque;
 	struct service_thread_opaq_t *service_threading;
+	struct big_pool_t *pool;
+
 	int libusb_verbose;
 	/* hold chip list that should be in reset state */
 	int reset;
@@ -106,6 +111,9 @@ struct joker_t {
 	void *joker_ci_opaque;
 	int ci_verbose; /* non 0 for debugging CI */
 	int ci_enable; /* enable CAM module */
+
+	/* TS check vars */
+	int last_pattern;
 };
 
 #ifdef __cplusplus

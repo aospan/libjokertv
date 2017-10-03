@@ -93,18 +93,27 @@ void* process_service(void * data) {
 		// get statistics
 		_read_signal_stat(joker, &joker->stat);
 
+		// control LNB health, not too often
+		if ((time(0) - last_lnb_check) > LNB_HEALTH_INTERVAL) {
+			/* this call will update LNB settings
+			 * if they lost during LNB chip reset (because of power failure)
+			 *
+			 * ops.set_voltage return different error codes for different error conditions 
+			 * -ENFILE for "LNB output voltage out of range"
+			 * -ERANGE for "Output current less than 50 mA"
+			 * -EMFILE for "Overcurrent protection triggered"
+			 *  0 if no errors detected
+			 */
+			if(fe->ops.set_voltage) {
+				joker->stat.lnb_err = fe->ops.set_voltage(fe, joker->info->voltage);
+			}
+			last_lnb_check = time(0);
+		}
+
 		// call callback
 		if (joker->status_callback)
 			joker->status_callback(joker);
 
-		// control LNB health, not too often
-		if ((time(0) - last_lnb_check) > LNB_HEALTH_INTERVAL) {
-			// this call will update LNB settings
-			// if they lost during LNB chip reset (because of power failure)
-			if(fe->ops.set_voltage)
-				fe->ops.set_voltage(fe, joker->info->voltage);
-			last_lnb_check = time(0);
-		}
 		pthread_mutex_unlock(&joker->service_threading->mux);
 
 		// wait signal or timeout
@@ -434,6 +443,33 @@ int set_refresh(struct joker_t *joker, int enable)
 	return 0;
 }
 
+/* set LNB voltage directly to chip 
+ * return:
+ * -ENFILE for "LNB output voltage out of range"
+ * -ERANGE for "Output current less than 50 mA"
+ * -EMFILE for "Overcurrent protection triggered"
+ *  0 if no errors detected
+ */
+int set_lnb_voltage(struct joker_t * joker, enum joker_fe_sec_voltage voltage)
+{
+	struct dvb_frontend *fe = NULL;
+
+	if (!joker || !joker->fe_opaque)
+		return -EINVAL;
+	fe = (struct dvb_frontend *)joker->fe_opaque;
+
+	if(fe->ops.set_voltage) {
+		pthread_mutex_lock(&joker->service_threading->mux);
+		joker->stat.lnb_err = fe->ops.set_voltage(fe, voltage);
+		joker->info->voltage = voltage;
+		pthread_mutex_unlock(&joker->service_threading->mux);
+		printf("LNB setting voltage = %d\n", joker->info->voltage);
+		return joker->stat.lnb_err;
+	} else {
+		return -EINVAL;
+	}
+}
+
 /* tune to specified source (DVB, ATSC, etc)
  * this call is non-blocking (returns after configuring frontend)
  * return negative error code if failed
@@ -475,6 +511,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	}
 	memcpy(joker->info, info, sizeof(*info));
 
+	joker->stat.status = JOKER_NOLOCK;
 	/* start service thread to monitor status (lock), etc */
 	if (!joker->service_threading) {
 		joker->service_threading = malloc(sizeof(*joker->service_threading));
