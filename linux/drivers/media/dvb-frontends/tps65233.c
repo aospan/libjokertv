@@ -99,6 +99,12 @@ static int tps65233_write_reg(struct tps65233_priv *priv,
 	return 0;
 }
 
+/* return different error codes for different error conditions 
+ * -ENFILE for "LNB output voltage out of range"
+ * -ERANGE for "Output current less than 50 mA"
+ * -EMFILE for "Overcurrent protection triggered"
+ *  0 if no errors detected
+ */
 static int tps65233_set_voltage(struct dvb_frontend *fe,
 			      enum fe_sec_voltage voltage)
 {
@@ -107,7 +113,6 @@ static int tps65233_set_voltage(struct dvb_frontend *fe,
 	const char *vsel;
 	struct tps65233_priv *priv = fe->sec_priv;
 	u8 val = 0;
-	int need_update = 0;
 
 	// clean bits first
 	priv->config[0] &= 0xf0;
@@ -118,52 +123,47 @@ static int tps65233_set_voltage(struct dvb_frontend *fe,
 	switch(voltage) {
 		case SEC_VOLTAGE_13:
 			priv->config[0] |= (TPS65233_13V | TPS65233_EN);
-			if (!(val&(TPS65233_13V | TPS65233_EN)))
-				need_update = 1;
 			break;
 		case SEC_VOLTAGE_18:
 			priv->config[0] |= (TPS65233_18V | TPS65233_EN);
-			if (!(val&(TPS65233_18V | TPS65233_EN)))
-				need_update = 1;
 			break;
 		case SEC_VOLTAGE_OFF:
 		default:
-			need_update = 1;
 			priv->config[0] &= ~TPS65233_EN;
 			break;
 	}
 
-	if (need_update) {
-		tps65233_write_reg(priv, 0x0, priv->config[0]);
-		dev_info(&priv->i2c->dev, "%s() voltage (%d) set done. config = 0x%.2x 0x%.2x\n",
-				__func__, voltage, priv->config[0], priv->config[1]);
-		msleep(10);
-	} else {
-		dev_dbg(&priv->i2c->dev, "%s() voltage (%d) already configured, skip. config = 0x%.2x 0x%.2x\n",
-				__func__, voltage, priv->config[0], priv->config[1]);
-	}
+	tps65233_write_reg(priv, 0x0, priv->config[0]);
+	dev_info(&priv->i2c->dev, "%s() voltage (%d) set done. config = 0x%.2x 0x%.2x\n",
+			__func__, voltage, priv->config[0], priv->config[1]);
+	msleep(10);
 
 	/* sanity: check status register */
 	tps65233_read_reg(priv, 0x02, &val);
 	dev_dbg(&priv->i2c->dev, "%s() status=0x%x \n", __func__, val);
 
+	/* return different error codes for different error conditions 
+	 * -ENFILE for "LNB output voltage out of range"
+	 * -ERANGE for "Output current less than 50 mA"
+	 * -EMFILE for "Overcurrent protection triggered"
+	 * */
 	if (val & TPS65233_VOUT_GOOD) {
 		dev_dbg(&priv->i2c->dev, "%s() LNB output voltage in range.\n", __func__);
 	} else {
-		ret = -EIO;
+		ret = -ENFILE;
 		dev_err(&priv->i2c->dev, "%s() Error: LNB output voltage out of range.\n", __func__);
 	}
 
 	if (val & TPS65233_CABLE_GOOD) {
 		dev_dbg(&priv->i2c->dev, "%s() cable OK\n", __func__);
 	} else {
-		ret = -EIO;
+		ret = -ERANGE;
 		dev_err(&priv->i2c->dev, "%s() Error: cable fail. Output current less than 50 mA\n", __func__);
 	}
 
 	if (val & TPS65233_OCP) {
 		dev_err(&priv->i2c->dev, "%s() Overcurrent protection triggered !\n", __func__);
-		ret = -EIO;
+		ret = -EMFILE;
 	}
 
 	return ret;
