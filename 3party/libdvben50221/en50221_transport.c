@@ -27,7 +27,6 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <sys/poll.h>
 #include <time.h>
 #include <libdvbmisc/dvbmisc.h>
 #include <libdvbapi/dvbca.h>
@@ -94,6 +93,10 @@ struct en50221_transport_layer {
 
 	en50221_tl_callback callback;
 	void *callback_arg;
+
+	/* low level actual poll */
+	en50221_tl_llpoll poll;
+	void *poll_arg;
 };
 
 static int en50221_tl_process_data(struct en50221_transport_layer *tl,
@@ -335,6 +338,7 @@ int en50221_tl_poll(struct en50221_transport_layer *tl)
 	uint8_t data[4096];
 	int slot_id;
 	int j;
+	int ret;
 
 	// make up pollfds if the slots have changed
 	pthread_mutex_lock(&tl->global_lock);
@@ -355,14 +359,18 @@ int en50221_tl_poll(struct en50221_transport_layer *tl)
 	pthread_mutex_unlock(&tl->global_lock);
 
 	// anything happened?
-	if (poll(tl->slot_pollfds, tl->max_slots, 10) < 0) {
+	if (tl->poll)
+		ret = tl->poll(tl->slot_pollfds, tl->max_slots, 10, tl->poll_arg);
+	else
+		ret = poll(tl->slot_pollfds, tl->max_slots, 10);
+
+	if (ret < 0) {
 		tl->error_slot = -1;
 		tl->error = EN50221ERR_CAREAD;
 		return -1;
 	}
 	// go through all slots (even though poll may not have reported any events
 	for (slot_id = 0; slot_id < tl->max_slots; slot_id++) {
-
 		// check if this slot is still used and get its handle
 		pthread_mutex_lock(&tl->slots[slot_id].slot_lock);
 		if (tl->slots[slot_id].ca_hndl == -1) {
@@ -515,6 +523,13 @@ void en50221_tl_register_callback(struct en50221_transport_layer *tl,
 	tl->callback = callback;
 	tl->callback_arg = arg;
 	pthread_mutex_unlock(&tl->setcallback_lock);
+}
+
+void en50221_tl_register_poll(struct en50221_transport_layer *tl,
+		en50221_tl_llpoll poll, void *arg)
+{
+	tl->poll = poll;
+	tl->poll_arg = arg;
 }
 
 int en50221_tl_get_error_slot(struct en50221_transport_layer *tl)

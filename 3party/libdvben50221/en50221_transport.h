@@ -32,6 +32,7 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/uio.h>
+#include <sys/poll.h>
 
 /**
  * Callback reasons.
@@ -77,6 +78,8 @@ typedef void (*en50221_tl_callback) (void *arg, int reason,
 				     uint8_t slot_id,
 				     uint8_t connection_id);
 
+/* custom low level poll type */
+typedef int (*en50221_tl_llpoll) (struct pollfd *fds, nfds_t nfds, int timeout, void *arg);
 
 /**
  * Construct a new instance of the transport layer.
@@ -228,6 +231,15 @@ extern int en50221_tl_del_tc(struct en50221_transport_layer *tl, uint8_t slot_id
 extern int en50221_tl_get_connection_state(struct en50221_transport_layer *tl,
 					   uint8_t slot_id, uint8_t connection_id);
 
+/**
+ * Register custom poll function
+ *
+ * @param tl The en50221_transport_layer instance.
+ * @param poll The custom poll
+ * @param arg Private data passed as arg0 of the poll.
+ */
+extern void en50221_tl_register_poll(struct en50221_transport_layer *tl,
+					 en50221_tl_llpoll poll, void *arg);
 #ifdef __cplusplus
 }
 #endif
