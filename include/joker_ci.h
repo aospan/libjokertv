@@ -27,7 +27,9 @@ extern "C" {
 /* from Linux kernel:
  * ./drivers/media/dvb-core/dvb_ca_en50221.c */
 #define CTRLIF_DATA      0
+/* command bits: R R R R RS SR SW HC */
 #define CTRLIF_COMMAND   1
+/* status bits: DA FR R R R R WE RE */
 #define CTRLIF_STATUS    1
 #define CTRLIF_SIZE_LOW  2
 #define CTRLIF_SIZE_HIGH 3
