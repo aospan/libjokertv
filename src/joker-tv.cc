@@ -129,6 +129,11 @@ int main (int argc, char **argv)
 	int64_t total_len = 0, limit = 0;
 	int voltage = 0, tone = 1;
 
+	/* disable output buffering
+	 * helps under Windows with stdout delays
+	 */
+	setbuf(stdout, NULL);
+
 	joker = (struct joker_t *) malloc(sizeof(struct joker_t));
 	if (!joker)
 		return ENOMEM;
