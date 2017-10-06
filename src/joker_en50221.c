@@ -26,6 +26,7 @@
 #include <poll.h>
 #include <libucsi/section.h>
 #include <libucsi/mpeg/section.h>
+#include <win/wtime.h>
 
 // libdvben50221 stuff
 #include <libdvben50221/en50221_session.h>

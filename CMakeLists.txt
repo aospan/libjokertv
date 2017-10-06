@@ -33,6 +33,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	find_library(LIBICONV libiconv.a REQUIRED)
 	set(PTHREADS_LIB "-Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
+	set(INCLUDE_PLATFORM "include/win")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 	set(EN50221LIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a -Wl,--no-whole-archive)
@@ -101,7 +102,7 @@ set(KINCLUDE_DIRS
 	${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/)
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
-set(INCLUDE_USER $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}> 3party)
+set(INCLUDE_USER ${INCLUDE_PLATFORM} $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}> 3party)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
 	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBobjc} ${LIBUDEV} ${LIBICONV})
 
