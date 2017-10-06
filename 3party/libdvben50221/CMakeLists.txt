@@ -12,6 +12,10 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 find_package( PkgConfig )
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+	set(INCLUDE_PLATFORM "../../include/win")
+endif()
+
 #set sources list
 SET (SRC asn_1.c             en50221_app_ca.c        en50221_app_epg.c
 	en50221_app_rm.c         en50221_app_utils.c  en50221_stdcam_hlci.c
@@ -23,7 +27,7 @@ SET (SRC asn_1.c             en50221_app_ca.c        en50221_app_epg.c
 
 #static lib 
 add_library (dvben50221 STATIC ${SRC})
-target_include_directories(dvben50221 PRIVATE ../)
+target_include_directories(dvben50221 PRIVATE ../ ${INCLUDE_PLATFORM})
 #set_source_files_properties(${SRC} PROPERTIES COMPILE_FLAGS ${KOPTIONS})
 set_target_properties(dvben50221 PROPERTIES COMPILE_FLAGS "-fPIC -DLOG_LEVEL=1")
 #set_target_properties(dvben50221 PROPERTIES COMPILE_FLAGS "-fPIC -DLOG_LEVEL=4 -DDEBUG_RXDATA -DDEBUG_TXDATA")

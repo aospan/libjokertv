@@ -34,6 +34,16 @@
 #include "en50221_transport.h"
 #include "asn_1.h"
 
+/* fake poll to satisfy compiler
+ * for Joker TV we do not use poll actually
+ */
+#ifndef poll
+int poll(struct pollfd *fds, nfds_t nfds, int timeout)
+{
+	return 0;
+}
+#endif
+
 // these are the Transport Tags, like
 // described in EN50221, Annex A.4.1.13 (pg70)
 #define T_SB                0x80	// sb                           primitive   h<--m
