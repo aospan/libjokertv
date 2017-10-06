@@ -29,9 +29,12 @@ extern "C"
 #include <stdint.h>
 #if defined(__APPLE__)
 #include <libkern/OSByteOrder.h>
-#define le32toh OSSwapLittleToHostInt32
-#define htole32 OSSwapHostToLittleInt32
+#define bswap_16 OSSwapInt16
 #define bswap_32 OSSwapInt32
+#elif defined(_WIN32)
+#include <stdlib.h>
+#define bswap_16 _byteswap_ushort
+#define bswap_32 _byteswap_ulong
 #else
 #include <byteswap.h>
 #include <endian.h>
@@ -41,8 +44,10 @@ extern "C"
 
 
 
-
-#if __BYTE_ORDER == __BIG_ENDIAN
+/* __BYTE_ORDER not defined under OSx and Windows
+ * assume it as little endian then
+ */
+#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
 #define EBIT2(x1,x2) x1 x2
 #define EBIT3(x1,x2,x3) x1 x2 x3
 #define EBIT4(x1,x2,x3,x4) x1 x2 x3 x4
