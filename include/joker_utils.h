@@ -53,6 +53,13 @@ int check_pattern(struct joker_t *joker, unsigned char * pkt);
  */
 int validate_ts(struct joker_t * joker, int timeout, int min_count, int max_err);
 
+/* memmem impl for cross-platform use
+ * based on https://github.com/libarchive/libarchive
+ */
+static char*
+xmemmem(const char *hay, const size_t haysize,
+	const char *needle, const size_t needlesize);
+
 #ifdef __cplusplus
 }
 #endif

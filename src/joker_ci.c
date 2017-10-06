@@ -222,6 +222,7 @@ int joker_ci_write_data(struct joker_t * joker, unsigned char *buf, int size)
 
 	ret = joker_ci_read(joker, CTRLIF_STATUS, JOKER_CI_IO);
 	if (ret < 0) {
+		printf("CAM:%s: can't read status. status=0x%x\n", __func__, ret);
 		ret = -EIO;
 		goto exit;
 	}
@@ -232,10 +233,11 @@ int joker_ci_write_data(struct joker_t * joker, unsigned char *buf, int size)
 		goto exit;
 	}
 
+	ret = 0;
+
 exit:
 	/* clear HC bit */
-	ret = joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN);
-	if (ret < 0) {
+	if (joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN) < 0) {
 		printf("CAM:%s: can't clear CMDREG_HC\n", __func__);
 		return -EIO;
 	}
@@ -397,12 +399,12 @@ int joker_ci_parse_attributes(struct joker_t * joker)
 	}
 
 	/* validate CAM version */
-	if (!memmem(tuple.data, tuple.size, "DVB_CI_V", strlen("DVB_CI_V"))) {
+	if (!xmemmem(tuple.data, tuple.size, "DVB_CI_V", strlen("DVB_CI_V"))) {
 		printf("CAM: can't find DVB_CI_V string \n");
 		return -EIO;
 	}
 
-	if (!memmem(tuple.data + 8, tuple.size - 8, "1.0", strlen("1.0"))) {
+	if (!xmemmem(tuple.data + 8, tuple.size - 8, "1.0", strlen("1.0"))) {
 		printf("CAM: not 1.0 version\n");
 		return -EIO;
 	}
@@ -425,8 +427,8 @@ int joker_ci_parse_attributes(struct joker_t * joker)
 				ci->config_option = tuple.data[0] & 0x3f;
 
 				/* OK, check it contains the correct strings */
-				if (!memmem(tuple.data, tuple.size, "DVB_HOST", strlen("DVB_HOST")) ||
-						!memmem(tuple.data, tuple.size, "DVB_CI_MODULE", strlen("DVB_CI_MODULE"))) {
+				if (!xmemmem(tuple.data, tuple.size, "DVB_HOST", strlen("DVB_HOST")) ||
+						!xmemmem(tuple.data, tuple.size, "DVB_CI_MODULE", strlen("DVB_CI_MODULE"))) {
 					printf ("CAM: can't validate CISTPL_CFTABLE_ENTRY. \n");
 					hexdump(tuple.data, tuple.size);
 					break;
