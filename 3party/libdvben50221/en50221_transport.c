@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <poll.h>
 #include <time.h>
 #include <libdvbmisc/dvbmisc.h>
 #include <libdvbapi/dvbca.h>
@@ -37,7 +38,7 @@
 /* fake poll to satisfy compiler
  * for Joker TV we do not use poll actually
  */
-#ifndef poll
+#ifdef _NO_POLL
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
 	return 0;

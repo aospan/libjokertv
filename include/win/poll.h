@@ -24,4 +24,6 @@ struct pollfd {
 	short revents;
 };
 
+#define _NO_POLL 1
+
 #endif
