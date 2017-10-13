@@ -75,7 +75,8 @@ void* process_service(void * data) {
 	while(!joker->service_threading->cancel) {
 		// wait until refresh not enabled
 		pthread_mutex_lock(&joker->service_threading->mux);
-		while (!joker->stat.refresh_enable)
+		while (!joker->stat.refresh_enable
+				&& !joker->service_threading->cancel)
 			pthread_cond_wait(&joker->service_threading->cond,
 					&joker->service_threading->mux);
 
@@ -129,7 +130,7 @@ void* process_service(void * data) {
 		jdebug("timedwait rc=%d \n", rc);
 		pthread_mutex_unlock(&joker->service_threading->mux);
 	}
-	printf("process_service done\n");
+	printf("%s: bye !\n", __func__);
 }
 
 // fast stop of service thread
@@ -540,7 +541,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 	i2c->algo_data = (void*)joker;
 
-	joker_reset(joker, 0xFF /* switch all chips to reset */);
+	joker_reset(joker, 0xFF & ~(OC_I2C_RESET_TPS_CI)/* switch all chips to reset except CI */);
 
 	switch (info->delivery_system)
 	{
@@ -567,7 +568,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			return ENODEV;
 	}
 
-	joker_unreset(joker, OC_I2C_RESET_TPS_CI);
 	msleep(50); /* wait chips to wakeup after reset */
 
 	/* choose TS input */
