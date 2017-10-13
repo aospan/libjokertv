@@ -355,7 +355,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	// create isochronous transfers
 	// USB isoc transfer should be delivered to Joker TV 
 	// every microframe (125usec)
-	// One isoc transfer size is 512 bytes (max 1024)
+	// One isoc transfer size is 1024 bytes (max 1024)
 	for (index = 0; index < NUM_USB_BUFS; index++) {
 		pool->usb_buffers[index] = (uint8_t*)malloc(NUM_USB_PACKETS * USB_PACKET_SIZE);
 		memset(pool->usb_buffers[index], 0, NUM_USB_PACKETS * USB_PACKET_SIZE);
