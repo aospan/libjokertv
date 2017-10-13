@@ -107,7 +107,7 @@ struct en50221_transport_layer {
 
 	/* low level actual poll */
 	en50221_tl_llpoll poll;
-	void *poll_arg;
+	void *ll_arg;
 };
 
 static int en50221_tl_process_data(struct en50221_transport_layer *tl,
@@ -371,7 +371,7 @@ int en50221_tl_poll(struct en50221_transport_layer *tl)
 
 	// anything happened?
 	if (tl->poll)
-		ret = tl->poll(tl->slot_pollfds, tl->max_slots, 10, tl->poll_arg);
+		ret = tl->poll(tl->slot_pollfds, tl->max_slots, 10, tl->ll_arg);
 	else
 		ret = poll(tl->slot_pollfds, tl->max_slots, 10);
 
@@ -396,7 +396,7 @@ int en50221_tl_poll(struct en50221_transport_layer *tl)
 			uint8_t connection_id;
 			int readcnt = dvbca_link_read(ca_hndl, &r_slot_id,
 						      &connection_id,
-						      data, sizeof(data));
+						      data, sizeof(data), tl->ll_arg);
 			if (readcnt < 0) {
 				tl->error_slot = slot_id;
 				tl->error = EN50221ERR_CAREAD;
@@ -467,7 +467,7 @@ int en50221_tl_poll(struct en50221_transport_layer *tl)
 					if (dvbca_link_write(tl->slots[slot_id].ca_hndl,
 					    		     tl->slots[slot_id].slot,
 							     j,
-							     msg->data, msg->length) < 0) {
+							     msg->data, msg->length, tl->ll_arg) < 0) {
 						free(msg);
 						pthread_mutex_unlock(&tl->slots[slot_id].slot_lock);
 						tl->error_slot = slot_id;
@@ -540,7 +540,7 @@ void en50221_tl_register_poll(struct en50221_transport_layer *tl,
 		en50221_tl_llpoll poll, void *arg)
 {
 	tl->poll = poll;
-	tl->poll_arg = arg;
+	tl->ll_arg = arg;
 }
 
 int en50221_tl_get_error_slot(struct en50221_transport_layer *tl)
@@ -846,7 +846,7 @@ static int en50221_tl_poll_tc(struct en50221_transport_layer *tl,
 	hdr[2] = connection_id;
 	if (dvbca_link_write(tl->slots[slot_id].ca_hndl,
 	    		     tl->slots[slot_id].slot,
-			     connection_id, hdr, 3) < 0) {
+			     connection_id, hdr, 3, tl->ll_arg) < 0) {
 		tl->error_slot = slot_id;
 		tl->error = EN50221ERR_CAWRITE;
 		return -1;
@@ -1021,7 +1021,7 @@ static int en50221_tl_handle_delete_tc(struct en50221_transport_layer *tl,
 		hdr[2] = connection_id;
 		if (dvbca_link_write(tl->slots[slot_id].ca_hndl,
 		    		     tl->slots[slot_id].slot,
-				     connection_id, hdr, 3) < 0) {
+				     connection_id, hdr, 3, tl->ll_arg) < 0) {
 			tl->error_slot = slot_id;
 			tl->error = EN50221ERR_CAWRITE;
 			return -1;
@@ -1083,7 +1083,7 @@ static int en50221_tl_handle_request_tc(struct en50221_transport_layer *tl,
 		hdr[1] = 2;
 		hdr[2] = connection_id;
 		hdr[3] = 1;
-		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, connection_id, hdr, 4) < 0) {
+		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, connection_id, hdr, 4, tl->ll_arg) < 0) {
 			tl->error_slot = slot_id;
 			tl->error = EN50221ERR_CAWRITE;
 			return -1;
@@ -1097,7 +1097,7 @@ static int en50221_tl_handle_request_tc(struct en50221_transport_layer *tl,
 		hdr[1] = 2;
 		hdr[2] = connection_id;
 		hdr[3] = conid;
-		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, connection_id, hdr, 4) < 0) {
+		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, connection_id, hdr, 4, tl->ll_arg) < 0) {
 			tl->slots[slot_id].connections[conid].state = T_STATE_IDLE;
 			tl->error_slot = slot_id;
 			tl->error = EN50221ERR_CAWRITE;
@@ -1109,7 +1109,7 @@ static int en50221_tl_handle_request_tc(struct en50221_transport_layer *tl,
 		hdr[0] = T_CREATE_T_C;
 		hdr[1] = 1;
 		hdr[2] = conid;
-		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, conid, hdr, 3) < 0) {
+		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, conid, hdr, 3, tl->ll_arg) < 0) {
 			tl->slots[slot_id].connections[conid].state = T_STATE_IDLE;
 			tl->error_slot = slot_id;
 			tl->error = EN50221ERR_CAWRITE;
@@ -1267,7 +1267,7 @@ static int en50221_tl_handle_sb(struct en50221_transport_layer *tl,
 		hdr[0] = T_RCV;
 		hdr[1] = 1;
 		hdr[2] = connection_id;
-		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, connection_id, hdr, 3) < 0) {
+		if (dvbca_link_write(ca_hndl, tl->slots[slot_id].slot, connection_id, hdr, 3, tl->ll_arg) < 0) {
 			tl->error_slot = slot_id;
 			tl->error = EN50221ERR_CAWRITE;
 			return -1;

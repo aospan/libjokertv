@@ -89,7 +89,7 @@ extern int dvbca_get_cam_state(int fd, uint8_t slot);
  * @return 0 on success, or -1 on failure.
  */
 extern int dvbca_link_write(int fd, uint8_t slot, uint8_t connection_id,
-			    uint8_t *data, uint16_t data_length);
+			    uint8_t *data, uint16_t data_length, void *arg);
 
 /**
  * Read a message from a CAM using a link-layer interface.
@@ -102,7 +102,7 @@ extern int dvbca_link_write(int fd, uint8_t slot, uint8_t connection_id,
  * @return Number of bytes read on success, or -1 on failure.
  */
 extern int dvbca_link_read(int fd, uint8_t *slot, uint8_t *connection_id,
-			   uint8_t *data, uint16_t data_length);
+			   uint8_t *data, uint16_t data_length, void *arg);
 
 // FIXME how do we determine which CAM slot of a CA is meant?
 /**
