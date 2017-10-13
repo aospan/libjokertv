@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #include <joker_tv.h>
 #include <joker_ci.h>
@@ -171,8 +172,12 @@ int joker_reset(struct joker_t *joker, int mask)
 		return -EINVAL;
 
 	joker->reset |= mask;
-	if (joker_reset_write(joker))
+	jdebug("%s: mask=0x%x final=0x%x\n",
+			__func__, mask, joker->reset);
+	if (joker_reset_write(joker)) {
+		printf("%s: Reset register write failed! \n", __func__);
 		return -EIO;
+	}
 }
 
 /* wakeup chips from reset
@@ -185,8 +190,12 @@ int joker_unreset(struct joker_t *joker, int mask)
 		return -EINVAL;
 
 	joker->reset &= ~mask;
-	if (joker_reset_write(joker))
+	jdebug("%s: mask=0x%x final=0x%x\n",
+			__func__, mask, joker->reset);
+	if (joker_reset_write(joker)) {
+		printf("%s: Reset register write failed! \n", __func__);
 		return -EIO;
+	}
 }
 
 static void*
