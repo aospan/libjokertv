@@ -23,6 +23,18 @@ extern "C" {
 #define TUPLE_MAX_SIZE	128
 #define JOKER_CI_IO	1
 #define JOKER_CI_MEM	0
+#define CAID_MAX_COUNT	128
+
+// commands to read/write CAM module IO or MEM
+#define JOKER_CI_CTRL_READ	1 << 0 // 0x01
+#define JOKER_CI_CTRL_WRITE	1 << 1 // 0x02
+#define JOKER_CI_CTRL_IO	1 << 2 // 0x04
+#define JOKER_CI_CTRL_MEM	1 << 3 // 0x08
+#define JOKER_CI_CTRL_BULK	1 << 4 // 0x10
+
+// commands status
+#define JOKER_CI_CTRL_ERR	1
+#define JOKER_CI_CTRL_OK	2
 
 /* from Linux kernel:
  * ./drivers/media/dvb-core/dvb_ca_en50221.c */
@@ -80,6 +92,13 @@ struct joker_ci_t {
 
 	/* CAM module info string */
 	unsigned char cam_infostring[TUPLE_MAX_SIZE];
+
+	/* EN50221 stuff */
+	uint8_t application_type;
+	uint16_t application_manufacturer;
+	uint16_t manufacturer_code;
+	unsigned char menu_string[TUPLE_MAX_SIZE];
+	uint16_t ca_ids[CAID_MAX_COUNT];
 };
 
 /* initialize CAM module

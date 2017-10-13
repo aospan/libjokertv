@@ -29,6 +29,8 @@
 #define TS_WILDCARD_PID		0x2000
 
 typedef void(*status_callback_t)(void *data);
+typedef void(*ci_callback_t)(void *data);
+typedef void(*mmi_callback_t)(void *data, unsigned char *buf, int len);
 struct tune_info_t;
 
 #define JOKER_LOCK 0
@@ -97,6 +99,8 @@ struct joker_t {
 	void *fe_opaque;
 	struct service_thread_opaq_t *service_threading;
 	struct big_pool_t *pool;
+	void *io_mux_opaq;
+	uint16_t fw_ver; // firmware version
 
 	int libusb_verbose;
 	/* hold chip list that should be in reset state */
@@ -108,9 +112,18 @@ struct joker_t {
 	struct tune_info_t *info;
 
 	/* CAM module */
+	struct ci_thread_opaq_t *ci_threading;
 	void *joker_ci_opaque;
+	void *joker_en50221_opaque;
+	ci_callback_t ci_info_callback;
+	ci_callback_t ci_caid_callback;
 	int ci_verbose; /* non 0 for debugging CI */
 	int ci_enable; /* enable CAM module */
+
+	/* CAM module (EN50221) TCP server */
+	int ci_server_port;
+	struct ci_server_thread_opaq_t *ci_server_threading;
+	int ci_client_fd;
 
 	/* TS check vars */
 	int last_pattern;
@@ -121,7 +134,7 @@ extern "C" {
 #endif
 
 /* open Joker TV on USB
- * return negative error code if fail
+ * return error code if fail
  * or 0 if success
  */
 int joker_open(struct joker_t *joker);

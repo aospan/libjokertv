@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.8.12)
 project (joker_tv)
-set (joker_tv_VERSION_MAJOR 0)
-set (joker_tv_VERSION_MINOR 9)
-set (joker_tv_VERSION_PATCH 9)
+set (joker_tv_VERSION_MAJOR 1)
+set (joker_tv_VERSION_MINOR 0)
+set (joker_tv_VERSION_PATCH 0)
 set (joker_tv_VERSION
 	${joker_tv_VERSION_MAJOR}.${joker_tv_VERSION_MINOR}.${joker_tv_VERSION_PATCH})
 
@@ -91,6 +91,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_ci.c
 	src/joker_utils.c
 	src/joker_en50221.c
+	src/joker_en50221_server.c
 	src/joker_ts.c)
 
 set(KOPTIONS "-include ${CMAKE_SOURCE_DIR}/linux/include/linux/types.h")

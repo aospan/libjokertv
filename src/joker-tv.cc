@@ -76,6 +76,48 @@ void service_name_update(struct program_t *program)
 	}
 }
 
+// CAM module info callback
+// will be called when CAM module info available
+void ci_info_callback_f(void *data)
+{
+	struct joker_t *joker= (struct joker_t *)data;
+	struct joker_ci_t * ci = NULL;
+	int i = 0;
+
+	if (!joker || !joker->joker_ci_opaque)
+		return;
+	ci = (struct joker_ci_t *)joker->joker_ci_opaque;
+
+	/* print CAM info */
+	printf("  CAM info: \n");
+	printf("  Application type: %02x\n", ci->application_type);
+	printf("  Application manufacturer: %04x\n", ci->application_manufacturer);
+	printf("  Manufacturer code: %04x\n", ci->manufacturer_code);
+	printf("  Menu string: %s\n", ci->menu_string);
+	printf("  Info string: %s\n", ci->cam_infostring);
+}
+
+// CAM module supported CAIDs callback
+// will be called when CAM module supported CAIDs available
+void ci_caid_callback_f(void *data)
+{
+	struct joker_t *joker= (struct joker_t *)data;
+	struct joker_ci_t * ci = NULL;
+	int i = 0;
+
+	if (!joker || !joker->joker_ci_opaque)
+		return;
+	ci = (struct joker_ci_t *)joker->joker_ci_opaque;
+
+	/* print supported CAIDs */
+	printf("  Supported CAIDs: \n");
+	for (i = 0; i < CAID_MAX_COUNT; i++) {
+		if (!ci->ca_ids[i])
+			break; /* end of list detected */
+		printf("    CAID: %.4x\n", ci->ca_ids[i]);
+	}
+}
+
 void show_help() {
 	printf("joker-tv usage: \n");
 	printf("	-d delsys	Delivery system. Options: \n \
@@ -99,6 +141,7 @@ void show_help() {
 	printf("	-e		Enable 22 kHz tone (continuous). Default: disabled\n");
 	printf("	-c		Enable CAM module. Default: disabled\n");
 	printf("	-j		Enable CAM module verbose messages. Default: disabled\n");
+	printf("	-i		TCP port for MMI (CAM) server. Default: 7777\n");
 
 	exit(0);
 }
@@ -128,6 +171,7 @@ int main (int argc, char **argv)
 	bool decode_program = false;
 	int64_t total_len = 0, limit = 0;
 	int voltage = 0, tone = 1;
+	int ci_server_port = 7777;
 
 	/* disable output buffering
 	 * helps under Windows with stdout delays
@@ -145,8 +189,10 @@ int main (int argc, char **argv)
 	// set callbacks
 	pool.service_name_callback = &service_name_update;
 	joker->status_callback = &status_callback_f;
+	joker->ci_info_callback = &ci_info_callback_f;
+	joker->ci_caid_callback = &ci_caid_callback_f;
 
-	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:nhecj")) != -1)
+	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:i:nhecj")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -191,6 +237,9 @@ int main (int argc, char **argv)
 			case 'j':
 				joker->ci_verbose = 1;
 				break;
+			case 'i':
+				ci_server_port = atoi(optarg);
+				break;
 			case 'l':
 				limit = 1024*1024*atoi(optarg);
 				break;
@@ -221,8 +270,8 @@ int main (int argc, char **argv)
 
 	/* init CI */
 	if (joker->ci_enable) {
-		if (!joker_ci(joker))
-			joker_ci_en50221(joker);
+		joker->ci_server_port = ci_server_port;
+		joker_ci(joker);
 	}
 
 	/* upgrade fw if selected */
@@ -279,8 +328,10 @@ int main (int argc, char **argv)
 
 		printf("########### Tuning to %llu Hz\n", (long long)freq);
 		printf("TUNE start \n");
-		if (tune(joker, &info))
+		if (tune(joker, &info)) {
+			printf("Tuning error. Exit.\n");
 			return -1;
+		}
 		printf("TUNE done \n");
 
 		while (joker->stat.status != JOKER_LOCK)

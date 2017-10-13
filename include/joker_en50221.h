@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#define MAX_EN50221_BUF 4096
+
 /* initialize EN50221
  * return 0 if success
  * other return values indicates error

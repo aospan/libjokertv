@@ -24,8 +24,8 @@
 /* USB part */
 /* open usb device
  *
- * return: device descriptor
- * or NULL if failed
+ * return: 0 if success
+ * or error code
  */
 int joker_open(struct joker_t *joker)
 {
@@ -65,6 +65,8 @@ int joker_open(struct joker_t *joker)
 			r = libusb_open(usb_list[i], &devh);
 			if (r)
 				libusb_error_name(r);
+			joker->fw_ver = desc.bcdDevice;
+			break; // open first available Joker TV
 		}
 	}
 	if (devh <= 0) {
@@ -72,7 +74,7 @@ int joker_open(struct joker_t *joker)
 		return ENODEV;
 	}
 
-	printf("usb device found\n");
+	printf("usb device found. firmware version 0x%x\n", joker->fw_ver);
 
 	ret = libusb_set_configuration(devh, 1);
 	if (ret < 0) {
@@ -90,6 +92,11 @@ int joker_open(struct joker_t *joker)
 
 	joker->libusb_opaque = (void *)devh;
 	printf("open:dev=%p \n", devh);
+
+	joker->io_mux_opaq = malloc(sizeof(pthread_mutex_t));
+	if (!joker->io_mux_opaq)
+		return ENOMEM;
+	pthread_mutex_init((pthread_mutex_t*)joker->io_mux_opaq, NULL);
 
 	/* prophylactic cleanup EP1 IN */
 	libusb_bulk_transfer(devh, USB_EP1_IN, in_buf, JCMD_BUF_LEN, &transferred, 1);
@@ -123,6 +130,7 @@ int joker_close(struct joker_t * joker) {
 		return EINVAL;
 
 	stop_service_thread(joker);
+	printf("%s: service thread stopped \n", __func__);
 
 	if((ret = joker_i2c_close(joker)))
 		return ret;
@@ -133,39 +141,49 @@ int joker_close(struct joker_t * joker) {
 	if(dev)
 		libusb_close(dev);
 	joker->libusb_opaque = NULL; /* dev not valid anymore */
+	printf("%s: done\n", __func__);
 }
 
 /* exchange with FPGA over USB
  * EP2 OUT EP used as joker commands (jcmd) source
  * EP1 IN EP used as command reply storage
  * return 0 if success
+ *
+ * thread safe
  */
 int joker_io(struct joker_t * joker, struct jcmd_t * jcmd) {
 	struct libusb_device_handle *dev = NULL;
 	unsigned char buf[JCMD_BUF_LEN];
-	int cnt = 20 /* 200 msec timeout */, ret = 0, transferred = 0;
+	int ret = 0, transferred = 0;
+	pthread_mutex_t *mux = NULL;
 
-	if (!joker)
-		return EINVAL;
+	if (!joker || !joker->io_mux_opaq)
+		return -EINVAL;
 
+	mux = (pthread_mutex_t*)joker->io_mux_opaq;
 	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 
-	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, jcmd->buf, jcmd->len, &transferred, 0);
-	if (ret < 0 || transferred != jcmd->len)
-		return ret;
-
-	while ( cnt-- > 0) {
-		/* jcmd expect some reply */
-		if (jcmd->in_len > 0) {
-			/* read collected data */
-			ret = libusb_bulk_transfer(dev, USB_EP1_IN, jcmd->in_buf, jcmd->in_len, &transferred, 1);
-			if (ret < 0 || transferred != jcmd->in_len)
-				break;
-		}
-		return 0;
+	pthread_mutex_lock(mux);
+	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, jcmd->buf, jcmd->len, &transferred, 1000);
+	if (ret < 0 || transferred != jcmd->len) {
+		pthread_mutex_unlock(mux);
+		return -EIO;
 	}
 
-	return ret;
+	/* jcmd expect some reply */
+	if (jcmd->in_len > 0) {
+		/* read collected data */
+		ret = libusb_bulk_transfer(dev, USB_EP1_IN, jcmd->in_buf, jcmd->in_len, &transferred, 1000);
+		if (ret < 0 || transferred != jcmd->in_len) {
+			printf("%s: failed to read reply. ret=%d transferred=%d expected %d\n",
+					__func__, ret, transferred, jcmd->in_len );
+			pthread_mutex_unlock(mux);
+			return -EIO;
+		}
+	}
+	pthread_mutex_unlock(mux);
+
+	return 0;
 }
 
 int joker_cmd(struct joker_t * joker, unsigned char *data, int len, unsigned char * in_buf, int in_len) {
@@ -180,7 +198,7 @@ int joker_cmd(struct joker_t * joker, unsigned char *data, int len, unsigned cha
 	jcmd.len = len;
 	jcmd.in_len = in_len;
 
-	if ((ret != joker_io(joker, &jcmd)))
+	if ((ret = joker_io(joker, &jcmd)))
 		return ret;
 
 	if (in_buf && in_len)
