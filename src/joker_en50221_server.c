@@ -65,6 +65,11 @@ void* joker_en50221_server_worker(void * data)
 	if (!joker || !joker->joker_en50221_opaque)
 		return;
 
+	if (joker->ci_server_port <= 0) {
+		printf("TCP port not defined. Do not start EN50221 MMI server ... \n");
+		return 0;
+	}
+
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0) {
 		printf("Could not create socket\n");
