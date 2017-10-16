@@ -118,6 +118,10 @@ int joker_open(struct joker_t *joker)
 	if ((ret = joker_i2c_init(joker)))
 		return ret;
 
+	/* power down all chips
+	 * will be enabled later on-demand */
+	joker_reset(joker, 0xFF /* switch all chips to reset */);
+
 	return 0;
 }
 

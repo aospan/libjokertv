@@ -541,8 +541,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 	i2c->algo_data = (void*)joker;
 
-	joker_reset(joker, 0xFF & ~(OC_I2C_RESET_TPS_CI)/* switch all chips to reset except CI */);
-
 	switch (info->delivery_system)
 	{
 		case JOKER_SYS_ATSC:
