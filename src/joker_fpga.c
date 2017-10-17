@@ -20,6 +20,7 @@
 #include <joker_i2c.h>
 #include <u_drv_data.h>
 #include <libusb.h>
+#include <pthread.h>
 
 /* USB part */
 /* open usb device

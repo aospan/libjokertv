@@ -31,6 +31,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(EN50221LIB -Wl,-force_load,${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	find_library(LIBICONV libiconv.a REQUIRED)
+	find_library(LIBWS2 ws2_32 REQUIRED)
 	set(PTHREADS_LIB "-Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 	set(EN50221LIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a -Wl,--no-whole-archive)
@@ -106,7 +107,7 @@ set(KINCLUDE_DIRS
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER ${INCLUDE_PLATFORM} $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}> 3party)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
-	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBobjc} ${LIBUDEV} ${LIBICONV})
+	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBobjc} ${LIBUDEV} ${LIBICONV} ${LIBWS2})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include
@@ -129,6 +130,7 @@ target_link_libraries(jokertv
 	PRIVATE ${PC_LIBUSB_LIBRARIES}
 	PRIVATE ${PC_LIBDVBPSI_LIBRARIES}
 	PRIVATE ${LIBICONV}
+	PRIVATE ${LIBWS2}
 	PRIVATE ${PTHREADS_LIB}
 	PRIVATE ${EXT_LIBS}
 	)

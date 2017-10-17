@@ -18,8 +18,13 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
+#ifdef __WIN32__
+#include <winsock2.h>
+#include <WS2tcpip.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
 #include <unistd.h>
 #include <pthread.h>
 
@@ -146,6 +151,13 @@ int start_en50221_server(struct joker_t * joker)
 
 	if (!joker)
 		return -EINVAL;
+
+	// start networking under Windows
+#ifdef __WIN32__
+	WORD versionWanted = MAKEWORD(1, 1);
+	WSADATA wsaData;
+	WSAStartup(versionWanted, &wsaData);
+#endif
 
 	if (!joker->ci_server_threading) {
 		joker->ci_server_threading = malloc(sizeof(struct ci_server_thread_opaq_t));
