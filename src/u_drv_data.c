@@ -192,17 +192,22 @@ void record_callback(struct libusb_transfer *transfer)
 
 	// free this transfer
 	if (!transfer->user_data) {
+		printf ("%s: no user data\n", __func__);
 		transfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
 		libusb_free_transfer(transfer);
 		return;
 	}
 
 	// looks like we stopping TS processing. do not submit this transfer
-	if(transfer->status == LIBUSB_TRANSFER_CANCELLED)
+	if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
+		printf ("%s: CANCELLED \n", __func__);
 		return;
+	}
 
-	if(transfer->status == LIBUSB_TRANSFER_ERROR)
+	if(transfer->status == LIBUSB_TRANSFER_ERROR) {
+		printf ("%s: ERROR \n", __func__);
 		return;
+	}
 
 	/* update statistics */
 	if ( (getus() - pool->start_time) > 2000000 ) {
