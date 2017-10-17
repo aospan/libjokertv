@@ -10,11 +10,10 @@
 
 #include "joker_list.h"
 
-#define NUM_USB_BUFS 64
+#define NUM_USB_BUFS 16
 // under CentOS 5.5 limit for URB size (?)
 // so, choose 64 here (original was 128) for CentOS 5.5
-#define NUM_USB_PACKETS 32
-//#define NUM_USB_PACKETS 128
+#define NUM_USB_PACKETS 128
 #define USB_PACKET_SIZE 1024
 
 #define BIG_POOL_GAIN	16
