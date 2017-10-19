@@ -622,12 +622,12 @@ void* joker_ci_worker(void * data)
 
 	if (joker->joker_ci_opaque) {
 		printf("CAM already initialized ? Call joker_ci_close to deinit\n");
-		return;
+		return -1;
 	}
 
 	ci = malloc(sizeof(struct joker_ci_t));
 	if (!ci)
-		return;
+		return -1;
 	memset(ci, 0, sizeof(struct joker_ci_t));
 	ci->ci_verbose = joker->ci_verbose;
 	joker->joker_ci_opaque = ci;
@@ -657,7 +657,7 @@ void* joker_ci_worker(void * data)
 
 	if (!(in_buf[1] & 0x01)) {
 		printf("CAM not detected. status=0x%x\n", in_buf[1]);
-		return;
+		return -1;
 	} else {
 		printf("CAM detected\n");
 	}
@@ -702,7 +702,7 @@ fail_out:
 		free(ci);
 	joker->joker_ci_opaque = NULL;
 
-	return;
+	return -1;
 }
 
 /* initialize CAM module

@@ -1072,11 +1072,11 @@ void *ci_poll_func(void* arg) {
 	int len = 0;
 
 	if (!joker || !joker->joker_en50221_opaque)
-		return;
+		return -1;
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 	tl = jen->tl;
 	if (!tl)
-		return;
+		return -1;
 
 	while(!jen->shutdown_stackthread) {
 		int error;
@@ -1148,7 +1148,7 @@ void *pmtthread_func(void* arg) {
 	}
 	shutdown_pmtthread = 0;
 #endif
-	return;
+	return 0;
 }
 
 

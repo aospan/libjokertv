@@ -265,7 +265,6 @@ void record_callback(struct libusb_transfer *transfer)
 		pkt = transfer->iso_packet_desc[i];
 		len = transfer->iso_packet_desc[i].actual_length;
 		pool->pkt_count++;
-		total++;
 
 		if (pkt.status == LIBUSB_TRANSFER_COMPLETED && len > 0) {
 			pool->pkt_count_complete++;
@@ -580,13 +579,13 @@ void* process_ts_loop(void * data) {
 
 	if (!joker || !joker->loop_ts_filename) {
 		printf("%s: invalid args \n", __func__ );
-		return;
+		return -1;
 	}
 
 	fd = fopen(joker->loop_ts_filename, "rb");
 	if (!fd) {
 		perror("Can't open TS loop file\n");
-		return;
+		return -1;
 	}
 
 	printf("%s: %s opened \n", __func__, joker->loop_ts_filename);
@@ -595,12 +594,12 @@ void* process_ts_loop(void * data) {
 	while(!joker->loop_threading->cancel) {
 		if ((nbytes = fread(buf, 1, len, fd)) <= 0) {
 			printf("TS loop: TS file processing done\n");
-			return;
+			return -1;
 		}
 
 		if ((ret = joker_send_ts_loop(joker, buf, nbytes))) {
 			printf("%s: can't send %d bytes \n", __func__, nbytes);
-			return;
+			return -1;
 		}
 		total += nbytes;
 		count++;
@@ -610,7 +609,7 @@ void* process_ts_loop(void * data) {
 		}
 	}
 
-	return;
+	return 0;
 }
 
 /* start TS loop thread 
