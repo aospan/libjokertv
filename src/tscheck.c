@@ -36,9 +36,10 @@ int checkts(unsigned char * pkt, int64_t off, int64_t *success_pattern, int64_t 
 	for(i = 4; i < TS_SIZE; i++) {
 		if (pkt[i] != pattern) {
 			foff = off + i;
-			printf("Pattern 0x%x mismatch with byte 0x%x. file offset=%lld (0x%" PRIx64 " or %d MB) \n",
+			printf("Mismatch byte: expected 0x%x found 0x%x. file offset=%lld (0x%" PRIx64 " or %d MB) \n",
 					pattern, pkt[i], (long long int)foff, foff, (int)(foff/1024/1024));
 			fail = 1;
+			break;
 		}
 	}
 
