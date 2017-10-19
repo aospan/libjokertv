@@ -582,9 +582,10 @@ void* process_ts_loop(void * data) {
 		return (void *)-EINVAL;
 	}
 
-	fd = fopen(joker->loop_ts_filename, "rb");
+	fd = fopen((char*)joker->loop_ts_filename, "r+b");
 	if (!fd) {
-		perror("Can't open TS loop file\n");
+		printf("TS loop file: %s \n", joker->loop_ts_filename);
+		perror("Can't open TS loop file:");
 		return (void *)-EIO;
 	}
 

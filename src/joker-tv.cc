@@ -253,7 +253,8 @@ int main (int argc, char **argv)
 				break;
 			case 'k':
 				len = strlen(optarg);
-				joker->loop_ts_filename = (unsigned char*)malloc(len);
+				joker->loop_ts_filename = (unsigned char*)malloc(len + 1);
+				memset(joker->loop_ts_filename, 0, len + 1);
 				strncpy((char*)joker->loop_ts_filename, optarg, len);
 				break;
 			case 'w':
