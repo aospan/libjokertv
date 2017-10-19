@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
 	FILE * ofd;
 	int c;
 	char *filename = "tsgen.ts";
-	int size = TS_LIMIT;
+	long long size = TS_LIMIT;
 	uint8_t pat_packet[TS_SIZE];
 	uint8_t pmt_packet[TS_SIZE];
 	uint8_t pcr_packet[TS_SIZE];
@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
 		switch (c)
 		{
 			case 's':
-				size = atoi(optarg)/TS_SIZE;
+				size = (1024*1024*(long long)atoi(optarg))/TS_SIZE;
 				break;
 			case 'f':
 				filename = optarg;
@@ -256,8 +256,9 @@ int main(int argc, char **argv) {
 	fwrite(pmt_packet, TS_SIZE, 1, ofd);
 
 	/* pattern should be rolled as 0x00 -> 0xff */
+	printf("size=%lld \n", size );
 	size = 256 * (size/256);
-	printf("ts pkt count=%d \n", size );
+	printf("ts pkt count=%lld \n", size );
 
 	for (i = 0; i < size; i++) {
 		pkt[0x00] = 0x47;
