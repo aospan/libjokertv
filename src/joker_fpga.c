@@ -92,7 +92,7 @@ int joker_open(struct joker_t *joker)
 	}
 
 	joker->libusb_opaque = (void *)devh;
-	printf("open:dev=%p \n", devh);
+	jdebug("open:dev=%p \n", devh);
 
 	joker->io_mux_opaq = malloc(sizeof(pthread_mutex_t));
 	if (!joker->io_mux_opaq)
@@ -107,17 +107,23 @@ int joker_open(struct joker_t *joker)
 	/* tune usb isoc transaction len */
 	buf[0] = J_CMD_ISOC_LEN_WRITE_HI;
 	buf[1] = (isoc_len >> 8) & 0x7;
-	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */))) {
+		printf("Can't set isoc transfers size (high)\n");
 		return ret;
+	}
 
 	buf[0] = J_CMD_ISOC_LEN_WRITE_LO;
 	buf[1] = isoc_len & 0xFF;
-	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */))) {
+		printf("Can't set isoc transfers size (low)\n");
 		return ret;
+	}
 
 	/* i2c core init */
-	if ((ret = joker_i2c_init(joker)))
+	if ((ret = joker_i2c_init(joker))) {
+		printf("Can't init i2c bus \n");
 		return ret;
+	}
 
 	/* power down all chips
 	 * will be enabled later on-demand */
@@ -169,16 +175,17 @@ int joker_io(struct joker_t * joker, struct jcmd_t * jcmd) {
 	dev = (struct libusb_device_handle *)joker->libusb_opaque;
 
 	pthread_mutex_lock(mux);
-	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, jcmd->buf, jcmd->len, &transferred, 1000);
+	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, jcmd->buf, jcmd->len, &transferred, 2000);
 	if (ret < 0 || transferred != jcmd->len) {
 		pthread_mutex_unlock(mux);
+		printf("USB bulk transaction failed. ret=%d transferred=%d \n", ret, transferred);
 		return -EIO;
 	}
 
 	/* jcmd expect some reply */
 	if (jcmd->in_len > 0) {
 		/* read collected data */
-		ret = libusb_bulk_transfer(dev, USB_EP1_IN, jcmd->in_buf, jcmd->in_len, &transferred, 1000);
+		ret = libusb_bulk_transfer(dev, USB_EP1_IN, jcmd->in_buf, jcmd->in_len, &transferred, 2000);
 		if (ret < 0 || transferred != jcmd->in_len) {
 			printf("%s: failed to read reply. ret=%d transferred=%d expected %d\n",
 					__func__, ret, transferred, jcmd->in_len );
@@ -191,23 +198,41 @@ int joker_io(struct joker_t * joker, struct jcmd_t * jcmd) {
 	return 0;
 }
 
+int joker_send_ts_loop(struct joker_t * joker, unsigned char *buf, int len) {
+	struct libusb_device_handle *dev = NULL;
+	int ret = 0, transferred = 0;
+
+	if (!joker)
+		return -EINVAL;
+
+	dev = (struct libusb_device_handle *)joker->libusb_opaque;
+
+	ret = libusb_bulk_transfer(dev, USB_EP4_OUT, buf, len, &transferred, 0);
+	if (ret < 0 || transferred != len) {
+		printf("%s: USB bulk transaction failed. ret=%d transferred=%d \n", __func__, ret, transferred);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+
+
 int joker_cmd(struct joker_t * joker, unsigned char *data, int len, unsigned char * in_buf, int in_len) {
 	int ret = 0;
 	struct jcmd_t jcmd;
 	int i = 0;
 
-	if (len > JCMD_BUF_LEN || in_len > JCMD_BUF_LEN)
-		return EINVAL;
+	if (!joker)
+		return -EINVAL;
 
-	memcpy(jcmd.buf, data, len);
+	jcmd.buf = data;
 	jcmd.len = len;
+	jcmd.in_buf = in_buf;
 	jcmd.in_len = in_len;
 
 	if ((ret = joker_io(joker, &jcmd)))
 		return ret;
-
-	if (in_buf && in_len)
-		memcpy(in_buf, jcmd.in_buf, in_len);
 
 	return 0;
 }

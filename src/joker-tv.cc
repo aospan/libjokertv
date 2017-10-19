@@ -140,9 +140,10 @@ void show_help() {
 	printf("	-z l,h,s	LNB settings: low/high/switch frequency. Example: -z 9750,10600,11700\n");
 	printf("	-e		Enable 22 kHz tone (continuous). Default: disabled\n");
 	printf("	-c		Enable CAM module. Default: disabled\n");
+	printf("	-g		Enable TS traffic through CAM module. Default: disabled\n");
 	printf("	-j		Enable CAM module verbose messages. Default: disabled\n");
-	printf("	-i		TCP port for MMI (CAM) server. Default: 7777\n");
-
+	printf("	-i port		TCP port for MMI (CAM) server. Default: 7777\n");
+	printf("	-k filename.ts	Send TS traffic to Joker TV. TS will return back (loop) Default: none\n");
 	exit(0);
 }
 
@@ -172,6 +173,7 @@ int main (int argc, char **argv)
 	int64_t total_len = 0, limit = 0;
 	int voltage = 0, tone = 1;
 	int ci_server_port = 7777;
+	int len = 0;
 
 	/* disable output buffering
 	 * helps under Windows with stdout delays
@@ -192,7 +194,7 @@ int main (int argc, char **argv)
 	joker->ci_info_callback = &ci_info_callback_f;
 	joker->ci_caid_callback = &ci_caid_callback_f;
 
-	while ((c = getopt (argc, argv, "d:y:z:m:f:s:o:b:l:tpu:w:i:nhecj")) != -1)
+	while ((c = getopt (argc, argv, "k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjg")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -234,6 +236,9 @@ int main (int argc, char **argv)
 			case 'c':
 				joker->ci_enable = 1;
 				break;
+			case 'g':
+				joker->ci_ts_enable = 1;
+				break;
 			case 'j':
 				joker->ci_verbose = 1;
 				break;
@@ -245,6 +250,11 @@ int main (int argc, char **argv)
 				break;
 			case 'o':
 				strncpy((char*)filename, optarg, FNAME_LEN);
+				break;
+			case 'k':
+				len = strlen(optarg);
+				joker->loop_ts_filename = (unsigned char*)malloc(len);
+				strncpy((char*)joker->loop_ts_filename, optarg, len);
 				break;
 			case 'w':
 				strncpy((char*)fwfilename, optarg, FNAME_LEN);
@@ -264,8 +274,10 @@ int main (int argc, char **argv)
 	}
 
 	/* open Joker TV on USB bus */
-	if ((ret = joker_open(joker)))
+	if ((ret = joker_open(joker))) {
+		printf("Can't open device \n");
 		return ret;
+	}
 	printf("allocated joker=%p \n", joker);
 
 	/* init CI */
@@ -298,15 +310,25 @@ int main (int argc, char **argv)
 		}
 	}
 
-	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 )
+	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 && !joker->loop_ts_filename)
 		show_help();
 
 	if(tsgen) {
 		/* TS generator selected */
 		buf[0] = J_CMD_TS_INSEL_WRITE;
 		buf[1] = J_INSEL_TSGEN;
-		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */))) {
+			printf("Can't set TS source (TS generator) \n");
 			return ret;
+		}
+	} else if (joker->loop_ts_filename) {
+		/* USB bulk selected */
+		buf[0] = J_CMD_TS_INSEL_WRITE;
+		buf[1] = J_INSEL_USB_BULK;
+		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */))) {
+			printf("Can't set TS source (USB bulk) \n");
+			return ret;
+		}
 	} else {
 		/* real demod selected
 		 * tuning ...
@@ -346,7 +368,11 @@ int main (int argc, char **argv)
 		printf("start_ts failed. err=%d \n", ret);
 		exit(-1);
 	}
-	fflush(stdout);
+
+	if (joker->loop_ts_filename) {
+		/* start TS file reading thread */
+		start_ts_loop(joker);
+	}
 
 	if (decode_program) {
 		/* get TV programs list */
@@ -360,8 +386,10 @@ int main (int argc, char **argv)
 	/* reading about 18K at once */
 	read_once = TS_SIZE * 100;
 	res = (unsigned char*)malloc(read_once);
-	if (!res)
+	if (!res) {
+		printf("Can't alloc mem for TS \n");
 		return -1;
+	}
 
 	while( limit == 0 || (limit > 0 && total_len < limit) ) {
 		res_len = read_ts_data(&pool, res, read_once);

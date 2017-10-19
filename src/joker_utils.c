@@ -143,6 +143,25 @@ int validate_ts(struct joker_t * joker, int timeout, int min_count, int max_err)
 	return ret;
 }
 
+
+/* clean TS FIFO inside FPGA
+ * return 0 if success
+ */
+int joker_clean_ts(struct joker_t *joker)
+{
+	unsigned char buf[BUF_LEN];
+	int ret = 0;
+
+	if (!joker)
+		return -EINVAL;
+
+	buf[0] = J_CMD_CLEAR_TS_FIFO;
+	if ((ret = joker_cmd(joker, buf, 1, NULL /* in_buf */, 0 /* in_len */)))
+		return ret;
+
+	return 0;
+}
+
 /* do actual reset control on device
  * return 0 if success
  */
@@ -197,6 +216,7 @@ int joker_unreset(struct joker_t *joker, int mask)
 		return -EIO;
 	}
 }
+
 
 static void*
 deconst(const void *c)

@@ -60,6 +60,11 @@ char*
 xmemmem(const char *hay, const size_t haysize,
 	const char *needle, const size_t needlesize);
 
+/* clean TS FIFO inside FPGA
+ * return 0 if success
+ */
+int joker_clean_ts(struct joker_t *joker);
+
 #ifdef __cplusplus
 }
 #endif

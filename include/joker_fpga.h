@@ -59,10 +59,12 @@
 #define J_INSEL_ATBM	(0x01)
 #define J_INSEL_LG	(0x02)
 #define J_INSEL_TSGEN	(0x03)
+#define J_INSEL_USB_BULK	(0x04)
 
 /* USB defines */
 #define	USB_EP1_IN		(0x81) /* i2c, etc */
 #define	USB_EP2_OUT		(0x02) /* i2c, etc */
+#define	USB_EP4_OUT		(0x04) /* TS from host, bulk */
 #define	USB_EP3_IN		(0x83) /* transport stream */
 #define NETUP_VID		(0x2D6B)
 #define JOKER_TV_PID		(0x7777)
@@ -82,8 +84,9 @@
 #define	J_CMD_ISOC_LEN_WRITE_LO	17
 #define	J_CMD_CI_STATUS		20 /* 0x14 CI common interfce */
 #define	J_CMD_CI_RW		22 /* 0x16 CAM IO/MEM RW */
+#define	J_CMD_CI_TS		23 /* enable/disable TS through CAM */
 #define	J_CMD_SPI		30 /* SPI bus access */
-#define	J_CMD_TSFIFO_LEVEL	31 /* get TSFIFO used level. current write position */
+#define	J_CMD_CLEAR_TS_FIFO	35 /* clear TS FIFO */
 
 
 /* J_CMD_RESET_CTRL_WRITE
@@ -106,10 +109,10 @@
 struct jcmd_t {
 	int cmd; /* command code. see defines above */
 	/* out buffer. will be sent to device */
-	unsigned char buf[JCMD_BUF_LEN];
+	unsigned char *buf;
 	int len;
 	/* input buffer. received bytes stored in this buf */
-	unsigned char in_buf[JCMD_BUF_LEN];
+	unsigned char *in_buf;
 	int in_len; /* amount of expected bytes */
 };
 
@@ -124,6 +127,8 @@ extern "C" {
  */
 int joker_io(struct joker_t * joker, struct jcmd_t * jcmd);
 int joker_cmd(struct joker_t * joker, unsigned char *data, int len, unsigned char * in_buf, int in_len);
+
+int joker_send_ts_loop(struct joker_t * joker, unsigned char *buf, int len);
 
 #ifdef __cplusplus
 }

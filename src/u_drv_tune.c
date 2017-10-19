@@ -533,6 +533,8 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 		}
 	}
 
+	joker_clean_ts(joker); // clean FIFO from previous TS
+
 	// pause service thread while we configure frontend
 	pthread_mutex_lock(&joker->service_threading->mux);
 	joker->stat.refresh_enable = 0;

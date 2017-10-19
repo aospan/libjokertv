@@ -22,6 +22,9 @@
 // default 2MB
 #define TS_LIST_SIZE_DEFAULT 1024*1024*2
 
+// Maximum size for TS loopback
+#define TS_LOOP_SIZE 16384
+
 // hook function
 struct big_pool_t;
 struct program_t;
@@ -65,6 +68,7 @@ struct big_pool_t {
 	void * hooks_opaque[8192];
 
 	/* statistics */
+	int calls_count;
 	int pkt_count;
 	int pkt_count_complete;
 	int bytes;
@@ -110,6 +114,16 @@ void drop_ts_data(struct ts_node * node);
  * return - copied bytes into data (can be less than requested size or zero if
  * no data available) */
 int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size);
+
+/* start TS loop thread 
+ * loop TS traffic
+ * send to Joker TV over USB (EP4 OUT, bulk)
+ * receive from Joker TV over USB (EP3 IN, isoch)
+ *
+ * TS traffic can'be routed through CAM module as well
+ */
+int start_ts_loop(struct joker_t *joker);
+int stop_ts_loop(struct joker_t *joker);
 
 #ifdef __cplusplus
 }

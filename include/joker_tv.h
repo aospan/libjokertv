@@ -124,9 +124,17 @@ struct joker_t {
 	int ci_server_port;
 	struct ci_server_thread_opaq_t *ci_server_threading;
 	int ci_client_fd;
+	int ci_ts_enable; // Enable TS traffic through CAM module
 
 	/* TS check vars */
 	int last_pattern;
+
+	/* loop TS traffic 
+	 * send to Joker TV over USB (EP2 OUT)
+	 * receive from Joker TV over USB (EP1 IN)
+	 */
+	unsigned char *loop_ts_filename;
+	struct loop_thread_opaq_t *loop_threading;
 };
 
 #ifdef __cplusplus

@@ -40,6 +40,15 @@ struct thread_opaq_t
 	pthread_mutex_t mux;
 };
 
+struct loop_thread_opaq_t
+{
+	/* TS loopback thread */
+	pthread_t loop_thread;
+	pthread_cond_t cond;
+	pthread_mutex_t mux;
+	int cancel;
+};
+
 /* helper func 
  * get current time in usec */
 uint64_t getus() {
@@ -200,28 +209,32 @@ void record_callback(struct libusb_transfer *transfer)
 
 	// looks like we stopping TS processing. do not submit this transfer
 	if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
-		printf ("%s: CANCELLED \n", __func__);
+		printf("%s: LIBUSB_TRANSFER_CANCELLED\n");
 		return;
 	}
 
 	if(transfer->status == LIBUSB_TRANSFER_ERROR) {
-		printf ("%s: ERROR \n", __func__);
+		printf("%s: LIBUSB_TRANSFER_ERROR\n");
 		return;
 	}
 
 	/* update statistics */
 	if ( (getus() - pool->start_time) > 2000000 ) {
-		printf("USB ISOC: all/complete=%f/%f transfer/sec %.2f MBytes %f mbits/sec \n", 
+		printf("USB ISOC: all/complete=%f/%f transfer/sec %.2f MBytes %f mbits/sec, %f calls/sec\n", 
 				(double)((int64_t)1000000*pool->pkt_count)/(getus() - pool->start_time),
 				(double)((int64_t)1000000*pool->pkt_count_complete)/(getus() - pool->start_time),
 				(double)pool->bytes/1024/1024,
-				(double)((int64_t)1000000*8*pool->bytes/1048576)/(getus() - pool->start_time));
+				(double)((int64_t)1000000*8*pool->bytes/1048576)/(getus() - pool->start_time),
+				(double)((int64_t)1000000*pool->calls_count)/(getus() - pool->start_time)
+				);
 		fflush(stdout);
+		pool->calls_count = 0;
 		pool->pkt_count = 0;
 		pool->pkt_count_complete = 0;
 		pool->bytes = 0;
 		pool->start_time = getus();
 	}
+	pool->calls_count++;
 
 	// fill TS list with received data
 	for(i = 0; i < transfer->num_iso_packets; i++) {
@@ -231,13 +244,17 @@ void record_callback(struct libusb_transfer *transfer)
 	}
 
 	node = malloc(sizeof(*node));
-	if(!node)
+	if(!node) {
+		printf("%s: can't alloc mem for node \n");
 		return;
+	}
 	memset(node, 0, sizeof(*node));
 
 	node->data = malloc(total_len + TS_SIZE);
-	if (!node->data)
+	if (!node->data) {
+		printf("%s: can't alloc mem for data \n");
 		return;
+	}
 
 	node->size = 0;
 	node->counter = pool->node_counter++;
@@ -248,11 +265,11 @@ void record_callback(struct libusb_transfer *transfer)
 		pkt = transfer->iso_packet_desc[i];
 		len = transfer->iso_packet_desc[i].actual_length;
 		pool->pkt_count++;
+		total++;
 
 		if (pkt.status == LIBUSB_TRANSFER_COMPLETED && len > 0) {
 			pool->pkt_count_complete++;
 			pool->bytes += len;
-			jdebug("ISOC size=%d \n", len );
 			if ((buf = libusb_get_iso_packet_buffer(transfer, i))) {
 				if (buf[TS_SIZE - pool->tail_size] == TS_SYNC)
 					ts_off = TS_SIZE - pool->tail_size; // tail is ok. use it
@@ -260,7 +277,7 @@ void record_callback(struct libusb_transfer *transfer)
 					ts_off = next_ts_off(buf, len);
 				jdebug("	ts_off=%d tail_size=%d\n", ts_off, pool->tail_size);
 				if (ts_off < 0)
-					break;
+					continue;
 
 				if ((ts_off + pool->tail_size) == TS_SIZE) {
 					jdebug("	 tail OK\n");
@@ -337,6 +354,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	struct libusb_device_handle *dev = NULL;
 	int index = 0;
 	int transferred = 0, rc = 0, ret = 0;
+	unsigned char buf[JCMD_BUF_LEN];
 
 	if (!joker || !pool)
 		return EINVAL;
@@ -349,6 +367,14 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	if (pool->initialized != BIG_POOL_MAGIC)
 		pool_init(pool);
 
+	joker_clean_ts(joker); // clean FIFO from previous TS
+
+	// enable/disable TS traffic through CAM
+	buf[0] = J_CMD_CI_TS;
+	buf[1] = joker->ci_ts_enable; // enable or disable
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		return ret;
+	
 #ifdef __linux__ 
 	/* set FIFO schedule priority
 	 * for faster USB ISOC transfer processing */
@@ -377,6 +403,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	}
 	
 	// start ISOC USB transfers processing thread
+	pool->calls_count = 0;
 	pool->pkt_count = 0;
 	pool->pkt_count_complete = 0;
 	pool->start_time = getus();
@@ -537,4 +564,99 @@ int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 	}
 
 	return res_off;
+}
+
+/* TS loopback thread */
+void* process_ts_loop(void * data) {
+	struct joker_t * joker = (struct joker_t *)data;
+	int rc = 0;
+	FILE *fd = NULL;
+	int nbytes = 0;
+	unsigned char buf[TS_LOOP_SIZE];
+	int len = 0, ret = 0, count = 0;
+	long long total = 0;
+	time_t t0 = time(0);
+	int print_interval = 5;
+
+	if (!joker || !joker->loop_ts_filename) {
+		printf("%s: invalid args \n", __func__ );
+		return;
+	}
+
+	fd = fopen(joker->loop_ts_filename, "rb");
+	if (!fd) {
+		perror("Can't open TS loop file\n");
+		return;
+	}
+
+	printf("%s: %s opened \n", __func__, joker->loop_ts_filename);
+	memset(buf, 0, TS_LOOP_SIZE);
+	len = TS_LOOP_SIZE; // actual TS data len
+	while(!joker->loop_threading->cancel) {
+		if ((nbytes = fread(buf, 1, len, fd)) <= 0) {
+			printf("TS loop: TS file processing done\n");
+			return;
+		}
+
+		if ((ret = joker_send_ts_loop(joker, buf, nbytes))) {
+			printf("%s: can't send %d bytes \n", __func__, nbytes);
+			return;
+		}
+		total += nbytes;
+		count++;
+		if ((time(0) - t0) > print_interval) {
+			printf("TS loop: %.2f MBytes sent\n", (float)total/1048576);
+			t0 = time(0);
+		}
+	}
+
+	return;
+}
+
+/* start TS loop thread 
+ * loop TS traffic 
+ * send to Joker TV over USB (EP2 OUT)
+ * receive from Joker TV over USB (EP1 IN)
+ */
+int start_ts_loop(struct joker_t *joker)
+{
+	int rc = 0;
+
+	if (!joker)
+		return EINVAL;
+
+	/* start loop thread */
+	if (!joker->loop_threading) {
+		joker->loop_threading = malloc(sizeof(struct loop_thread_opaq_t));
+		memset(joker->loop_threading, 0, sizeof(struct loop_thread_opaq_t));
+		pthread_mutex_init(&joker->loop_threading->mux, NULL);
+		pthread_cond_init(&joker->loop_threading->cond, NULL);
+
+		pthread_attr_t attrs;
+		pthread_attr_init(&attrs);
+		pthread_attr_setdetachstate(&attrs, PTHREAD_CREATE_JOINABLE);
+		rc = pthread_create(&joker->loop_threading->loop_thread, &attrs, process_ts_loop, (void *)joker);
+		if (rc){
+			printf("ERROR: can't start TS loop thread. code=%d\n", rc);
+			return rc;
+		}
+	}
+	return 0;
+}
+
+// fast stop of loop thread
+int stop_ts_loop(struct joker_t * joker)
+{
+	int ret = 0;
+
+	if (!joker || !joker->loop_threading)
+		return -EINVAL;
+
+	// fast stop of service thread
+	joker->loop_threading->cancel = 1;
+	pthread_cond_signal(&joker->loop_threading->cond);
+	ret = pthread_join(joker->loop_threading->loop_thread, NULL);
+
+	free(joker->loop_threading);
+	joker->loop_threading = NULL;
 }

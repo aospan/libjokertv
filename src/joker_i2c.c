@@ -26,26 +26,35 @@
 int joker_i2c_read_cmd(struct joker_t * joker, int offset, unsigned char * data) {
 	int ret = 0;
 	struct jcmd_t jcmd;
-	jcmd.buf[0] = J_CMD_I2C_READ;
-	jcmd.buf[1] = offset;
+	unsigned char buf[2];
+	unsigned char in_buf[2];
+
+	buf[0] = J_CMD_I2C_READ;
+	buf[1] = offset;
 	jcmd.len = 2;
 	jcmd.in_len = 2;
+	jcmd.buf = buf;
+	jcmd.in_buf = in_buf;
 
 	if ((ret != joker_io(joker, &jcmd)))
 		return ret;
 
-	*data = jcmd.in_buf[1];
+	*data = in_buf[1];
 	return 0;
 }
 
 int joker_i2c_write_cmd(struct joker_t * joker, int offset, unsigned char data) {
 	int ret = 0;
 	struct jcmd_t jcmd;
-	jcmd.buf[0] = J_CMD_I2C_WRITE;
-	jcmd.buf[1] = offset;
-	jcmd.buf[2] = data;
+	unsigned char buf[3];
+
+	buf[0] = J_CMD_I2C_WRITE;
+	buf[1] = offset;
+	buf[2] = data;
 	jcmd.len = 3;
+	jcmd.buf = buf;
 	jcmd.in_len = 0;
+	jcmd.in_buf = NULL;
 
 	if ((ret != joker_io(joker, &jcmd)))
 		return ret;
