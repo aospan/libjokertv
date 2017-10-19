@@ -68,7 +68,7 @@ void* joker_en50221_server_worker(void * data)
 	char out_buf[MAX_EN50221_BUF];
 
 	if (!joker || !joker->joker_en50221_opaque)
-		return -1;
+		return (void *)-EINVAL;
 
 	if (joker->ci_server_port <= 0) {
 		printf("TCP port not defined. Do not start EN50221 MMI server ... \n");
@@ -78,7 +78,7 @@ void* joker_en50221_server_worker(void * data)
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0) {
 		printf("Could not create socket\n");
-		return -1;
+		return (void *)-EIO;
 	}
 
 	server.sin_family = AF_INET;
@@ -92,13 +92,13 @@ void* joker_en50221_server_worker(void * data)
 	err = bind(server_fd, (struct sockaddr *) &server, sizeof(server));
 	if (err < 0) {
 		printf("%s: Could not bind socket\n", __func__);
-		return -1;
+		return (void *)-EIO;
 	}
 
 	err = listen(server_fd, 128);
 	if (err < 0) {
 		printf("%s: Could not listen on socket\n", __func__);
-		return -1;
+		return (void *)-EIO;
 	}
 
 	printf("%s: Server is listening on %d\n", __func__, joker->ci_server_port);
@@ -115,7 +115,7 @@ void* joker_en50221_server_worker(void * data)
 		// start MMI
 		if (joker_en50221_mmi_enter(joker, &mmi_callback)) {
 			printf("%s: can't enter to MMI menu\n", __func__);
-			return -1;
+			return (void *)-EIO;
 		};
 
 		while (1) {

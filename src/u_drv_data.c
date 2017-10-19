@@ -209,12 +209,12 @@ void record_callback(struct libusb_transfer *transfer)
 
 	// looks like we stopping TS processing. do not submit this transfer
 	if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
-		printf("%s: LIBUSB_TRANSFER_CANCELLED\n");
+		printf("%s: LIBUSB_TRANSFER_CANCELLED\n", __func__);
 		return;
 	}
 
 	if(transfer->status == LIBUSB_TRANSFER_ERROR) {
-		printf("%s: LIBUSB_TRANSFER_ERROR\n");
+		printf("%s: LIBUSB_TRANSFER_ERROR\n", __func__);
 		return;
 	}
 
@@ -245,14 +245,14 @@ void record_callback(struct libusb_transfer *transfer)
 
 	node = malloc(sizeof(*node));
 	if(!node) {
-		printf("%s: can't alloc mem for node \n");
+		printf("%s: can't alloc mem for node \n", __func__);
 		return;
 	}
 	memset(node, 0, sizeof(*node));
 
 	node->data = malloc(total_len + TS_SIZE);
 	if (!node->data) {
-		printf("%s: can't alloc mem for data \n");
+		printf("%s: can't alloc mem for data \n", __func__);
 		return;
 	}
 
@@ -579,13 +579,13 @@ void* process_ts_loop(void * data) {
 
 	if (!joker || !joker->loop_ts_filename) {
 		printf("%s: invalid args \n", __func__ );
-		return -1;
+		return (void *)-EINVAL;
 	}
 
 	fd = fopen(joker->loop_ts_filename, "rb");
 	if (!fd) {
 		perror("Can't open TS loop file\n");
-		return -1;
+		return (void *)-EIO;
 	}
 
 	printf("%s: %s opened \n", __func__, joker->loop_ts_filename);
@@ -594,12 +594,12 @@ void* process_ts_loop(void * data) {
 	while(!joker->loop_threading->cancel) {
 		if ((nbytes = fread(buf, 1, len, fd)) <= 0) {
 			printf("TS loop: TS file processing done\n");
-			return -1;
+			return (void *)-EIO;
 		}
 
 		if ((ret = joker_send_ts_loop(joker, buf, nbytes))) {
 			printf("%s: can't send %d bytes \n", __func__, nbytes);
-			return -1;
+			return (void *)-EIO;
 		}
 		total += nbytes;
 		count++;

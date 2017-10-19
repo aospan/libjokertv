@@ -1072,11 +1072,11 @@ void *ci_poll_func(void* arg) {
 	int len = 0;
 
 	if (!joker || !joker->joker_en50221_opaque)
-		return -1;
+		return (void *)-EINVAL;
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 	tl = jen->tl;
 	if (!tl)
-		return -1;
+		return (void *)-EINVAL;
 
 	while(!jen->shutdown_stackthread) {
 		int error;
