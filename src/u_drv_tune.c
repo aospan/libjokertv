@@ -546,6 +546,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	switch (info->delivery_system)
 	{
 		case JOKER_SYS_ATSC:
+		case JOKER_SYS_DVBC_ANNEX_B:
 			input = J_INSEL_LG;
 			joker_unreset(joker, OC_I2C_RESET_GATE | OC_I2C_RESET_TUNER | OC_I2C_RESET_LG);
 			break;
@@ -579,6 +580,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	switch (info->delivery_system)
 	{
 		case JOKER_SYS_ATSC:
+		case JOKER_SYS_DVBC_ANNEX_B:
 			fe = lgdt3306a_attach(&lgdt3306a_config, i2c);
 			if (!fe) {
 				printf("can't attach LGDT3306A demod\n");

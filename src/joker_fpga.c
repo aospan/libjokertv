@@ -178,7 +178,8 @@ int joker_io(struct joker_t * joker, struct jcmd_t * jcmd) {
 	ret = libusb_bulk_transfer(dev, USB_EP2_OUT, jcmd->buf, jcmd->len, &transferred, 2000);
 	if (ret < 0 || transferred != jcmd->len) {
 		pthread_mutex_unlock(mux);
-		printf("USB bulk transaction failed. ret=%d transferred=%d \n", ret, transferred);
+		printf("%s: USB bulk transaction failed. cmd=0x%x len=%d ret=%d transferred=%d \n",
+				__func__, jcmd->buf[0], jcmd->len, ret, transferred);
 		return -EIO;
 	}
 
