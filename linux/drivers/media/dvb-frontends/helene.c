@@ -537,7 +537,10 @@ static enum helene_tv_system_t helene_get_tv_system(struct dvb_frontend *fe)
 			system = SONY_HELENE_DTV_DVBC_6;
 		else if (p->bandwidth_hz <= 8000000)
 			system = SONY_HELENE_DTV_DVBC_8;
+	} else if (p->delivery_system == SYS_DVBC_ANNEX_B) {
+		system = SONY_HELENE_DTV_QAM;
 	}
+
 	dev_info(&priv->i2c->dev,
 			"%s(): HELENE DTV system %d (delsys %d, bandwidth %d)\n",
 			__func__, (int)system, p->delivery_system,
