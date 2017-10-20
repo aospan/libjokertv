@@ -20,9 +20,14 @@ make
 
 # Run
 
-example tune to DVB-C on 150MHz with bandwidth 8MHz
+example tune to DVB-C (J.83A) on 150MHz with bandwidth 8MHz
 ```
 ./joker-tv -d 1 -f 150000000 -b 8000000
+```
+
+example tune to US cable (J.83B, DVB-C annex B) on 150MHz with bandwidth 8MHz
+```
+./joker-tv -d 2 -f 150000000 -b 8000000 -m 3
 ```
 
 example tune to ATSC on 575MHz with bandwidth 6MHz and modulation 8VSB
