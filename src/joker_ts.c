@@ -384,7 +384,7 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 			codepage = p_descriptor->p_data[service_provider_name_length + 3];
 			jdebug("provider_len=%d service_name_length=%d service_name_ptr=%d codepage=0x%x\n",
 					service_provider_name_length, service_name_length, service_provider_name_length + 3, codepage);
-			for (i = 1; i < service_name_length; i++) {
+			for (i = isprint(service_name_ptr[0])?0:1; i < service_name_length; i++) {
 				// special chars. ignore it
 				if (service_name_ptr[i] >= 0x80 && service_name_ptr[i] <= 0x8B)
 					continue;
