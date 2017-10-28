@@ -235,7 +235,7 @@ int joker_ci_write_data(struct joker_t * joker, unsigned char *buf, int size)
 			0x0, buf, size);
 	if (ret < 0) {
 		printf("CAM:%s can't write\n", __func__);
-		sleep(3600);
+		return -EIO;
 	}
 
 	return size;
@@ -591,6 +591,9 @@ int joker_ci_link_init(struct joker_t * joker)
 		return -EIO;
 	joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN);
 
+	if (ci->ci_verbose)
+		printf("CAM:%s suggested buffer size %d bytes \n", __func__, ((int)buf[0] << 8 | buf[1]));
+
 	/* write the buffer size to the CAM */
 	joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN | CMDREG_SW);
 	ret = joker_ci_wait_status(joker, STATUSREG_FR, 100);
@@ -598,13 +601,16 @@ int joker_ci_link_init(struct joker_t * joker)
 		printf("CAM:ERROR: link buffer size write failed\n");
 		return -EIO;
 	}
-	jdebug("CAM:%s suggested buffer size %d bytes \n", __func__, ((int)buf[0] << 8 | buf[1]));
 	/* we are 'huge host' and can handle any buffer size
 	 * so, just write suggested buffer size back to CAM
 	 */
 	ret = joker_ci_write_data(joker, buf, 2);
-	if (ret != 2)
+	if (ret != 2) {
+		printf("CAM:ERROR: link buffer size write failed (2 bytes)\n");
 		return -EIO;
+	}
+
+	joker_ci_write(joker, CTRLIF_COMMAND, JOKER_CI_IO, IRQEN);
 
 	return 0;
 }
