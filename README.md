@@ -1,7 +1,7 @@
 # libjokertv project
 
 User-level driver for Joker TV card (https://tv.jokersys.com) using libusb.
-Supported platforms: Linux, Mac OSx (more platforms coming soon ... )
+Supported platforms: Linux, Mac OSx, Win32/64
 
 'linux' folder contains stripped Linux kernel header and Linux media subsystem
 drivers (cxd2841er, helene, etc).
