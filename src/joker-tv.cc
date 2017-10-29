@@ -285,6 +285,11 @@ int main (int argc, char **argv)
 	if (joker->ci_enable) {
 		joker->ci_server_port = ci_server_port;
 		joker_ci(joker);
+
+		// no TS options specified. In this case we sleep forever and only CI will work
+		if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 && !joker->loop_ts_filename)
+			while (1)
+				sleep(3600);
 	}
 
 	/* upgrade fw if selected */
