@@ -125,6 +125,13 @@ int joker_ci_rw(struct joker_t * joker, int command, uint16_t offset, unsigned c
 		if (command & JOKER_CI_CTRL_READ) {
 			// this was a read command
 			memcpy(buf, &in_buf[4], size);
+			if (ci->ci_verbose) {
+				printf("CAM:%s read %d bytes:\n",
+						__func__, size);
+				hexdump(buf, size);
+			}
+
+
 		}
 		// return read or written bytes count
 		return (in_buf[2] << 8 | in_buf[3]);
@@ -201,6 +208,11 @@ int joker_ci_read_data(struct joker_t * joker, unsigned char *buf, int size)
 
 	if (ret & STATUSREG_DA) {
 		printf("CAM:%s More data available! status=0x%x\n", __func__, ret);
+	}
+
+	if (ci->ci_verbose) {
+		printf("CAM:%s: read %d bytes from CAM. hexdump:\n", __func__, bytes_read);
+		hexdump(buf, bytes_read);
 	}
 
 	return bytes_read;
