@@ -887,8 +887,8 @@ static int en50221_tl_process_data(struct en50221_transport_layer *tl,
 		if ((asn_data_length < 1) ||
 		    (asn_data_length > (data_length - (1 + length_field_len)))) {
 			print(LOG_LEVEL, ERROR, 1,
-			      "Received data with invalid length from module on slot %02x\n",
-			      slot_id);
+			      "Received data with invalid length %d vs %d from module on slot %02x\n",
+			      asn_data_length, data_length - (1 + length_field_len), slot_id);
 			tl->error_slot = slot_id;
 			tl->error = EN50221ERR_BADCAMDATA;
 			return -1;
