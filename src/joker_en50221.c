@@ -515,9 +515,11 @@ extern int dvbca_link_write(int fd, uint8_t slot, uint8_t connection_id,
 extern int dvbca_link_read(int fd, uint8_t *slot, uint8_t *connection_id,
 		uint8_t *data, uint16_t data_length, void *arg)
 {
-	int size = 0;
-	uint8_t *buf = malloc(data_length + 2);
+	uint8_t *buf = malloc(data_length);
 	struct joker_t *joker = (struct joker_t *)arg;
+	int size = 0;
+	int dst_off = 0;
+	int more_data = 1;
 
 	jdebug("EN50221:%s slot=%p connection_id=%p len=%d joker=%p buf=%p called \n",
 			__func__, slot, connection_id, data_length, joker, buf);
@@ -528,19 +530,32 @@ extern int dvbca_link_read(int fd, uint8_t *slot, uint8_t *connection_id,
 	if (!buf)
 		return -ENOMEM;
 
-	if ((size = joker_ci_read_data(joker, buf, data_length+2)) < 0) {
-		printf("EN50221:%s joker_ci_read_data failed, size=%d \n",
-				__func__, size);
-		return -EIO;
+	/* from EN 50221:1997 standard:
+	 * The first byte of the header is the Transport
+	 * Connection Identifier for that TPDU fragment. The second byte contains a More/Last indicator in its most
+	 * significant bit. If the bit is set to '1' then at least one more TPDU fragment follows, and if the bit is set to '0'
+	 * then it indicates this is the last (or only) fragment of the TPDU for that Transport Connection.
+	 */
+	while (more_data) {
+		if ((size = joker_ci_read_data(joker, buf, data_length)) < 0) {
+			printf("EN50221:%s joker_ci_read_data failed, size=%d \n",
+					__func__, size);
+			return -EIO;
+		}
+
+		/* extract link layer (en50221) header */
+		*connection_id = buf[0];
+		*slot = 0x0; // TODO
+		memcpy(data + dst_off, buf+2, size-2);
+		dst_off += size-2;
+		more_data = buf[1]&0x80;
 	}
 
-	/* extract link layer (en50221) header */
-	*connection_id = buf[0];
-	*slot = 0x0; // TODO
-	memcpy(data, buf+2, size-2);
 	free(buf);
 
-	return size-2;
+	jdebug("EN50221:%s joker_ci_read_data done, size=%d \n",
+			__func__, dst_off);
+	return dst_off;
 }
 
 // FIXME how do we determine which CAM slot of a CA is meant?
