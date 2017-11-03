@@ -134,7 +134,7 @@ static int tps65233_set_voltage(struct dvb_frontend *fe,
 	}
 
 	tps65233_write_reg(priv, 0x0, priv->config[0]);
-	dev_info(&priv->i2c->dev, "%s() voltage (%d) set done. config = 0x%.2x 0x%.2x\n",
+	dev_dbg(&priv->i2c->dev, "%s() voltage (%d) set done. config = 0x%.2x 0x%.2x\n",
 			__func__, voltage, priv->config[0], priv->config[1]);
 	msleep(10);
 
