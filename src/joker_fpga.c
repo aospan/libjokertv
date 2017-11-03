@@ -129,6 +129,13 @@ int joker_open(struct joker_t *joker)
 	 * will be enabled later on-demand */
 	joker_reset(joker, 0xFF /* switch all chips to reset */);
 
+
+	// init EN50221 stuff (no actual CAM module processing starts here)
+	if (joker_ci_en50221_init(joker)) {
+		printf("Can't init EN50221 \n");
+		return -EIO;
+	}
+
 	return 0;
 }
 

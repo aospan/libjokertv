@@ -93,6 +93,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_utils.c
 	src/joker_en50221.c
 	src/joker_en50221_server.c
+	3party/libucsi/mpeg/pmt_section.c
 	src/joker_ts.c)
 
 set(KOPTIONS "-include ${CMAKE_SOURCE_DIR}/linux/include/linux/types.h")
@@ -138,6 +139,7 @@ target_include_directories(jokertv PRIVATE
 	$<BUILD_INTERFACE:include ${PC_LIBUSB_INCLUDE_DIR}>
 	#$<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}/dvbpsi>
 	${INCLUDE_USER}
+	"3party/libdvben50221/"
 	)
 
 #simple program: tune and save TS to file

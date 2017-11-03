@@ -91,10 +91,11 @@ struct big_pool_t {
 	void *atsc_dvbpsi;
 
 	uint32_t initialized;
+	struct joker_t *joker;
 };
 
 /* init pool */
-int pool_init(struct big_pool_t * pool);
+int pool_init(struct joker_t *joker, struct big_pool_t * pool);
 
 /* start TS processing thread 
  */

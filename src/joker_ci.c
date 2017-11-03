@@ -710,8 +710,8 @@ void* joker_ci_worker(void * data)
 		printf("CAM: EN50221 link initialized \n");
 	}
 
-	// init rest EN50221 stuff
-	joker_ci_en50221(joker);
+	// start EN50221 stuff
+	joker_ci_en50221_start(joker);
 
 	return 0;
 

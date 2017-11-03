@@ -130,6 +130,7 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 	struct program_t *program = (struct program_t *)data;
 	struct program_es_t*es = NULL;
 	int audio = 0, video = 0;
+	struct dvbpsi_psi_section_s *current_section = NULL;
 	dvbpsi_pmt_es_t* p_es = p_pmt->p_first_es;
 
 	jdebug(  "\n");
@@ -176,13 +177,22 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 				p_es->i_pid, p_es->i_pid);
 		p_es = p_es->p_next;
 	}
-	dvbpsi_pmt_delete(p_pmt);
+
+	// get pointer to "raw" PMT (unparsed)
+	current_section = ((dvbpsi_t*)program->pmt_dvbpsi)->p_decoder->p_current_section;
+	jdebug("%s: p_current_section=%p \n", __func__, current_section);
+
+	// send "raw" PMT to en50221 layer for processing
+	joker_en50221_pmt_update(program,
+			current_section->p_data, current_section->i_length);
 }
 
 static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 {
 	struct program_t *program = NULL;
 	struct big_pool_t *pool = (struct big_pool_t *)data;
+	int ignore = 0;
+
 	dvbpsi_pat_program_t* p_program = p_pat->p_first_program;
 	jdebug(  "\n");
 	jdebug(  "New PAT. pool=%p\n", pool);
@@ -192,17 +202,22 @@ static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 	while(p_program)
 	{
 		// avoid duplicates
+		ignore = 0;
 		if(!list_empty(&pool->programs_list)) {
 			list_for_each_entry(program, &pool->programs_list, list) {
 				if (program->number == p_program->i_number) 
-					continue; // ignore, already in the list
+					ignore = 1; // ignore, already in the list
 			}
 		}
+
+		if (ignore)
+			continue;
 
 		program = (struct program_t*)malloc(sizeof(*program));
 		if (!program)
 			break;
 
+		program->joker = pool->joker;
 		memset(&program->name, 0, SERVICE_NAME_LEN);
 		program->number = p_program->i_number;
 		INIT_LIST_HEAD(&program->es_list);

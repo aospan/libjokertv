@@ -27,6 +27,7 @@
 #include <poll.h>
 #include <libucsi/section.h>
 #include <libucsi/mpeg/section.h>
+#include <libucsi/mpeg/pmt_section.h> 
 #include <win/wtime.h>
 #include <pthread.h>
 
@@ -40,6 +41,20 @@
 #include <netinet/in.h>
 #endif
 #include <unistd.h>
+
+#include <libdvbmisc/dvbmisc.h>
+#include <pthread.h>
+#include <libucsi/mpeg/descriptor.h>
+#include "en50221_app_ca.h"
+#include "asn_1.h"
+
+// stuff from libdvbpsi
+#include <stdbool.h>
+#include <dvbpsi.h>
+#include <psi.h>
+#include <descriptor.h>
+#include <pat.h>
+#include <pmt.h>
 
 // libdvben50221 stuff
 #include <libdvben50221/en50221_session.h>
@@ -58,7 +73,6 @@
 
 /****** stuff from ./test/libdvben50221/test-app.c */
 void *ci_poll_func(void* arg);
-void *pmtthread_func(void* arg);
 int test_lookup_callback(void *arg, uint8_t slot_id, uint32_t requested_resource_id,
 		en50221_sl_resource_callback *callback_out, void **arg_out, uint32_t *connected_resource_id);
 int test_session_callback(void *arg, int reason, uint8_t slot_id, uint16_t session_number, uint32_t resource_id);
@@ -170,6 +184,10 @@ struct joker_en50221_t {
 	int slot_id;
 	int mmi_entered;
 	mmi_callback_t cb;
+
+	// protect access to CAM from another threads
+	pthread_mutex_t mux;
+	struct list_head programs_list;
 };
 
 int joker_ci_poll(struct pollfd *fds, nfds_t nfds, int timeout, void *arg)
@@ -195,25 +213,47 @@ int joker_ci_poll(struct pollfd *fds, nfds_t nfds, int timeout, void *arg)
  * return 0 if success
  * other return values indicates error
  */
-int joker_ci_en50221(struct joker_t * joker)
+int joker_ci_en50221_init(struct joker_t * joker)
 {
 	int ret = -EINVAL, i = 0, j = 0;
-	struct joker_ci_t * ci = NULL;
-	struct en50221_transport_layer *tl = NULL;
-	struct en50221_session_layer *sl = NULL;
-	struct en50221_app_send_functions *sendfuncs = NULL;
-	char tmp[256];
 	struct joker_en50221_t *jen = NULL;
-	pthread_t stackthread;
 
-	if (!joker || !joker->joker_ci_opaque)
+	if (!joker)
 		return -EINVAL;
+
+	// already initialized, okay
+	if (joker->joker_en50221_opaque)
+		return 0;
 
 	jen = (struct joker_en50221_t *)malloc(sizeof(struct joker_en50221_t));
 	if (!jen)
 		return -ENOMEM;
 	memset(jen, 0, sizeof(struct joker_en50221_t));
 	joker->joker_en50221_opaque = jen;
+	pthread_mutex_init(&jen->mux, NULL);
+
+	INIT_LIST_HEAD(&jen->programs_list);
+
+	return 0;
+}
+
+/* start EN50221
+ * return 0 if success
+ * other return values indicates error
+ */
+int joker_ci_en50221_start(struct joker_t * joker)
+{
+	struct joker_en50221_t * jen = NULL;
+	struct en50221_transport_layer *tl = NULL;
+	struct en50221_session_layer *sl = NULL;
+	struct en50221_app_send_functions *sendfuncs = NULL;
+	char tmp[256];
+	pthread_t stackthread;
+
+	jdebug("EN50221:%s called \n", __func__);
+	if (!joker || !joker->joker_en50221_opaque)
+		return -EINVAL;
+	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 	jen->resource_ids_count = sizeof(resource_ids)/4;
 
 	sendfuncs = (struct en50221_app_send_functions *)malloc(sizeof(struct en50221_app_send_functions));
@@ -818,13 +858,16 @@ int test_ca_info_callback(void *arg, uint8_t slot_id, uint16_t session_number, u
 	struct joker_t * joker = (struct joker_t *)arg;
 	struct joker_ci_t * ci = NULL;
 	struct joker_en50221_t * jen = NULL;
+	struct big_pool_t *pool = NULL;
+	struct program_t *program = NULL;
 	int len = 0;
 	uint32_t i;
 
-	if (!joker || !joker->joker_ci_opaque || !joker->joker_en50221_opaque)
+	if (!joker || !joker->joker_ci_opaque || !joker->joker_en50221_opaque /* || !joker->pool */)
 		return -EINVAL;
 	ci = (struct joker_ci_t *)joker->joker_ci_opaque;
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
+	pool = joker->pool;
 
 	jdebug("%02x:%s\n", slot_id, __func__);
 	for(i=0; i< ca_id_count; i++) {
@@ -836,7 +879,14 @@ int test_ca_info_callback(void *arg, uint8_t slot_id, uint16_t session_number, u
 	if(joker->ci_caid_callback)
 		joker->ci_caid_callback(joker);
 
+	pthread_mutex_lock(&jen->mux);
 	jen->ca_connected = 1;
+
+	// send CA PMT to CAM if we have some in queue
+	joker_en50221_sync_cam(jen);
+	
+	pthread_mutex_unlock(&jen->mux);
+
 	return 0;
 }
 
@@ -1109,105 +1159,311 @@ void *ci_poll_func(void* arg) {
 	return 0;
 }
 
-void *pmtthread_func(void* arg) {
-	(void)arg;
-	char buf[4096];
-	uint8_t capmt[4096];
-	int pmtversion = -1;
+/* parse PMT
+ * return pointer to pmt
+ * 0 if failed */
+struct mpeg_pmt_section * joker_en50221_parse_pmt(void* _pmt, int len)
+{
 	struct mpeg_pmt_section *pmt = NULL;
+	struct section_ext *ext = NULL;
+	struct section *section = NULL;
 
-#if 0
-	while(!shutdown_pmtthread) {
-		if (!ca_connected) {
-			sleep(1);
-			continue;
-		}
-
-		// read the PMT
-		struct section_ext *section_ext = read_section_ext(buf, sizeof(buf), adapterid, 0, pmt_pid, stag_mpeg_program_map);
-		if (section_ext == NULL) {
-			jdebug(stderr, "Failed to read PMT\n");
-			exit(1);
-		}
-		struct mpeg_pmt_section *pmt = mpeg_pmt_section_codec(section_ext);
-		if (pmt == NULL) {
-			jdebug(stderr, "Bad PMT received\n");
-			exit(1);
-		}
-		if (pmt->head.version_number == pmtversion) {
-			continue;
-		}
-
-		// translate it into a CA PMT
-		int listmgmt = CA_LIST_MANAGEMENT_ONLY;
-		if (pmtversion != -1) {
-			listmgmt = CA_LIST_MANAGEMENT_UPDATE;
-		}
-		int size;
-		if ((size = en50221_ca_format_pmt(pmt,
-						capmt,
-						sizeof(capmt),
-						listmgmt,
-						0,
-						CA_PMT_CMD_ID_OK_DESCRAMBLING)) < 0) {
-			jdebug(stderr, "Failed to format CA PMT object\n");
-			exit(1);
-		}
-
-		// set it
-		if (en50221_app_ca_pmt(ca_resource, ca_session_number, capmt, size)) {
-			jdebug(stderr, "Failed to send CA PMT object\n");
-			exit(1);
-		}
-		pmtversion = pmt->head.version_number;
+	// parse it as a section
+	// note: actually _pmt len is 1024 byte (hardcoded in libdvbpsi/src/tables/pmt.c)
+	section = section_codec((uint8_t*) _pmt, len);
+	if (!section) {
+		printf("CAM: can't parse PMT as section\n");
+		return 0;
 	}
-	shutdown_pmtthread = 0;
-#endif
+	
+	// parse it as a section_ext
+	ext = section_ext_decode(section, 0);
+	if (!ext) {
+		printf("CAM: can't parse PMT as ext section\n");
+		return 0;
+	}
+
+	pmt = mpeg_pmt_section_codec(ext);
+	if (!pmt) {
+		printf("CAM: can't parse PMT \n");
+		return 0;
+	}
+
+	return pmt;
+}
+
+/* add/find program in list
+ * must me called with jen->mux locked for thread safe list operations
+ * return pointer to created/found program_t
+ * or 0 if failed
+ */
+struct program_t * joker_en50221_program_add_or_find(struct joker_en50221_t * jen, int program_num)
+{
+	struct program_t *program = NULL, *list_program = NULL;
+
+	if (!jen)
+		return 0;
+
+	// find program in list
+	if(!list_empty(&jen->programs_list)) {
+		list_for_each_entry(list_program, &jen->programs_list, list) {
+			if (list_program->number == program_num) {
+				program = list_program;
+				break; // program found in list 
+			}
+		}
+	}
+
+	// program not found. create new one and insert into list
+	if (!program) {
+		program = (struct program_t*)calloc(1, sizeof(*program));
+		if (!program) {
+			pthread_mutex_unlock(&jen->mux);
+			return 0;
+		}
+
+		program->number = program_num;
+		list_add_tail(&program->list, &jen->programs_list);
+	}
+
+	return program;
+}
+
+/* send all CA PMT to CAM
+ * must be called with "jen->mux" locked
+ * return 0 if success */
+int joker_en50221_sync_cam(struct joker_en50221_t * jen)
+{
+	int ret = 0;
+	struct program_t *program = NULL, *list_program = NULL;
+	int count = 0, i = 0;
+	int listmgmt = CA_LIST_MANAGEMENT_ONLY;
+	struct mpeg_pmt_section * pmt = NULL;
+	uint8_t capmt[4096];
+	int size = 0;
+
+	if (!jen)
+		return -EINVAL;
+
+	// CAM not ready yet. Do not sync now
+	if (!jen->ca_connected)
+		return 0;
+
+	// find number of programs to descramble
+	if(!list_empty(&jen->programs_list)) {
+		list_for_each_entry(list_program, &jen->programs_list, list) {
+			if (list_program->ci_status && list_program->pmt) {
+				count++;
+			}
+		}
+	}
+	printf("%s: %d program(s) will send to CAM \n", __func__, count);
+
+	// actual send CA PMT to CAM
+	if(!list_empty(&jen->programs_list) && count > 0) {
+		list_for_each_entry(list_program, &jen->programs_list, list) {
+			jdebug("%s: program %d found in list \n", __func__, list_program->number);
+			if (list_program->ci_status && list_program->pmt) {
+				// parse PMT as a section
+				pmt = (struct mpeg_pmt_section *)list_program->pmt;
+
+				if (count == 1) {
+					listmgmt = CA_LIST_MANAGEMENT_ONLY;
+				} else if (count > 1) {
+					if (i == 0)
+						listmgmt = CA_LIST_MANAGEMENT_FIRST;
+					else if ((i + 1) == count)
+						listmgmt = CA_LIST_MANAGEMENT_LAST;
+					else
+						listmgmt = CA_LIST_MANAGEMENT_MORE;
+				}
+
+				// prepare CA PMT
+				if ((size = en50221_ca_format_pmt(pmt,
+								capmt,
+								sizeof(capmt),
+								0,
+								listmgmt,
+								CA_PMT_CMD_ID_OK_DESCRAMBLING)) < 0) {
+					printf("Failed to format CA PMT object for program=%d\n", list_program->number);
+					continue;
+				}
+
+				// send it into CAM
+				if (en50221_app_ca_pmt(jen->ca_resource,
+							jen->ca_session_number,
+							capmt, size)) {
+					printf("Failed to send CA PMT object into CAM for program=%d\n", list_program->number);
+					continue;
+				}
+				printf("CA PMT object sent into CAM for program=%d listmgmt=%d\n",
+						list_program->number, listmgmt);
+
+				// now program is inside CAM
+				// we should update CAM if PMT changes for this program
+				list_program->ci_status = CI_CAM_SENT;
+				i++;
+			}
+		}
+	}
+
+	return ret;
+}
+
+/* add program to descramble list
+ * return 0 if success
+ */
+int joker_en50221_descramble_add(struct joker_t * joker, int program_num)
+{
+	struct program_t *program = NULL;
+	struct joker_en50221_t * jen = NULL;
+
+	if (!joker)
+		return -EINVAL;
+
+	if (!joker->joker_en50221_opaque)
+		if (joker_ci_en50221_init(joker))
+			return -EINVAL;
+
+	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
+
+	// add or update program in list
+	pthread_mutex_lock(&jen->mux);
+	if (!(program = joker_en50221_program_add_or_find(jen, program_num))) {
+		pthread_mutex_unlock(&jen->mux);
+		printf ("%s: Can't add/find program in list \n", __func__);
+		return -ENOENT;
+	}
+
+	program->ci_status = CI_INIT; // intended to descramble
+
+	pthread_mutex_unlock(&jen->mux);
+
 	return 0;
 }
 
 
-struct section_ext *read_section_ext(char *buf, int buflen, int adapter, int demux, int pid, int table_id)
+/* update PMT for program
+ * copy of PMT will be saved in internal list for later CAM updated
+ * return 0 if success
+ */
+int joker_en50221_pmt_update(struct program_t *_program, void* _pmt, int len)
 {
-	int demux_fd = -1;
-	uint8_t filter[18];
-	uint8_t mask[18];
-	int size;
-	struct section *section;
-	struct section_ext *result = NULL;
+	struct joker_t * joker = _program->joker;
+	struct joker_en50221_t * jen = NULL;
+	struct program_t *program = NULL;
+	int ret = 0;
+	struct mpeg_pmt_section *pmt = NULL;
+	uint8_t capmt[4096];
+	int size = 0;
 
-#if 0
-	// open the demuxer
-	if ((demux_fd = dvbdemux_open_demux(adapter, demux, 0)) < 0) {
-		goto exit;
-	}
+	if (!_pmt || !_program || !joker)
+		return -EINVAL;
 
-	// create a section filter
-	memset(filter, 0, sizeof(filter));
-	memset(mask, 0, sizeof(mask));
-	filter[0] = table_id;
-	mask[0] = 0xFF;
-	if (dvbdemux_set_section_filter(demux_fd, pid, filter, mask, 1, 1)) {
-		goto exit;
-	}
+	if (!joker->joker_en50221_opaque)
+		if (joker_ci_en50221_init(joker))
+			return -EINVAL;
 
-	// read the section
-	if ((size = read(demux_fd, buf, buflen)) < 0) {
-		goto exit;
-	}
+	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 
 	// parse it as a section
-	section = section_codec((uint8_t*) buf, size);
-	if (section == NULL) {
-		goto exit;
+	if (!(pmt = joker_en50221_parse_pmt(_pmt, len + 3))) {
+		printf("CAM: can't parse PMT \n");
+		return -EINVAL;
+	}
+	jdebug("CAM: raw PMT parsed. version=%d curnext=%d\n", pmt->head.version_number, pmt->head.current_next_indicator);
+
+	pthread_mutex_lock(&jen->mux);
+
+	// find program in list or create new
+	if (!(program = joker_en50221_program_add_or_find(jen, _program->number))) {
+		pthread_mutex_unlock(&jen->mux);
+		printf ("%s: Can't add/find program in list \n", __func__);
+		return -ENOENT;
 	}
 
-	// parse it as a section_ext
-	result = section_ext_decode(section, 0);
+	// update PMT for program if changed version or current_next_indicator
+	if (program->i_version != pmt->head.version_number ||
+			program->b_current_next != pmt->head.current_next_indicator) {
+		if (program->pmt)
+			free(program->pmt);
 
-exit:
-	if (demux_fd != -1)
-		close(demux_fd);
-	return result;
-#endif
+		// save this PMT for later actual CAM processing
+		program->pmt = calloc(1, len + 3);
+		if (!program->pmt) {
+			pthread_mutex_unlock(&jen->mux);
+			return -ENOMEM;
+		}
+		memcpy(program->pmt, _pmt, len + 3);
+		program->pmt_len = len + 3;
+		jdebug("CAM: new CA PMT for program=%d \n", program->number);
+
+		program->i_version = pmt->head.version_number;
+		program->b_current_next = pmt->head.current_next_indicator;
+
+		// update CA PMT inside CAM module
+		if (program->ci_status == CI_CAM_SENT) {
+			// prepare CA PMT
+			if ((size = en50221_ca_format_pmt(pmt,
+							capmt,
+							sizeof(capmt),
+							0,
+							CA_LIST_MANAGEMENT_UPDATE,
+							CA_PMT_CMD_ID_OK_DESCRAMBLING)) < 0) {
+				printf("Failed to format CA PMT object for program=%d\n", program->number);
+				pthread_mutex_unlock(&jen->mux);
+				return -EIO;
+			}
+
+			// send it into CAM
+			if (en50221_app_ca_pmt(jen->ca_resource,
+						jen->ca_session_number,
+						capmt, size)) {
+				printf("Failed to send CA PMT object into CAM for program=%d\n", program->number);
+				pthread_mutex_unlock(&jen->mux);
+				return -EIO;
+			}
+			printf("CA PMT object updated inside CAM for program=%d\n",
+					program->number);
+
+		}
+
+		// program not sent to the cam yet. sync it
+		if (program->ci_status == CI_INIT) {
+			joker_en50221_sync_cam(jen);
+		}
+	}
+
+	pthread_mutex_unlock(&jen->mux);
+
+	return 0;
+}
+
+/* clear descramble program list
+ * return 0 if success
+ */
+int joker_en50221_descramble_clear(struct joker_t * joker)
+{
+	struct program_t *program = NULL;
+	struct joker_en50221_t * jen = NULL;
+
+	if (!joker)
+		return -EINVAL;
+
+	if (!joker->joker_en50221_opaque)
+		if (joker_ci_en50221_init(joker))
+			return -EINVAL;
+
+	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
+
+	// safe update programs list
+	pthread_mutex_lock(&jen->mux);
+	if(!list_empty(&jen->programs_list)) {
+		list_for_each_entry(program, &jen->programs_list, list) {
+			program->ci_status = CI_NONE; // not intended to descramble
+		}
+	}
+	pthread_mutex_unlock(&jen->mux);
+
+	return 0;
 }

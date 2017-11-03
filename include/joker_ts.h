@@ -30,6 +30,12 @@ extern "C" {
 #define SERVICE_TYPE_RADIO	0x02
 #define SERVICE_TYPE_TLX	0x03
 
+enum ci_program_status {
+	CI_NONE, // do not descramble this program
+	CI_INIT, // program not sent to CAM yet
+	CI_CAM_SENT // program sent to CAM 
+};
+
 // Programs elementary streams (audio, video, etc)
 // "type" described in ISO/IEC 13818-1 : 2000 (E)
 // Table 2-29 – Stream type assignments 
@@ -50,6 +56,18 @@ struct program_t {
 	struct list_head list;
 	int has_video;
 	int has_audio;
+
+	struct joker_t * joker;
+
+	// CI stuff
+	int capmt_sent;
+	void *pmt; // "raw" PMT. actually this is struct mpeg_pmt_section *
+	int pmt_len;
+	enum ci_program_status ci_status;
+
+	// last used PMT stuff
+	uint8_t i_version;
+	int b_current_next;
 };
 
 struct list_head * get_programs(struct big_pool_t *pool);

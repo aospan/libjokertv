@@ -58,11 +58,12 @@ uint64_t getus() {
 }
 
 /* init pool */
-int pool_init(struct big_pool_t * pool)
+int pool_init(struct joker_t *joker, struct big_pool_t * pool)
 {
-	if (!pool)
+	if (!joker || !pool)
 		return -EINVAL;
 
+	pool->joker = joker;
 	pool->node_counter = 0;
 	pool->tail_size = 0;
 	pool->ts_list_size = 0;
@@ -364,7 +365,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 
 	// sanity check
 	if (pool->initialized != BIG_POOL_MAGIC)
-		pool_init(pool);
+		pool_init(joker, pool);
 
 	joker_clean_ts(joker); // clean FIFO from previous TS
 

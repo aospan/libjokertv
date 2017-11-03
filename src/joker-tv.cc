@@ -141,6 +141,7 @@ void show_help() {
 	printf("	-e		Enable 22 kHz tone (continuous). Default: disabled\n");
 	printf("	-c		Enable CAM module. Default: disabled\n");
 	printf("	-g		Enable TS traffic through CAM module. Default: disabled\n");
+	printf("	-q program	Descramble program number using CAM. Multiple programs supported. Example: -q 2 -q 3 -q 4\n");
 	printf("	-j		Enable CAM module verbose messages. Default: disabled\n");
 	printf("	-i port		TCP port for MMI (CAM) server. Default: 7777\n");
 	printf("	-k filename.ts	Send TS traffic to Joker TV. TS will return back (loop) Default: none\n");
@@ -194,7 +195,10 @@ int main (int argc, char **argv)
 	joker->ci_info_callback = &ci_info_callback_f;
 	joker->ci_caid_callback = &ci_caid_callback_f;
 
-	while ((c = getopt (argc, argv, "k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjg")) != -1)
+	// clear descramble program list
+	joker_en50221_descramble_clear(joker);
+
+	while ((c = getopt (argc, argv, "q:k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjg")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -244,6 +248,9 @@ int main (int argc, char **argv)
 				break;
 			case 'i':
 				ci_server_port = atoi(optarg);
+				break;
+			case 'q':
+				joker_en50221_descramble_add(joker, atoi(optarg));
 				break;
 			case 'l':
 				limit = 1024*1024*atoi(optarg);

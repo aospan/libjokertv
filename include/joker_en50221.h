@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include "joker_tv.h"
+#include "joker_ts.h"
 
 #ifndef _JOKER_EN50221
 #define _JOKER_EN50221	1
@@ -27,7 +28,29 @@ extern "C" {
  * return 0 if success
  * other return values indicates error
  */
-int joker_ci_en50221(struct joker_t * joker);
+int joker_ci_en50221_init(struct joker_t * joker);
+
+/* start EN50221
+ * return 0 if success
+ * other return values indicates error
+ */
+int joker_ci_en50221_init(struct joker_t * joker);
+
+/* add program to descramble list
+ * return 0 if success
+ */
+int joker_en50221_descramble_add(struct joker_t * joker, int program);
+
+/* clear descramble program list
+ * return 0 if success
+ */
+int joker_en50221_descramble_clear(struct joker_t * joker);
+
+/* update PMT for program
+ * call this if PMT changed
+ * return 0 if success
+ */
+int joker_en50221_pmt_update(struct program_t *_program, void* _pmt, int len);
 
 #ifdef __cplusplus
 }
