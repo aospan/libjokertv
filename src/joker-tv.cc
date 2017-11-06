@@ -272,6 +272,11 @@ int main (int argc, char **argv)
 				show_help();
 		}
 
+	// just show help message if nothing selected by user
+	if (delsys == JOKER_SYS_UNDEFINED && !tsgen &&
+			!joker->loop_ts_filename && !joker->ci_enable)
+		show_help();
+
 	out = fopen((char*)filename, "w+b");
 	if (!out){
 		printf("Can't open out file '%s' \n", filename);
@@ -294,7 +299,7 @@ int main (int argc, char **argv)
 		joker_ci(joker);
 
 		// no TS options specified. In this case we sleep forever and only CI will work
-		if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 && !joker->loop_ts_filename)
+		if (delsys == JOKER_SYS_UNDEFINED && !tsgen && !joker->loop_ts_filename)
 			while (1)
 				sleep(3600);
 	}
@@ -327,9 +332,6 @@ int main (int argc, char **argv)
 			return 0;
 		}
 	}
-
-	if (delsys == JOKER_SYS_UNDEFINED && tsgen !=1 && !joker->loop_ts_filename)
-		show_help();
 
 	if(tsgen) {
 		/* TS generator selected */
