@@ -318,7 +318,12 @@ int main (int argc, char **argv)
 			printf("Can't write fw to flash !\n");
 			return -1;
 		} else {
-			printf("FW successfully upgraded. Reconnect device please.\n");
+			printf("FW successfully upgraded. Rebooting device ...\n");
+			buf[0] = J_CMD_REBOOT;
+			if ((ret = joker_cmd(joker, buf, 1, NULL /* in_buf */, 0 /* in_len */))) {
+				printf("Can't reboot FPGA\n");
+				return ret;
+			}
 			return 0;
 		}
 	}
