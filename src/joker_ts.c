@@ -132,6 +132,7 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 	int audio = 0, video = 0;
 	struct dvbpsi_psi_section_s *current_section = NULL;
 	dvbpsi_pmt_es_t* p_es = p_pmt->p_first_es;
+	int ignore = 0;
 
 	jdebug(  "\n");
 	jdebug(  "New active PMT\n");
@@ -146,11 +147,17 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 	while(p_es)
 	{
 		// avoid duplicates
+		ignore = 0;
 		if(!list_empty(&program->es_list)) {
 			list_for_each_entry(es, &program->es_list, list) {
-				if (es->pid == p_es->i_pid) 
-					continue; // ignore, already in the list
+				if (es->pid == p_es->i_pid)
+					ignore = 1; // ignore, already in the list
 			}
+		}
+
+		if (ignore) {
+			p_es = p_es->p_next;
+			continue;
 		}
 
 		es = (struct program_es_t*)malloc(sizeof(*es));
