@@ -280,7 +280,8 @@ int main (int argc, char **argv)
 
 	// just show help message if nothing selected by user
 	if (delsys == JOKER_SYS_UNDEFINED && !tsgen &&
-			!joker->loop_ts_filename && !joker->ci_enable)
+			!joker->loop_ts_filename && !joker->ci_enable &&
+			!strlen((const char*)fwfilename))
 		show_help();
 
 	out = fopen((char*)filename, "w+b");
