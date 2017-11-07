@@ -210,8 +210,10 @@ static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 			}
 		}
 
-		if (ignore)
+		if (ignore) {
+			p_program = p_program->p_next;
 			continue;
+		}
 
 		program = (struct program_t*)malloc(sizeof(*program));
 		if (!program)
