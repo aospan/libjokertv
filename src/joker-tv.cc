@@ -145,6 +145,7 @@ void show_help() {
 	printf("	-j		Enable CAM module verbose messages. Default: disabled\n");
 	printf("	-i port		TCP port for MMI (CAM) server. Default: 7777\n");
 	printf("	-k filename.ts	Send TS traffic to Joker TV. TS will return back (loop) Default: none\n");
+	printf("	-r		Send QUERY CA PMT to CAM (check is descrambling possible). Default: disabled\n");
 	exit(0);
 }
 
@@ -175,6 +176,7 @@ int main (int argc, char **argv)
 	int voltage = 0, tone = 1;
 	int ci_server_port = 7777;
 	int len = 0;
+	int descramble_programs = 0;
 
 	/* disable output buffering
 	 * helps under Windows with stdout delays
@@ -198,7 +200,7 @@ int main (int argc, char **argv)
 	// clear descramble program list
 	joker_en50221_descramble_clear(joker);
 
-	while ((c = getopt (argc, argv, "q:k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjg")) != -1)
+	while ((c = getopt (argc, argv, "q:k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjgr")) != -1)
 		switch (c)
 		{
 			case 'd':
@@ -246,11 +248,15 @@ int main (int argc, char **argv)
 			case 'j':
 				joker->ci_verbose = 1;
 				break;
+			case 'r':
+				joker->cam_query_send = 1;
+				break;
 			case 'i':
 				ci_server_port = atoi(optarg);
 				break;
 			case 'q':
 				joker_en50221_descramble_add(joker, atoi(optarg));
+				descramble_programs = 1;
 				break;
 			case 'l':
 				limit = 1024*1024*atoi(optarg);
@@ -394,7 +400,7 @@ int main (int argc, char **argv)
 		start_ts_loop(joker);
 	}
 
-	if (decode_program) {
+	if (decode_program || descramble_programs) {
 		/* get TV programs list */
 		printf("Trying to get programs list ... \n");
 		programs = get_programs(&pool);

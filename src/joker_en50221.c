@@ -640,6 +640,8 @@ int test_lookup_callback(void *arg, uint8_t slot_id, uint32_t requested_resource
 		return -EINVAL;
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 
+	jdebug("%s: requested_resource_id=%d \n", __func__, requested_resource_id);
+
 	// decode the resource id
 	if (en50221_app_decode_public_resource_id(&resid, requested_resource_id)) {
 		jdebug("%02x:Public resource lookup callback %i %i %i\n", slot_id,
@@ -736,7 +738,7 @@ int test_rm_enq_callback(void *arg, uint8_t slot_id, uint16_t session_number)
 	jdebug("%02x:%s\n", slot_id, __func__);
 
 	if (en50221_app_rm_reply(jen->rm_resource, session_number, jen->resource_ids_count, resource_ids)) {
-		jdebug("%02x:Failed to send reply to ENQ\n", slot_id);
+		printf("%02x:Failed to send reply to ENQ\n", slot_id);
 	}
 
 	return 0;
@@ -760,7 +762,7 @@ int test_rm_reply_callback(void *arg, uint8_t slot_id, uint16_t session_number, 
 	}
 
 	if (en50221_app_rm_changed(jen->rm_resource, session_number)) {
-		jdebug("%02x:Failed to send REPLY\n", slot_id);
+		printf("%02x:Failed to send REPLY\n", slot_id);
 	}
 
 	return 0;
@@ -779,7 +781,7 @@ int test_rm_changed_callback(void *arg, uint8_t slot_id, uint16_t session_number
 	jdebug("%02x:%s\n", slot_id, __func__);
 
 	if (en50221_app_rm_enq(jen->rm_resource, session_number)) {
-		jdebug("%02x:Failed to send ENQ\n", slot_id);
+		printf("%02x:Failed to send ENQ\n", slot_id);
 	}
 
 	return 0;
@@ -798,10 +800,9 @@ int test_datetime_enquiry_callback(void *arg, uint8_t slot_id, uint16_t session_
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 
 	jdebug("%02x:%s\n", slot_id, __func__);
-	jdebug("  response_interval:%i\n", response_interval);
 
 	if (en50221_app_datetime_send(jen->datetime_resource, session_number, time(NULL), -1)) {
-		jdebug("%02x:Failed to send datetime\n", slot_id);
+		printf("%02x:Failed to send datetime\n", slot_id);
 	}
 
 	return 0;
@@ -883,7 +884,7 @@ int test_ca_info_callback(void *arg, uint8_t slot_id, uint16_t session_number, u
 	jen->ca_connected = 1;
 
 	// send CA PMT to CAM if we have some in queue
-	joker_en50221_sync_cam(jen);
+	joker_en50221_sync_cam(joker);
 	
 	pthread_mutex_unlock(&jen->mux);
 
@@ -899,6 +900,43 @@ int test_ca_pmt_reply_callback(void *arg, uint8_t slot_id, uint16_t session_numb
 	(void)reply_size;
 
 	jdebug("%02x:%s\n", slot_id, __func__);
+	jdebug("%s: CA_enable_flag=%d CA_enable=0x%x \n", __func__,
+			reply->CA_enable_flag, reply->CA_enable);
+
+	// from EN 50221:1997 standard:
+	// CA_enable value (hex)
+	// Descrambling possible 01
+	// Descrambling possible under conditions (purchase dialogue) 02
+	// Descrambling possible under conditions (technical dialogue) 03
+	// Descrambling not possible (because no entitlement) 71
+	// Descrambling not possible (for technical reasons) 73
+	// RFU other values 00-7F
+	switch (reply->CA_enable) {
+		case 0x01:
+			printf("%s: program=%d, Descrambling possible \n",
+					__func__, reply->program_number );
+			break;
+		case 0x02:
+			printf("%s: program=%d, Descrambling possible under conditions (purchase dialogue) \n",
+					__func__, reply->program_number );
+			break;
+		case 0x03:
+			printf("%s: program=%d, Descrambling possible under conditions (technical dialogue) \n",
+					__func__, reply->program_number );
+			break;
+		case 0x71:
+			printf("%s: program=%d, Descrambling not possible (because no entitlement) \n",
+					__func__, reply->program_number );
+			break;
+		case 0x73:
+			printf("%s: program=%d, Descrambling not possible (for technical reasons) \n",
+					__func__, reply->program_number );
+			break;
+		default:
+			printf("%s: program=%d, CA_enable=0x%x \n",
+					__func__, reply->program_number, reply->CA_enable);
+			break;
+	}
 
 	return 0;
 }
@@ -1232,7 +1270,7 @@ struct program_t * joker_en50221_program_add_or_find(struct joker_en50221_t * je
 /* send all CA PMT to CAM
  * must be called with "jen->mux" locked
  * return 0 if success */
-int joker_en50221_sync_cam(struct joker_en50221_t * jen)
+int joker_en50221_sync_cam(struct joker_t * joker)
 {
 	int ret = 0;
 	struct program_t *program = NULL, *list_program = NULL;
@@ -1240,10 +1278,14 @@ int joker_en50221_sync_cam(struct joker_en50221_t * jen)
 	int listmgmt = CA_LIST_MANAGEMENT_ONLY;
 	struct mpeg_pmt_section * pmt = NULL;
 	uint8_t capmt[4096];
+	uint8_t buf[4096];
 	int size = 0;
+	struct joker_en50221_t * jen = NULL;
 
-	if (!jen)
+	if (!joker->joker_en50221_opaque)
 		return -EINVAL;
+
+	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 
 	// CAM not ready yet. Do not sync now
 	if (!jen->ca_connected)
@@ -1260,6 +1302,7 @@ int joker_en50221_sync_cam(struct joker_en50221_t * jen)
 	printf("%s: %d program(s) will send to CAM \n", __func__, count);
 
 	// actual send CA PMT to CAM
+	i = 0;
 	if(!list_empty(&jen->programs_list) && count > 0) {
 		list_for_each_entry(list_program, &jen->programs_list, list) {
 			jdebug("%s: program %d found in list \n", __func__, list_program->number);
@@ -1305,6 +1348,51 @@ int joker_en50221_sync_cam(struct joker_en50221_t * jen)
 				i++;
 			}
 		}
+	}
+
+	// Query descrambling status for all programs
+	// this is just for information
+	// CAM should send CA_enable (see 'test_ca_pmt_reply_callback')
+	// we will send CA PMT for all programs anyway
+	if(!list_empty(&jen->programs_list) && count > 0 && joker->cam_query_send) {
+		list_for_each_entry(list_program, &jen->programs_list, list) {
+			jdebug("%s: program %d found in list \n", __func__, list_program->number);
+			if (list_program->ci_status && list_program->pmt) {
+				// parse PMT as a section
+				pmt = (struct mpeg_pmt_section *)list_program->pmt;
+				listmgmt = CA_LIST_MANAGEMENT_ONLY;
+				// prepare CA PMT
+				if ((size = en50221_ca_format_pmt(pmt,
+								capmt,
+								sizeof(capmt),
+								0,
+								listmgmt,
+								/* CA_PMT_CMD_ID_OK_MMI */ CA_PMT_CMD_ID_QUERY)) < 0) {
+					printf("Failed to format CA PMT object for program=%d\n", list_program->number);
+					continue;
+				}
+
+				// send it into CAM
+				if (en50221_app_ca_pmt(jen->ca_resource,
+							jen->ca_session_number,
+							capmt, size)) {
+					printf("Failed to send CA PMT object into CAM for program=%d\n", list_program->number);
+					continue;
+				}
+				printf("CA PMT QUERY object sent into CAM for program=%d listmgmt=%d size=%d table_id_ext=%d curnext=%d\n",
+						list_program->number, listmgmt, size, pmt->head.table_id_ext, pmt->head.current_next_indicator);
+			}
+		}
+	}
+
+	if (count > 0) {
+		printf ("Enabling TS traffic through CAM \n");
+		// enable/disable TS traffic through CAM
+		buf[0] = J_CMD_CI_TS;
+		buf[1] = joker->ci_ts_enable; // enable or disable
+		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+			return -EIO;
+		printf ("Enabled TS traffic through CAM\n");
 	}
 
 	return ret;
@@ -1371,7 +1459,8 @@ int joker_en50221_pmt_update(struct program_t *_program, void* _pmt, int len)
 		printf("CAM: can't parse PMT \n");
 		return -EINVAL;
 	}
-	jdebug("CAM: raw PMT parsed. version=%d curnext=%d\n", pmt->head.version_number, pmt->head.current_next_indicator);
+	jdebug("CAM:joker_en50221_pmt_update: raw PMT parsed. version=%d curnext=%d\n",
+			pmt->head.version_number, pmt->head.current_next_indicator);
 
 	pthread_mutex_lock(&jen->mux);
 
@@ -1430,7 +1519,7 @@ int joker_en50221_pmt_update(struct program_t *_program, void* _pmt, int len)
 
 		// program not sent to the cam yet. sync it
 		if (program->ci_status == CI_INIT) {
-			joker_en50221_sync_cam(jen);
+			joker_en50221_sync_cam(joker);
 		}
 	}
 

@@ -369,9 +369,9 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 
 	joker_clean_ts(joker); // clean FIFO from previous TS
 
-	// enable/disable TS traffic through CAM
+	// disable TS traffic through CAM
 	buf[0] = J_CMD_CI_TS;
-	buf[1] = joker->ci_ts_enable; // enable or disable
+	buf[1] = 0; // disable here. will be enabled later
 	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 		return ret;
 	

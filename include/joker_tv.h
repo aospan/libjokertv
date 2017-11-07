@@ -119,6 +119,7 @@ struct joker_t {
 	ci_callback_t ci_caid_callback;
 	int ci_verbose; /* non 0 for debugging CI */
 	int ci_enable; /* enable CAM module */
+	int cam_query_send; /* send QUERY CA PMT to check subscription */
 
 	/* CAM module (EN50221) TCP server */
 	int ci_server_port;
