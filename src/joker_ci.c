@@ -500,7 +500,7 @@ int joker_ci_wait_status(struct joker_t * joker, uint8_t waitfor, int timeout)
 		 */
 		ret = joker_ci_rw(joker, JOKER_CI_CTRL_READ | JOKER_CI_CTRL_IO, CTRLIF_STATUS, buf, 1);
 		if (ret < 0) {
-			printf("CAM:%s can't read status reg \n", __func__);
+			jdebug("CAM:%s can't read status reg \n", __func__);
 			return -EIO;
 		}
 
