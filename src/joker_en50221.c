@@ -381,7 +381,7 @@ int joker_en50221_mmi_enter(struct joker_t * joker, mmi_callback_t cb)
 	return 0;
 }
 
-int joker_en50221_mmi_call(struct joker_t * joker, unsigned char *buf, int len)
+int joker_en50221_mmi_call(struct joker_t * joker, const unsigned char *buf, int len)
 {
 	int choice = atoi(buf);
 	struct joker_en50221_t * jen = NULL;

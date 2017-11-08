@@ -61,7 +61,7 @@ int joker_en50221_mmi_enter(struct joker_t * joker, mmi_callback_t cb);
 
 /* send user choice to CAM module
  * return 0 if success */
-int joker_en50221_mmi_call(struct joker_t * joker, unsigned char *buf, int len);
+int joker_en50221_mmi_call(struct joker_t * joker, const unsigned char *buf, int len);
 
 #ifdef __cplusplus
 }
