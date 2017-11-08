@@ -334,7 +334,7 @@ int get_charset_name(uint8_t codepage, char * charset)
 }
 
 // convert name to utf-8
-int to_utf(char * buf, size_t insize, int maxlen, char *charset)
+int to_utf(char * buf, size_t insize, char * _outbuf, int maxlen, char *charset)
 {
 	iconv_t cd;
 	char outbuf[maxlen];
@@ -362,9 +362,31 @@ int to_utf(char * buf, size_t insize, int maxlen, char *charset)
 	jdebug("iconv: charset=%s insize=%zd avail=%zd nconv=%zd \n",
 			charset, insize, avail, nconv );
 	// copy result 
-	memset(buf, 0, maxlen);
-	memcpy(buf, outbuf, maxlen - avail);
+	memset(_outbuf, 0, maxlen);
+	memcpy(_outbuf, outbuf, maxlen - avail);
 	iconv_close (cd);
+}
+
+/* convert name to utf-8
+ * first byte can be used as codepage */
+int dvb_to_utf(char * buf, size_t insize, char * _outbuf, int maxlen)
+{
+	unsigned char charset[SERVICE_NAME_LEN];
+	unsigned char *final_inbuf = buf;
+
+	memset(&charset[0], 0, SERVICE_NAME_LEN);
+
+	if(buf[0] > 0 && buf[0] < 0x20) {
+		if (get_charset_name(buf[0], charset))
+			return -ENOENT;
+
+		final_inbuf = buf + 1; // skip first byte
+	} else {
+		// default latin
+		strncpy(charset, "ISO6937", SERVICE_NAME_LEN);
+	}
+
+	return to_utf(final_inbuf, insize, _outbuf, maxlen, charset);
 }
 
 static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_descriptor)
@@ -420,7 +442,7 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 
 			// convert name to utf-8
 			if (!get_charset_name(codepage, &charset[0]))
-				to_utf(program->name, off, SERVICE_NAME_LEN, charset);
+				to_utf(program->name, off, program->name, SERVICE_NAME_LEN, charset);
 		}
 		p_descriptor = p_descriptor->p_next;
 	}
@@ -528,7 +550,7 @@ static void DumpAtscVCTChannels(dvbpsi_atsc_vct_channel_t *p_vct_channels, struc
 					// Unicode character
 					// data. 
 					memcpy(program->name, p_channel->i_short_name, 14);
-					to_utf(program->name, 14, SERVICE_NAME_LEN, "UTF-16BE");
+					to_utf(program->name, 14, program->name, SERVICE_NAME_LEN, "UTF-16BE");
 
 					// call service name callback with new name
 					if (pool->service_name_callback)

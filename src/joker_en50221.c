@@ -1099,27 +1099,34 @@ int test_mmi_menu_callback(void *arg, uint8_t slot_id, uint16_t session_number,
 	struct joker_en50221_t * jen = NULL;
 	int len = 0, total = 0;
 	unsigned char * buf = NULL;
+	unsigned char utf_buf[MAX_EN50221_BUF];
+	unsigned char charset[MAX_EN50221_BUF];
 
 	if (!joker || !joker->joker_en50221_opaque)
 		return -EINVAL;
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 
-	jdebug("%02x:%s\n", slot_id, __func__);
+	printf("%02x:%s\n", slot_id, __func__);
 	buf = malloc(MAX_EN50221_BUF);
 	if (!buf)
 		return -ENOMEM;
 	memset(buf, 0, MAX_EN50221_BUF);
 
 	total = sprintf(buf, "\n");
-	total += sprintf(buf + total, "  %.*s\n", title->text_length, title->text);
-	total += sprintf(buf + total, "  %.*s\n", sub_title->text_length, sub_title->text);
-	total += sprintf(buf + total, "  %.*s\n", bottom->text_length, bottom->text);
+
+	dvb_to_utf(title->text, title->text_length, utf_buf, MAX_EN50221_BUF);
+	total += sprintf(buf + total, "  %s\n", utf_buf);
+	dvb_to_utf(sub_title->text, sub_title->text_length, utf_buf, MAX_EN50221_BUF);
+	total += sprintf(buf + total, "  %s\n", utf_buf);
+	dvb_to_utf(bottom->text, bottom->text_length, utf_buf, MAX_EN50221_BUF);
+	total += sprintf(buf + total, "  %s\n", utf_buf);
 
 	uint32_t i;
 	for(i=0; i< item_count; i++) {
-		total += sprintf(buf + total, "    %i: %.*s\n", i+1, items[i].text_length, items[i].text);
+		dvb_to_utf(items[i].text, items[i].text_length, utf_buf, MAX_EN50221_BUF);
+		total += sprintf(buf + total, "    %i: %s\n", i+1, utf_buf);
 	}
-	jdebug("  raw_length: %i\n", item_raw_length);
+	jdebug("%s:  raw_length: %i\n", __func__, item_raw_length);
 
 	if (jen->cb)
 		jen->cb(joker, buf, total);
