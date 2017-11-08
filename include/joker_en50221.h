@@ -52,6 +52,17 @@ int joker_en50221_descramble_clear(struct joker_t * joker);
  */
 int joker_en50221_pmt_update(struct program_t *_program, void* _pmt, int len);
 
+/* init MMI menu 
+ * call this before any joker_en50221_mmi_call
+ * cb will be called when CAM module send reply
+ * return 0 if success
+ */
+int joker_en50221_mmi_enter(struct joker_t * joker, mmi_callback_t cb);
+
+/* send user choice to CAM module
+ * return 0 if success */
+int joker_en50221_mmi_call(struct joker_t * joker, unsigned char *buf, int len);
+
 #ifdef __cplusplus
 }
 #endif
