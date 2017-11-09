@@ -94,6 +94,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_en50221.c
 	src/joker_en50221_server.c
 	3party/libucsi/mpeg/pmt_section.c
+	3party/libucsi/crc32.c
 	src/joker_ts.c)
 
 set(KOPTIONS "-include ${CMAKE_SOURCE_DIR}/linux/include/linux/types.h")
