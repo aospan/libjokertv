@@ -871,11 +871,8 @@ int test_ca_info_callback(void *arg, uint8_t slot_id, uint16_t session_number, u
 	pool = joker->pool;
 
 	jdebug("%02x:%s\n", slot_id, __func__);
-	for(i=0; i< ca_id_count; i++) {
-		jdebug("  Supported CA ID[%d]: %04x\n", i, ca_ids[i]);
-		ci->ca_ids[i] = ca_ids[i];
-	}
-	ci->ca_ids[i] = 0; /* end of list */
+	memcpy(ci->ca_ids, ca_ids, ca_id_count * sizeof(uint16_t));
+	ci->ca_ids[ca_id_count + 1] = 0; /* end of list */
 
 	if(joker->ci_caid_callback)
 		joker->ci_caid_callback(joker);
