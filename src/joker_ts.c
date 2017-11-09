@@ -192,6 +192,8 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 	// send "raw" PMT to en50221 layer for processing
 	joker_en50221_pmt_update(program,
 			current_section->p_data, current_section->i_length);
+
+	dvbpsi_pmt_delete(p_pmt);
 }
 
 static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
