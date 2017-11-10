@@ -383,6 +383,7 @@ int dvb_to_utf(char * buf, size_t insize, char * _outbuf, int maxlen)
 			return -ENOENT;
 
 		final_inbuf = buf + 1; // skip first byte
+		insize = insize - 1;
 	} else {
 		// default latin
 		strncpy(charset, "ISO6937", SERVICE_NAME_LEN);
