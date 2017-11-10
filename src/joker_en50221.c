@@ -1103,7 +1103,7 @@ int test_mmi_menu_callback(void *arg, uint8_t slot_id, uint16_t session_number,
 		return -EINVAL;
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 
-	printf("%02x:%s\n", slot_id, __func__);
+	jdebug("%02x:%s\n", slot_id, __func__);
 	buf = malloc(MAX_EN50221_BUF);
 	if (!buf)
 		return -ENOMEM;
