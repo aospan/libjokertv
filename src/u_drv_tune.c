@@ -360,13 +360,39 @@ int _read_signal_stat(struct joker_t *joker, struct stat_t *stat)
 	if (!fe)
 		return -EINVAL;
 
-	// cleanup previous readings
-	prop->strength.stat[0].uvalue = 0;
-	prop->cnr.stat[0].svalue = 0;
-	prop->block_error.stat[0].uvalue = 0;
+	// special case for LGDT3306A to read SNR, etc
+	if (prop->delivery_system == JOKER_SYS_ATSC || 
+			prop->delivery_system == JOKER_SYS_DVBC_ANNEX_B)
+	{
+		u16 snr = 0;
+		fe->ops.read_snr(fe, &snr);
+		stat->snr = 100 * snr;
 
-	// read all stats from frontend
-	fe->ops.get_frontend(fe, prop);
+		u32 ber = 0;
+		fe->ops.read_ber(fe, &ber);
+		stat->bit_error = ber;
+		stat->bit_count = 1;
+
+		u32 ucblocks = 0;
+		fe->ops.read_ucblocks(fe, &ucblocks);
+		stat->ucblocks = ucblocks;
+	} else {
+		// cleanup previous readings
+		prop->strength.stat[0].uvalue = 0;
+		prop->cnr.stat[0].svalue = 0;
+		prop->block_error.stat[0].uvalue = 0;
+
+		// read all stats from frontend
+		fe->ops.get_frontend(fe, prop);
+
+		/* transfer values to stat_t */
+		stat->rf_level = (int32_t)prop->strength.stat[0].uvalue;
+		stat->snr = (int32_t)prop->cnr.stat[0].svalue;
+		stat->ucblocks = prop->block_error.stat[0].uvalue;
+		stat->bit_error = prop->post_bit_error.stat[0].uvalue;
+		stat->bit_count = prop->post_bit_count.stat[0].uvalue;
+	}
+
 
 	// if we have special method to read RSSI from tuner
 	// overwrite values obtained from demod then
@@ -375,14 +401,8 @@ int _read_signal_stat(struct joker_t *joker, struct stat_t *stat)
 		fe->ops.tuner_ops.get_rssi(fe, &rssi);
 		joker_i2c_gate_ctrl(fe, 0);
 		prop->strength.stat[0].uvalue = rssi;
+		stat->rf_level = (int32_t)prop->strength.stat[0].uvalue;
 	}
-
-	/* transfer values to stat_t */
-	stat->rf_level = (int32_t)prop->strength.stat[0].uvalue;
-	stat->snr = (int32_t)prop->cnr.stat[0].svalue;
-	stat->ucblocks = prop->block_error.stat[0].uvalue;
-	stat->bit_error = prop->post_bit_error.stat[0].uvalue;
-	stat->bit_count = prop->post_bit_count.stat[0].uvalue;
 
 	/* make signal quality decision using RF Level
 	 * this is very 'shallow' estimations
