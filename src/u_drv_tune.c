@@ -686,7 +686,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	joker_i2c_gate_ctrl(fe, 0);
 
 	// now wakeup service thread
-	printf("Wakeup service thread \n");
+	jdebug("Wakeup service thread \n");
 	pthread_mutex_lock(&joker->service_threading->mux);
 	joker->stat.refresh_enable = 1;
 	pthread_cond_signal(&joker->service_threading->cond);

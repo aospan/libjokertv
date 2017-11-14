@@ -90,6 +90,12 @@ struct stat_t {
 
 	/* LNB status */
 	int lnb_err;
+
+	/* Average values */
+	int64_t avg_rf_level;
+	int64_t avg_ucblocks;
+	int64_t avg_snr;
+	int64_t avg_count;
 };
 
 /* main pointer to Joker TV */
@@ -136,6 +142,13 @@ struct joker_t {
 	 */
 	unsigned char *loop_ts_filename;
 	struct loop_thread_opaq_t *loop_threading;
+
+	/* XML file with lock instructions */
+	char *xml_in_filename;
+
+	/* XML file with lock results (RF Level, BER, etc) */
+	char *csv_out_filename;
+	FILE *csv_out_filename_fd;
 };
 
 #ifdef __cplusplus

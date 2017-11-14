@@ -17,6 +17,7 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 find_package( Threads REQUIRED)
 find_package( PkgConfig )
+find_package( LibXml2 )
 
 add_subdirectory("3party/libdvben50221/")
 
@@ -95,6 +96,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_en50221_server.c
 	3party/libucsi/mpeg/pmt_section.c
 	3party/libucsi/crc32.c
+	src/joker_xml.c
 	src/joker_ts.c)
 
 set(KOPTIONS "-include ${CMAKE_SOURCE_DIR}/linux/include/linux/types.h")
@@ -107,9 +109,20 @@ set(KINCLUDE_DIRS
 	${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/)
 
 set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
-set(INCLUDE_USER ${INCLUDE_PLATFORM} $<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}> 3party)
+set(INCLUDE_USER
+	${INCLUDE_PLATFORM}
+	${LIBXML2_INCLUDE_DIR}
+	$<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}>
+	3party)
 set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
-	${PC_LIBDVBPSI_LIBRARIES} ${LIBIOKit} ${LIBCoreFoundation} ${LIBobjc} ${LIBUDEV} ${LIBICONV} ${LIBWS2})
+	${PC_LIBDVBPSI_LIBRARIES}
+	${LIBXML2_LIBRARIES}
+	${LIBIOKit}
+	${LIBCoreFoundation}
+	${LIBobjc}
+	${LIBUDEV}
+	${LIBICONV}
+	${LIBWS2})
 
 #install header files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include

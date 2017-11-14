@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <libusb.h>
+#include <getopt.h>
 
 #include <queue>
 #include "joker_tv.h"
@@ -31,6 +32,7 @@
 #include "joker_en50221.h"
 #include "joker_spi.h"
 #include "joker_ts.h"
+#include "joker_xml.h"
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 
@@ -50,7 +52,6 @@ void status_callback_f(void *data)
 			stat->ucblocks, (double)stat->rf_level/1000, (double)stat->snr/1000,
 			(double)stat->bit_error/stat->bit_count,
 			stat->signal_quality);
-	fflush(stdout);
 
 	// less heavy refresh if status locked
 	if (stat->status == JOKER_LOCK)
@@ -146,8 +147,16 @@ void show_help() {
 	printf("	-i port		TCP port for MMI (CAM) server. Default: 7777\n");
 	printf("	-k filename.ts	Send TS traffic to Joker TV. TS will return back (loop) Default: none\n");
 	printf("	-r		Send QUERY CA PMT to CAM (check is descrambling possible). Default: disabled\n");
+	printf("	--in in.xml	XML file with lock instructions. Example: --in ./docs/atsc_north_america_freq.xml \n");
+	printf("	--out out.csv	output CSV file with lock results (BER, etc). Example: --out ant1-result.csv \n");
 	exit(0);
 }
+
+static struct option long_options[] = {
+	{"in",  required_argument, 0, 0},
+	{"out",  required_argument, 0, 0},
+	{ 0, 0, 0, 0}
+};
 
 int main (int argc, char **argv)
 {
@@ -163,6 +172,7 @@ int main (int argc, char **argv)
 	FILE * out = NULL;
 	char filename[FNAME_LEN] = "out.ts";
 	char fwfilename[FNAME_LEN] = "";
+	char infilename[FNAME_LEN] = "";
 	char confirm[FNAME_LEN];
 	int signal = 0;
 	int disable_data = 0;
@@ -177,6 +187,7 @@ int main (int argc, char **argv)
 	int ci_server_port = 7777;
 	int len = 0;
 	int descramble_programs = 0;
+	int option_index = 0;
 
 	/* disable output buffering
 	 * helps under Windows with stdout delays
@@ -200,9 +211,25 @@ int main (int argc, char **argv)
 	// clear descramble program list
 	joker_en50221_descramble_clear(joker);
 
-	while ((c = getopt (argc, argv, "q:k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjgr")) != -1)
+	while (1) {
+		c = getopt_long (argc, argv, "q:k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjgr", long_options, &option_index);
+		if (c == -1)
+			break;
+
 		switch (c)
 		{
+			case 0:
+				if (!strcasecmp(long_options[option_index].name, "in")) {
+					len = strlen(optarg);
+					joker->xml_in_filename = (char*)calloc(1, len + 1);
+					strncpy(joker->xml_in_filename, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "out")) {
+					len = strlen(optarg);
+					joker->csv_out_filename = (char*)calloc(1, len + 1);
+					strncpy(joker->csv_out_filename, optarg, len);
+				}
+				break;
 			case 'd':
 				delsys = atoi(optarg);
 				break;
@@ -266,8 +293,7 @@ int main (int argc, char **argv)
 				break;
 			case 'k':
 				len = strlen(optarg);
-				joker->loop_ts_filename = (unsigned char*)malloc(len + 1);
-				memset(joker->loop_ts_filename, 0, len + 1);
+				joker->loop_ts_filename = (unsigned char*)calloc(1, len + 1);
 				strncpy((char*)joker->loop_ts_filename, optarg, len);
 				break;
 			case 'w':
@@ -277,11 +303,13 @@ int main (int argc, char **argv)
 			default:
 				show_help();
 		}
+	}
 
 	// just show help message if nothing selected by user
 	if (delsys == JOKER_SYS_UNDEFINED && !tsgen &&
 			!joker->loop_ts_filename && !joker->ci_enable &&
-			!strlen((const char*)fwfilename))
+			!strlen((const char*)fwfilename) &&
+			!joker->xml_in_filename)
 		show_help();
 
 	out = fopen((char*)filename, "w+b");
@@ -356,6 +384,9 @@ int main (int argc, char **argv)
 			printf("Can't set TS source (USB bulk) \n");
 			return ret;
 		}
+	} else if (joker->xml_in_filename) {
+		// XML in file with lock instructions (list of frequencies, etc)
+		return joker_process_xml(joker);
 	} else {
 		/* real demod selected
 		 * tuning ...
