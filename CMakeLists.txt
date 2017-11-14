@@ -37,6 +37,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 	set(EN50221LIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a -Wl,--no-whole-archive)
 	set(INCLUDE_PLATFORM "include/win")
+	set(EXT_LIBS ${PC_LIBXML_STATIC_LIBRARIES})
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 	set(EN50221LIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a -Wl,--no-whole-archive)
@@ -114,7 +115,7 @@ set(INCLUDE_USER
 	${LIBXML2_INCLUDE_DIR}
 	$<BUILD_INTERFACE:include ${PC_LIBDVBPSI_INCLUDE_DIR}>
 	3party)
-set(EXT_LIBS ${CMAKE_THREAD_LIBS_INIT}
+set(EXT_LIBS ${EXT_LIBS} ${CMAKE_THREAD_LIBS_INIT}
 	${PC_LIBDVBPSI_LIBRARIES}
 	${LIBXML2_LIBRARIES}
 	${LIBIOKit}
