@@ -147,6 +147,10 @@ int joker_close(struct joker_t * joker) {
 	if (!joker)
 		return EINVAL;
 
+	// stop CI EN50221 stack
+	joker_ci_close(joker);
+	printf("%s: CI stack stopped \n", __func__);
+
 	stop_service_thread(joker);
 	printf("%s: service thread stopped \n", __func__);
 

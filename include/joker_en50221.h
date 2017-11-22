@@ -24,13 +24,19 @@ extern "C" {
 
 #define MAX_EN50221_BUF 4096
 
-/* initialize EN50221
+/* stop EN50221
  * return 0 if success
  * other return values indicates error
  */
-int joker_ci_en50221_init(struct joker_t * joker);
+int joker_ci_en50221_stop(struct joker_t * joker);
 
 /* start EN50221
+ * return 0 if success
+ * other return values indicates error
+ */
+int joker_ci_en50221_start(struct joker_t * joker);
+
+/* initialize EN50221
  * return 0 if success
  * other return values indicates error
  */

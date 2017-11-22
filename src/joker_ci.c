@@ -757,6 +757,9 @@ int joker_ci(struct joker_t * joker)
 
 int joker_ci_close(struct joker_t * joker)
 {
+	// stop en50221 stuff
+	joker_ci_en50221_stop(joker);
+
 	if (joker->joker_ci_opaque) {
 		free(joker->joker_ci_opaque);
 		joker->joker_ci_opaque = NULL;

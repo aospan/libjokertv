@@ -185,6 +185,7 @@ struct joker_en50221_t {
 	int mmi_entered;
 	mmi_callback_t cb;
 
+	pthread_t stackthread;
 	// protect access to CAM from another threads
 	pthread_mutex_t mux;
 	struct list_head programs_list;
@@ -237,6 +238,25 @@ int joker_ci_en50221_init(struct joker_t * joker)
 	return 0;
 }
 
+/* stop EN50221
+ * return 0 if success
+ * other return values indicates error
+ */
+int joker_ci_en50221_stop(struct joker_t * joker)
+{
+	struct joker_en50221_t * jen = NULL;
+
+	if (!joker || !joker->joker_en50221_opaque)
+		return -EINVAL;
+	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
+
+	jen->shutdown_stackthread = 1;
+
+	pthread_join(jen->stackthread, NULL);
+
+	return 0;
+}
+
 /* start EN50221
  * return 0 if success
  * other return values indicates error
@@ -248,7 +268,6 @@ int joker_ci_en50221_start(struct joker_t * joker)
 	struct en50221_session_layer *sl = NULL;
 	struct en50221_app_send_functions *sendfuncs = NULL;
 	char tmp[256];
-	pthread_t stackthread;
 
 	jdebug("EN50221:%s called \n", __func__);
 	if (!joker || !joker->joker_en50221_opaque)
@@ -349,7 +368,7 @@ int joker_ci_en50221_start(struct joker_t * joker)
 
 	// start another thread running the stack
 	jen->tl = tl;
-	pthread_create(&stackthread, NULL, ci_poll_func, joker);
+	pthread_create(&jen->stackthread, NULL, ci_poll_func, joker);
 
 	// register callbacks
 	en50221_sl_register_lookup_callback(sl, test_lookup_callback, joker);
