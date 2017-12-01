@@ -32,7 +32,7 @@ struct ci_thread_opaq_t
 	pthread_t ci_thread;
 	pthread_cond_t cond;
 	pthread_mutex_t mux;
-	int cancel;
+	int shutdown_thread;
 };
 
 int joker_ci_read(struct joker_t * joker, int offset, int area)
@@ -650,7 +650,7 @@ void* joker_ci_worker(void * data)
 	ci->ci_verbose = joker->ci_verbose;
 	joker->joker_ci_opaque = ci;
 
-	while(try--) {
+	while(try-- && !joker->ci_threading->shutdown_thread) {
 		/* power cycle for CAM */
 		joker_reset(joker, OC_I2C_RESET_TPS_CI);
 		msleep(10);
@@ -658,7 +658,7 @@ void* joker_ci_worker(void * data)
 
 		// wait until cam status changed 
 		ci_timeout = 70; /* 7 sec timeout for CAM reset */
-		while(ci_timeout--) {
+		while(ci_timeout-- && !joker->ci_threading->shutdown_thread) {
 			buf[0] = J_CMD_CI_STATUS;
 			if ((ret = joker_cmd(joker, buf, 1, in_buf, 2 /* in_len */)))
 				goto fail_out;
@@ -759,6 +759,10 @@ int joker_ci_close(struct joker_t * joker)
 {
 	// stop en50221 stuff
 	joker_ci_en50221_stop(joker);
+
+	joker->ci_threading->shutdown_thread = 1;
+	pthread_join(joker->ci_threading->ci_thread, NULL);
+	printf("CI thread done \n");
 
 	if (joker->joker_ci_opaque) {
 		free(joker->joker_ci_opaque);
