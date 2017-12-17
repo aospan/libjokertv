@@ -21,6 +21,8 @@
  * https://tv.jokersys.com
  */
 
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -504,7 +506,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	struct vb2_dvb_frontend *fes[2];
 	enum fe_status status;
 	int fe_count = 2;
-	int i = 0, num = 0;
+	int i = 0, num = 0, lo_freq;
 	struct netup_unidvb_dev *ndev = NULL;
 	unsigned int delay = 0;
 	int ret = 0;
@@ -673,12 +675,16 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 		/* use LNB settings to calculate correct frequency */
 		if (info->lnb.switchfreq) {
-			if (info->frequency > info->lnb.switchfreq*1000*1000)
-				fe->dtv_property_cache.frequency = info->frequency - info->lnb.highfreq*1000*1000;
+			if (info->frequency / 1000 > info->lnb.switchfreq * 1000)
+				lo_freq = info->lnb.highfreq * 1000;
 			else
-				fe->dtv_property_cache.frequency = info->frequency - info->lnb.lowfreq*1000*1000;
+				lo_freq = info->lnb.lowfreq * 1000;
+		} else {
+			lo_freq = info->lnb.lowfreq * 1000;
 		}
-		printf("final freq %d \n", fe->dtv_property_cache.frequency);
+		fe->dtv_property_cache.frequency = abs(info->frequency / 1000 - lo_freq) * 1000;
+		printf("Channel freq %.2f MHz, LO %.2f MHz, L-Band freq %.2f MHz\n",
+		       info->frequency / 1000000., lo_freq / 1000., fe->dtv_property_cache.frequency / 1000000.);
 	}
 
 	/* actual tune call */

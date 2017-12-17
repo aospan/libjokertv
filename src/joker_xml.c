@@ -96,6 +96,10 @@ static void do_elements(struct joker_t * joker, xmlNode * a_node)
 				info.delivery_system = (enum joker_fe_delivery_system)delivery_system;
 				info.bandwidth_hz = bandwidth;
 				info.frequency = frequency_mhz * 1000000;
+
+				if (info.delivery_system == JOKER_SYS_ISDBT)
+					info.frequency += 142857;
+
 				info.modulation = (enum joker_fe_modulation)modulation;
 
 				// clear avg values before
