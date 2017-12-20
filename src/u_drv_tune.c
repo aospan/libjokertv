@@ -673,10 +673,13 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 
 		/* use LNB settings to calculate correct frequency */
 		if (info->lnb.switchfreq) {
-			if (info->frequency / 1000 > info->lnb.switchfreq * 1000)
+			if (info->frequency / 1000 > info->lnb.switchfreq * 1000) {
 				lo_freq = info->lnb.highfreq * 1000;
-			else
+				// switch to high band enabling 22kHz tone
+				fe->ops.set_tone(fe, JOKER_SEC_TONE_ON);
+			} else {
 				lo_freq = info->lnb.lowfreq * 1000;
+			}
 		} else {
 			lo_freq = info->lnb.lowfreq * 1000;
 		}
