@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8.12)
 project (joker_tv)
 set (joker_tv_VERSION_MAJOR 1)
 set (joker_tv_VERSION_MINOR 6)
-set (joker_tv_VERSION_PATCH 2)
+set (joker_tv_VERSION_PATCH 3)
 set (joker_tv_VERSION
 	${joker_tv_VERSION_MAJOR}.${joker_tv_VERSION_MINOR}.${joker_tv_VERSION_PATCH})
 
@@ -38,6 +38,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(EN50221LIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a -Wl,--no-whole-archive)
 	set(INCLUDE_PLATFORM "include/win")
 	set(EXT_LIBS ${PC_LIBXML_STATIC_LIBRARIES})
+	set(CFLAGS_USER "${CFLAGS_USER} -DIN_LIBXML")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(LINUXLIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/libjokertv_linux.a -Wl,--no-whole-archive)
 	set(EN50221LIB -Wl,--whole-archive ${CMAKE_CURRENT_BINARY_DIR}/3party/libdvben50221/libdvben50221.a -Wl,--no-whole-archive)
@@ -109,7 +110,7 @@ set(KINCLUDE_DIRS
 	${CMAKE_SOURCE_DIR}/linux/include/uapi/linux/dvb/
 	${CMAKE_SOURCE_DIR}/linux/drivers/media/dvb-core/)
 
-set(CFLAGS_USER "${PC_LIBUSB_CFLAGS}")
+set(CFLAGS_USER "${CFLAGS_USER} ${PC_LIBUSB_CFLAGS}")
 set(INCLUDE_USER
 	${INCLUDE_PLATFORM}
 	${LIBXML2_INCLUDE_DIR}
