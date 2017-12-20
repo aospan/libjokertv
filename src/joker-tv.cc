@@ -126,7 +126,8 @@ void show_help() {
 			JOKER_SYS_ATSC, JOKER_SYS_DVBS, JOKER_SYS_DVBS2, JOKER_SYS_DVBC_ANNEX_A,
 			JOKER_SYS_DVBT, JOKER_SYS_DVBT2, JOKER_SYS_ISDBT, JOKER_SYS_DTMB, JOKER_SYS_DVBC_ANNEX_B);
 	printf("	-m modulation	Modulation. Options: \n \
-			%d-VSB8 (for ATSC) %d-QPSK %d-QAM64 %d-QAM256\n", JOKER_VSB_8, JOKER_QPSK, JOKER_QAM_64, JOKER_QAM_256);
+			%d-VSB8 (for ATSC) %d-QPSK %d-8PSK %d-QAM64 %d-QAM256\n",
+			JOKER_VSB_8, JOKER_QPSK, JOKER_PSK_8, JOKER_QAM_64, JOKER_QAM_256);
 	printf("	-f freq		Frequency in Hz. Example: 1402000000\n");
 	printf("	-s symbol_rate	Symbol rate. Options: 0-AUTO. Example: 20000000\n");
 	printf("	-y voltage	LNB voltage. Options: 13-Vert/Right, 18-Horiz/Left, 0-OFF. Example: -y 18\n");
