@@ -640,7 +640,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	int pid = 0;
 	struct program_t *program = NULL;
 	struct program_es_t *es = NULL;
-	int notready = 0, cnt = 1000;
+	int notready = 0, cnt = 20;
 
 	// Attach PAT
 	pool->pat_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
@@ -668,11 +668,11 @@ struct list_head * get_programs(struct big_pool_t *pool)
 
 	// check program list (PAT parse)
 	while (cnt-- > 0 && list_empty(&pool->programs_list))
-		usleep(1000);
+		usleep(50000);
 
 	// check ES streams (PMT parse)
 	jdebug("is PMT done ? \n");
-	cnt = 1000;
+	cnt = 20;
 	while (cnt-- > 0 ) {	
 		// we are ready when all programs PMT parsed
 		notready = 0;
@@ -684,7 +684,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 		if (!notready)
 			break;
 			
-		usleep(1000);
+		usleep(50000);
 	}
 	printf("All PAT/PMT parse done. Program list is ready now.\n");
 
