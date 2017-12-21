@@ -327,8 +327,8 @@ int get_charset_name(uint8_t codepage, char * charset)
 			strncpy(charset, "GB2312", SERVICE_NAME_LEN); break;
 		case 0x00:
 		default:
-			// default codepage  ISO/IEC 6937
-			strncpy(charset, "ISO6937", SERVICE_NAME_LEN);
+			// default codepage  ISO8859-1
+			strncpy(charset, "ISO8859-1", SERVICE_NAME_LEN);
 			break;
 	}
 
@@ -430,7 +430,14 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 			// non-displayed data which specifies the
 			// alternative character table to be used for the
 			// remainder of the text item.
-			codepage = p_descriptor->p_data[service_provider_name_length + 3];
+			// If the first byte of the text field has a value in the range "0x20" to "0xFF"
+			// then this and all subsequent bytes in the text
+			// item are coded using the default character coding table (table 00 - Latin alphabet) of figure A.1. 
+			if (service_name_ptr[0] >= 0x20 && service_name_ptr[0] <= 0xFF)
+				codepage = 0x0; // ISO8859-1
+			else
+				codepage = service_name_ptr[0];
+
 			jdebug("provider_len=%d service_name_length=%d service_name_ptr=%d codepage=0x%x\n",
 					service_provider_name_length, service_name_length, service_provider_name_length + 3, codepage);
 			for (i = isprint(service_name_ptr[0])?0:1; i < service_name_length; i++) {
