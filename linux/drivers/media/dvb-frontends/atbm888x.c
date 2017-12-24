@@ -224,8 +224,6 @@ static int set_if_freq(struct atbm_state *priv, u32 freq /*in kHz*/)
 		do_div(t, 1000);
 		val = t;
 
-		printk("val=0x%x \n", val);
-
 		// atbm888x_write_reg(priv, REG_TUNER_BASEBAND, 1);
 		atbm888x_write_reg(priv, REG_IF_FREQ, val);
 		atbm888x_write_reg(priv, REG_IF_FREQ+1, val >> 8);
@@ -550,7 +548,6 @@ static int atbm888x_set_fe(struct dvb_frontend *fe)
 	int i;
 	u8 locked = 0;
 	dev_dbg(&priv->i2c->dev, "%s:start\n", __func__);
-	printk("aospan:atbm888x_chip_id=0x%x \n", atbm888x_chip_id(priv));
 
 	/* set frequency */
 	if (fe->ops.tuner_ops.set_params) {
@@ -624,10 +621,7 @@ static int atbm888x_read_status(struct dvb_frontend *fe,
 	uint8_t agc0, agc1;
 	uint16_t agc_value;
 
-#if 1
 	dev_dbg(&priv->i2c->dev, "%s\n", __func__);
-	printk("aospan:atbm888x_chip_id=0x%x \n", atbm888x_chip_id(priv));
-#endif
 
 	*fe_status = 0;
 
@@ -815,10 +809,8 @@ struct dvb_frontend *atbm888x_attach(const struct atbm888x_config *config,
 	priv->frontend.demodulator_priv = priv;
 
 	atbm888x_init(&priv->frontend);
-	printk("aospan:atbm888x_chip_id=0x%x \n", atbm888x_chip_id(priv));
 	atbm888x_i2c_gate_ctrl(&priv->frontend, 1);
 
-	printk("aospan:atbm888x_chip_id=0x%x \n", atbm888x_chip_id(priv));
 	return &priv->frontend;
 
 error_out:
