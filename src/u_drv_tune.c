@@ -338,7 +338,7 @@ int read_status(struct joker_t *joker)
 {
 	int ret = 0;
 	pthread_mutex_lock(&joker->service_threading->mux);
-	ret = read_status(joker);
+	ret = _read_status(joker);
 	pthread_mutex_unlock(&joker->service_threading->mux);
 	return ret;
 }
@@ -532,7 +532,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	}
 	memcpy(joker->info, info, sizeof(*info));
 
-	joker->stat.status = JOKER_NOLOCK;
 	/* start service thread to monitor status (lock), etc */
 	if (!joker->service_threading) {
 		joker->service_threading = malloc(sizeof(*joker->service_threading));
@@ -552,6 +551,7 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			return rc;
 		}
 	}
+	joker->stat.status = JOKER_NOLOCK;
 
 	joker_clean_ts(joker); // clean FIFO from previous TS
 
