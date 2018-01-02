@@ -24,6 +24,9 @@
 #include "atbm888x.h"
 #include "atbm888x_priv.h"
 
+static int atbm888x_read_ber(struct dvb_frontend *fe, u32 *ber);
+static int atbm888x_read_snr(struct dvb_frontend *fe, u16 *snr);
+
 uint8_t ui8AATBM888XCommonReg[]=
 {
         0x02, 0x45, 0x33,
@@ -577,6 +580,10 @@ static int atbm888x_get_fe(struct dvb_frontend *fe,
 			   struct dtv_frontend_properties *c)
 {
 	struct atbm_state *priv = fe->demodulator_priv;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	int ret = 0;
+	u32 ber = 0;
+	u16 snr = 0;
 	dev_dbg(&priv->i2c->dev, "%s\n", __func__);
 
 	/* TODO: get real readings from device */
@@ -599,6 +606,16 @@ static int atbm888x_get_fe(struct dvb_frontend *fe,
 
 	/* hierarchy */
 	c->hierarchy = HIERARCHY_NONE;
+
+	atbm888x_read_ber(fe, &ber);
+
+	ret = atbm888x_read_snr(fe, &snr);
+	if (!ret) {
+		p->cnr.stat[0].scale = FE_SCALE_DECIBEL;
+		p->cnr.stat[0].svalue = snr;
+	} else {
+		p->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+	}
 
 	return 0;
 }
@@ -655,24 +672,31 @@ static int atbm888x_read_status(struct dvb_frontend *fe,
 static int atbm888x_read_ber(struct dvb_frontend *fe, u32 *ber)
 {
 	struct atbm_state *priv = fe->demodulator_priv;
+	u8 ber_count[3];
 	u32 frame_err;
 	u8 t;
+	double ber_calc = 0;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
 	dev_dbg(&priv->i2c->dev, "%s\n", __func__);
 
 	atbm888x_reglatch_lock(priv, 1);
-
-	atbm888x_read_reg(priv, REG_FRAME_ERR_CNT + 1, &t);
-	frame_err = t & 0x7F;
-	frame_err <<= 8;
-	atbm888x_read_reg(priv, REG_FRAME_ERR_CNT, &t);
-	frame_err |= t;
-
+	atbm888x_read_reg(priv, 0x0B21, &ber_count[0]);
+	atbm888x_read_reg(priv, 0x0B22, &ber_count[1]);
+	atbm888x_read_reg(priv, 0x0B23, &ber_count[2]);
 	atbm888x_reglatch_lock(priv, 0);
+	ber_calc = ((ber_count[2]&0x07)*256*256 + ber_count[1]*256 + ber_count[0])*1.0/pow(2.0,27.0) ; //134217728
 
-	*ber = frame_err * 100 / 32767;
+	// save BER
+	p->post_bit_error.stat[0].scale = FE_SCALE_COUNTER;
+	p->post_bit_error.stat[0].uvalue = (u64)(ber_calc*1000*1000*1000);
+	p->post_bit_count.stat[0].scale = FE_SCALE_COUNTER;
+	p->post_bit_count.stat[0].uvalue = 1000*1000*1000;
 
-	dev_dbg(&priv->i2c->dev, "%s: ber=0x%x\n", __func__, *ber);
+	// TODO: fix value for old style BER report
+	*ber = (u32)(ber_calc*1000*1000);
+
+	dev_dbg(&priv->i2c->dev, "%s: ber_calc=%f\n", __func__, ber_calc);
 	return 0;
 }
 
@@ -704,8 +728,91 @@ static int atbm888x_read_signal_strength(struct dvb_frontend *fe, u16 *signal)
 static int atbm888x_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
 	struct atbm_state *priv = fe->demodulator_priv;
+	u8  ui8PNValue,ui8PN, ui8TmpNoise,ui8IsSc,ui8SignalH, ui8SignalM, ui8SignalL,ui8NoiseH,ui8NoiseM, ui8NoiseL;
+	int32_t   i32SignalPower,i32NoisePower;
+	double dbSNR = 0;
+
 	dev_dbg(&priv->i2c->dev, "%s\n", __func__);
-	*snr = 0;
+
+	atbm888x_reglatch_lock(priv, 1);
+	atbm888x_read_reg(priv, 0x082d,&ui8PNValue);
+	ui8PN       = (ui8PNValue&0x03);
+	atbm888x_read_reg(priv, 0x14AF,&ui8TmpNoise);
+	atbm888x_read_reg(priv, 0x0d0f,&ui8IsSc);
+
+	if(ui8IsSc !=1 )
+	{
+		atbm888x_read_reg(priv, 0x0f1d,&ui8SignalL);
+		atbm888x_read_reg(priv, 0x0f1e,&ui8SignalM);
+		atbm888x_read_reg(priv, 0x0f1f,&ui8SignalH);
+		atbm888x_read_reg(priv, 0x0f1a,&ui8NoiseL);
+		atbm888x_read_reg(priv, 0x0f1b,&ui8NoiseM);
+		atbm888x_read_reg(priv, 0x0f1c,&ui8NoiseH);
+		i32SignalPower = ((ui8SignalH&0x0f)<<16)+(ui8SignalM<<8)+ui8SignalL;
+		i32NoisePower  = ((ui8NoiseH&0x07)<<16)+(ui8NoiseM<<8)+ui8NoiseL;
+		if(i32SignalPower == 0)
+		{
+			i32SignalPower = 1; //signal_power should >0 in log calculation;
+		}
+		dbSNR = (double) (10*(log10(i32SignalPower*1.0/(i32NoisePower+1))));
+	}
+
+	if(ui8IsSc ==1 )
+	{
+		if(ui8PN == 2) //PN595
+		{
+			atbm888x_read_reg(priv, 0x14dc,&ui8SignalL);
+			atbm888x_read_reg(priv, 0x14dd,&ui8SignalM);
+			atbm888x_read_reg(priv, 0x14de,&ui8SignalH);
+			i32SignalPower = ((ui8SignalH&0x0f)<<16)+(ui8SignalM<<8)+ui8SignalL;
+			i32SignalPower = i32SignalPower/16;
+			if(ui8TmpNoise != 3)
+			{
+				atbm888x_read_reg(priv, 0x14f8,&ui8NoiseL);
+				atbm888x_read_reg(priv, 0x14f9,&ui8NoiseH);
+				i32NoisePower = ((ui8NoiseH&0x3f)<<8) + ui8NoiseL;
+			}
+			else
+			{
+				atbm888x_read_reg(priv, 0x1340,&ui8NoiseL);
+				atbm888x_read_reg(priv, 0x1341,&ui8NoiseH);
+				i32NoisePower = ((ui8NoiseH&0x3f)<<8) + ui8NoiseL;
+			}
+			if(i32SignalPower == 0)
+			{
+				i32SignalPower = 1; //signal_power should >0 in log calculation;
+			}
+			dbSNR = (double) (10*(log10(i32SignalPower*1.0/(i32NoisePower+1))));
+		}
+
+		if((ui8PN == 1)||(ui8PN == 3)) //PN420 & PN945
+		{
+			atbm888x_read_reg(priv, 0x09cc,&ui8SignalL);
+			atbm888x_read_reg(priv, 0x09cd,&ui8SignalH);
+			i32SignalPower = (ui8SignalH<<8) + ui8SignalL;
+			atbm888x_read_reg(priv, 0x09ed,&ui8NoiseL);
+			atbm888x_read_reg(priv, 0x09ee,&ui8NoiseH);
+			i32NoisePower  = ((ui8NoiseH&0x3f)<<8) + ui8NoiseL;
+
+			if(i32SignalPower == 0)
+			{
+				i32SignalPower = 1; //signal_power >0;
+			}
+			if(i32NoisePower == 0)
+			{
+				dbSNR = (double)(10*(log10(i32SignalPower*1.0/(i32NoisePower + 1))));
+			}
+			else
+			{
+				dbSNR = (double)(10*(log10(i32SignalPower*1.0/i32NoisePower)));
+			}
+		}
+	}
+	atbm888x_reglatch_lock(priv, 0);
+
+	dev_dbg(&priv->i2c->dev, "%s dbSNR=%f\n", __func__, dbSNR);
+
+	*snr = (u16)dbSNR*1000;
 	return 0;
 }
 
