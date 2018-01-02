@@ -34,41 +34,12 @@
 #include "dvb_frontend.h"
 #include "cxd2841er.h"
 #include "cxd2841er_priv.h"
+#include "cxd2841er_blind_scan.h"
 
 #define MAX_WRITE_REGSIZE	16
 #define LOG2_E_100X 144
 
 #define INTLOG10X100(x) ((u32) (((u64) intlog10(x) * 100) >> 24))
-
-/* DVB-C constellation */
-enum sony_dvbc_constellation_t {
-	SONY_DVBC_CONSTELLATION_16QAM,
-	SONY_DVBC_CONSTELLATION_32QAM,
-	SONY_DVBC_CONSTELLATION_64QAM,
-	SONY_DVBC_CONSTELLATION_128QAM,
-	SONY_DVBC_CONSTELLATION_256QAM
-};
-
-enum cxd2841er_state {
-	STATE_SHUTDOWN = 0,
-	STATE_SLEEP_S,
-	STATE_ACTIVE_S,
-	STATE_SLEEP_TC,
-	STATE_ACTIVE_TC
-};
-
-struct cxd2841er_priv {
-	struct dvb_frontend		frontend;
-	struct i2c_adapter		*i2c;
-	u8				i2c_addr_slvx;
-	u8				i2c_addr_slvt;
-	const struct cxd2841er_config	*config;
-	enum cxd2841er_state		state;
-	u8				system;
-	enum cxd2841er_xtal		xtal;
-	enum fe_caps caps;
-	u32				flags;
-};
 
 static const struct cxd2841er_cnr_data s_cn_data[] = {
 	{ 0x033e, 0 }, { 0x0339, 100 }, { 0x0333, 200 },
@@ -216,7 +187,7 @@ static void cxd2841er_i2c_debug(struct cxd2841er_priv *priv,
 		(write == 0 ? "read" : "write"), addr, reg, len, len, data);
 }
 
-static int cxd2841er_write_regs(struct cxd2841er_priv *priv,
+int cxd2841er_write_regs(struct cxd2841er_priv *priv,
 				u8 addr, u8 reg, const u8 *data, u32 len)
 {
 	int ret;
@@ -254,13 +225,13 @@ static int cxd2841er_write_regs(struct cxd2841er_priv *priv,
 	return 0;
 }
 
-static int cxd2841er_write_reg(struct cxd2841er_priv *priv,
+int cxd2841er_write_reg(struct cxd2841er_priv *priv,
 			       u8 addr, u8 reg, u8 val)
 {
 	return cxd2841er_write_regs(priv, addr, reg, &val, 1);
 }
 
-static int cxd2841er_read_regs(struct cxd2841er_priv *priv,
+int cxd2841er_read_regs(struct cxd2841er_priv *priv,
 			       u8 addr, u8 reg, u8 *val, u32 len)
 {
 	int ret;
@@ -357,7 +328,7 @@ static int cxd2841er_tuner_set(struct dvb_frontend *fe)
 	return 0;
 }
 
-static int cxd2841er_dvbs2_set_symbol_rate(struct cxd2841er_priv *priv,
+int cxd2841er_dvbs2_set_symbol_rate(struct cxd2841er_priv *priv,
 					   u32 symbol_rate)
 {
 	u32 reg_value = 0;
@@ -369,7 +340,7 @@ static int cxd2841er_dvbs2_set_symbol_rate(struct cxd2841er_priv *priv,
 	 *          = ((symbolRateKSps * 2^14) + 500) / 1000
 	 *          = ((symbolRateKSps * 16384) + 500) / 1000
 	 */
-	reg_value = DIV_ROUND_CLOSEST(symbol_rate * 16384, 1000);
+	reg_value = DIV_ROUND_CLOSEST((symbol_rate * 16384) + 500, 1000);
 	if ((reg_value == 0) || (reg_value > 0xFFFFF)) {
 		dev_err(&priv->i2c->dev,
 			"%s(): reg_value is out of range\n", __func__);
@@ -403,7 +374,7 @@ static int cxd2841er_sleep_s_to_active_s(struct cxd2841er_priv *priv,
 	/* Set demod mode */
 	if (system == SYS_DVBS) {
 		data[0] = 0x0A;
-	} else if (system == SYS_DVBS2) {
+	} else if (system == SYS_DVBS2 || system == SYS_DVBS_S2_AUTO) {
 		data[0] = 0x0B;
 	} else {
 		dev_err(&priv->i2c->dev, "%s(): invalid delsys %d\n",
@@ -414,7 +385,10 @@ static int cxd2841er_sleep_s_to_active_s(struct cxd2841er_priv *priv,
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x00, 0x00);
 	cxd2841er_write_reg(priv, I2C_SLVX, 0x17, data[0]);
 	/* DVB-S/S2 */
-	data[0] = 0x00;
+	if (system == SYS_DVBS_S2_AUTO)
+		data[0] = 0x01;
+	else
+		data[0] = 0x00;
 	/* Set SLV-T Bank : 0x00 */
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0x00);
 	/* Enable S/S2 auto detection 1 */
@@ -2064,7 +2038,7 @@ static u16 cxd2841er_read_agc_gain_i(struct cxd2841er_priv *priv,
 	return ((((u16)data[0] & 0x0F) << 8) | (u16)(data[1] & 0xFF)) << 4;
 }
 
-static u16 cxd2841er_read_agc_gain_s(struct cxd2841er_priv *priv)
+u16 cxd2841er_read_agc_gain_s(struct cxd2841er_priv *priv)
 {
 	u8 data[2];
 
@@ -3436,7 +3410,7 @@ static int cxd2841er_get_frontend(struct dvb_frontend *fe,
 	return 0;
 }
 
-static int cxd2841er_set_frontend_s(struct dvb_frontend *fe)
+int cxd2841er_set_frontend_s(struct dvb_frontend *fe)
 {
 	int ret = 0, i, timeout, carr_offset;
 	enum fe_status status;
@@ -3971,7 +3945,6 @@ static struct dvb_frontend *cxd2841er_attach(struct cxd2841er_config *cfg,
 					     struct i2c_adapter *i2c,
 					     u8 system)
 {
-	u8 chip_id = 0;
 	const char *type;
 	const char *name;
 	struct cxd2841er_priv *priv = NULL;
@@ -3991,8 +3964,8 @@ static struct dvb_frontend *cxd2841er_attach(struct cxd2841er_config *cfg,
 		"%s(): I2C adapter %p SLVX addr %x SLVT addr %x\n",
 		__func__, priv->i2c,
 		priv->i2c_addr_slvx, priv->i2c_addr_slvt);
-	chip_id = cxd2841er_chip_id(priv);
-	switch (chip_id) {
+	priv->chip_id = cxd2841er_chip_id(priv);
+	switch (priv->chip_id) {
 	case CXD2837ER_CHIP_ID:
 		snprintf(cxd2841er_t_c_ops.info.name, 128,
 				"Sony CXD2837ER DVB-T/T2/C demodulator");
@@ -4029,7 +4002,7 @@ static struct dvb_frontend *cxd2841er_attach(struct cxd2841er_config *cfg,
 		break;
 	default:
 		dev_err(&priv->i2c->dev, "%s(): invalid chip ID 0x%02x\n",
-				__func__, chip_id);
+				__func__, priv->chip_id);
 		priv->frontend.demodulator_priv = NULL;
 		kfree(priv);
 		return NULL;
@@ -4051,7 +4024,7 @@ static struct dvb_frontend *cxd2841er_attach(struct cxd2841er_config *cfg,
 		"%s(): attaching %s DVB-%s frontend\n",
 		__func__, name, type);
 	dev_info(&priv->i2c->dev, "%s(): chip ID 0x%02x OK.\n",
-		__func__, chip_id);
+		__func__, priv->chip_id);
 	return &priv->frontend;
 }
 
@@ -4094,7 +4067,8 @@ static const struct dvb_frontend_ops cxd2841er_dvbs_s2_ops = {
 	.set_tone = cxd2841er_set_tone,
 	.diseqc_send_burst = cxd2841er_send_burst,
 	.diseqc_send_master_cmd = cxd2841er_send_diseqc_msg,
-	.tune = cxd2841er_tune_s
+	.tune = cxd2841er_tune_s,
+	.blind_scan = cxd2841er_blind_scan
 };
 
 static struct dvb_frontend_ops cxd2841er_t_c_ops = {

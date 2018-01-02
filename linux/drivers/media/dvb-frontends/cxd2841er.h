@@ -23,6 +23,7 @@
 #define CXD2841ER_H
 
 #include <linux/dvb/frontend.h>
+#include "dvb_frontend.h"
 
 #define CXD2841ER_USE_GATECTRL	1	/* bit 0 */
 #define CXD2841ER_AUTO_IFHZ	2	/* bit 1 */
