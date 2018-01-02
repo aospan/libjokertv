@@ -68,16 +68,33 @@ int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
 		enum joker_fe_sec_tone_mode tone,
 		enum joker_fe_sec_voltage voltage)
 {
-	printf("\n\t *** Blind scan quadrant %dv, %s LNB band (22khz %s)\n",
+	int freq_min = 950000;
+	int freq_max = 2150000;
+
+	/* avoid duplicate range scan
+	 * example: duplicate range for universal LNB:
+	 * 11550 - 11900 MHz
+	 *
+	 * calc:
+	 * 10600 + 950 = 11550 MHz
+	 * 9750 + 2150 = 11900 Mhz
+	 * 
+	 */
+	if (tone == JOKER_SEC_TONE_ON) {
+		freq_min = info->lnb.lowfreq + 2150000 - info->lnb.highfreq;
+	}
+
+	printf("\n\t *** Blind scan quadrant %dv, %s LNB band (22khz %s) min/max freq=%d/%d\n",
 			(voltage == JOKER_SEC_VOLTAGE_13) ? 13:18,
 			(tone == JOKER_SEC_TONE_ON) ? "high" : "low",
-			(tone == JOKER_SEC_TONE_ON) ? "on" : "off");
+			(tone == JOKER_SEC_TONE_ON) ? "on" : "off",
+			freq_min, freq_max);
 
 	fe->ops.set_tone(fe, tone);
 	fe->ops.set_voltage(fe, voltage);
 	info->lnb.selected_freq = (tone == JOKER_SEC_TONE_ON) ? info->lnb.highfreq : info->lnb.lowfreq;
 	info->voltage = voltage;
-	fe->ops.blind_scan(fe, 950000, 2150000, 1000, 45000, blind_scan_callback, info);
+	fe->ops.blind_scan(fe, freq_min, freq_max, 1000, 45000, blind_scan_callback, info);
 }
 
 /*** Blind scan ***/
