@@ -757,6 +757,9 @@ int joker_ci(struct joker_t * joker)
 
 int joker_ci_close(struct joker_t * joker)
 {
+	if (!joker->ci_threading)
+		return 0;
+
 	// stop en50221 stuff
 	joker_ci_en50221_stop(joker);
 
