@@ -31,6 +31,7 @@ typedef unsigned int            uint32_t;
 // Linux kernel header files
 #include <drivers/media/dvb-frontends/helene.h>
 #include <drivers/media/dvb-frontends/cxd2841er.h>
+#include <drivers/media/dvb-frontends/cxd2841er_blind_scan.h>
 #include <drivers/media/dvb-frontends/lgdt3306a.h>
 #include <drivers/media/dvb-frontends/atbm888x.h>
 #include <drivers/media/dvb-frontends/tps65233.h>
@@ -43,6 +44,7 @@ typedef unsigned int            uint32_t;
 #include "joker_i2c.h"
 #include "joker_fpga.h"
 #include "u_drv_tune.h"
+#include "joker_blind_scan.h"
 
 static int joker_i2c_gate_ctrl(struct dvb_frontend *fe, int enable);
 
@@ -268,6 +270,11 @@ void warn_slowpath_null(const char *file, int line)
 void msleep(unsigned int msecs)
 {
 	usleep(1000*msecs);
+}
+
+u64 ktime_get_ns(void)
+{
+	return (u64)1000 * getus();
 }
 
 void print_hex_dump(const char *level, const char *prefix_str,
@@ -668,26 +675,34 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			return -1;
 		}
 
-		/* use LNB settings to calculate correct frequency */
-		if (info->lnb.switchfreq) {
-			if (info->frequency / 1000 > info->lnb.switchfreq * 1000) {
-				lo_freq = info->lnb.highfreq * 1000;
-				// switch to high band enabling 22kHz tone
-				info->tone = JOKER_SEC_TONE_ON;
+		if (!joker->blind_scan) {
+			/* use LNB settings to calculate correct frequency */
+			if (info->lnb.switchfreq) {
+				if (info->frequency / 1000 > info->lnb.switchfreq * 1000) {
+					lo_freq = info->lnb.highfreq * 1000;
+					// switch to high band enabling 22kHz tone
+					info->tone = JOKER_SEC_TONE_ON;
+				} else {
+					lo_freq = info->lnb.lowfreq * 1000;
+				}
 			} else {
 				lo_freq = info->lnb.lowfreq * 1000;
 			}
-		} else {
-			lo_freq = info->lnb.lowfreq * 1000;
+			fe->dtv_property_cache.frequency = abs(info->frequency / 1000 - lo_freq) * 1000;
+
+			fe->ops.set_tone(fe, info->tone);
+			fe->ops.set_voltage(fe, info->voltage);
+
+			printf("Channel freq %.2f MHz, LO %.2f MHz, L-Band freq %.2f MHz 22kHz tone %s\n",
+					info->frequency / 1000000., lo_freq / 1000., fe->dtv_property_cache.frequency / 1000000.,
+					(info->tone == JOKER_SEC_TONE_ON) ? "On":"Off");
 		}
-		fe->dtv_property_cache.frequency = abs(info->frequency / 1000 - lo_freq) * 1000;
+	}
 
-		fe->ops.set_tone(fe, info->tone);
-		fe->ops.set_voltage(fe, info->voltage);
-
-		printf("Channel freq %.2f MHz, LO %.2f MHz, L-Band freq %.2f MHz 22kHz tone %s\n",
-		       info->frequency / 1000000., lo_freq / 1000., fe->dtv_property_cache.frequency / 1000000.,
-		       (info->tone == JOKER_SEC_TONE_ON) ? "On":"Off");
+	if (joker->blind_scan) {
+		blind_scan(joker, info, fe);
+		fprintf(stderr,"\n");
+		return 0;
 	}
 
 	/* actual tune call */

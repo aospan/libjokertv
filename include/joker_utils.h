@@ -17,6 +17,9 @@
 extern "C" {
 #endif
 
+/* get current time in usec */
+uint64_t getus();
+
 void hexdump(unsigned char * buf, int size);
 
 /* put chips into reset state

@@ -19,6 +19,13 @@
 #include <joker_ci.h>
 #include <joker_fpga.h>
 
+/* get current time in usec */
+uint64_t getus() {
+	struct timeval tv;
+	gettimeofday(&tv,NULL);
+	return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
+}
+
 void hexdump(unsigned char * buf, int size)
 {
 	int i = 0, printed = 0;

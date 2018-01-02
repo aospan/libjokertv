@@ -150,12 +150,16 @@ void show_help() {
 	printf("	-r		Send QUERY CA PMT to CAM (check is descrambling possible). Default: disabled\n");
 	printf("	--in in.xml	XML file with lock instructions. Example: --in ./docs/atsc_north_america_freq.xml \n");
 	printf("	--out out.csv	output CSV file with lock results (BER, etc). Example: --out ant1-result.csv \n");
+	printf("	--blind		Do blind scan (DVB-S/S2 only). Default: disabled\n");
+	printf("	--blind-out file.xml	Write blind scan results to file. Default: blind.xml\n");
 	exit(0);
 }
 
 static struct option long_options[] = {
 	{"in",  required_argument, 0, 0},
 	{"out",  required_argument, 0, 0},
+	{"blind",  no_argument, 0, 0},
+	{"blind-out",  required_argument, 0, 0},
 	{ 0, 0, 0, 0}
 };
 
@@ -230,6 +234,16 @@ int main (int argc, char **argv)
 					joker->csv_out_filename = (char*)calloc(1, len + 1);
 					strncpy(joker->csv_out_filename, optarg, len);
 				}
+				if (!strcasecmp(long_options[option_index].name, "blind")) {
+					joker->blind_scan = 1;
+					delsys = JOKER_SYS_DVBS;
+				}
+				if (!strcasecmp(long_options[option_index].name, "blind-out")) {
+					len = strlen(optarg);
+					joker->blind_out_filename = (char*)calloc(1, len + 1);
+					strncpy(joker->blind_out_filename, optarg, len);
+				}
+
 				break;
 			case 'd':
 				delsys = atoi(optarg);
@@ -310,7 +324,8 @@ int main (int argc, char **argv)
 	if (delsys == JOKER_SYS_UNDEFINED && !tsgen &&
 			!joker->loop_ts_filename && !joker->ci_enable &&
 			!strlen((const char*)fwfilename) &&
-			!joker->xml_in_filename)
+			!joker->xml_in_filename 
+			&& !joker->blind_scan)
 		show_help();
 
 	out = fopen((char*)filename, "w+b");
@@ -407,14 +422,16 @@ int main (int argc, char **argv)
 		else
 			info.voltage = JOKER_SEC_VOLTAGE_OFF;
 
-		printf("########### Tuning to %llu Hz\n", (long long)freq);
-		printf("TUNE start \n");
 		if (tune(joker, &info)) {
 			printf("Tuning error. Exit.\n");
 			return -1;
 		}
-		printf("TUNE done \n");
+		if (joker->blind_scan) {
+			printf("Blind scan done \n");
+			return 0;
+		}
 
+		printf("TUNE done \n");
 		while (joker->stat.status != JOKER_LOCK)
 			usleep(1000*100);
 	}

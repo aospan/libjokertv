@@ -83,10 +83,12 @@ set(PC_LIBUSB_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb/li
 SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
 	linux/drivers/media/dvb-frontends/lgdt3306a.c
 	linux/drivers/media/dvb-frontends/cxd2841er.c
+	linux/drivers/media/dvb-frontends/cxd2841er_blind_scan.c
 	linux/drivers/media/dvb-frontends/tps65233.c
 	linux/drivers/media/dvb-frontends/atbm888x.c
 	linux/drivers/media/dvb-core/dvb_math.c
-	src/u_drv_tune.c)
+	src/u_drv_tune.c
+	src/joker_blind_scan.c)
 
 SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_i2c.c
