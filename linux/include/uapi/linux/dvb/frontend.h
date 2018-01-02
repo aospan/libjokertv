@@ -342,6 +342,7 @@ enum fe_delivery_system {
 	SYS_DVBT2,
 	SYS_TURBO,
 	SYS_DVBC_ANNEX_C,
+	SYS_DVBS_S2_AUTO,
 };
 
 /* backward compatibility */
