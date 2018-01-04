@@ -49,14 +49,6 @@ struct loop_thread_opaq_t
 	int cancel;
 };
 
-/* helper func 
- * get current time in usec */
-uint64_t getus() {
-	struct timeval tv;
-	gettimeofday(&tv,NULL);
-	return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
-}
-
 /* init pool */
 int pool_init(struct joker_t *joker, struct big_pool_t * pool)
 {

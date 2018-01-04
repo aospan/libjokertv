@@ -69,6 +69,7 @@ struct joker_lnb_t {
 	int lowfreq;
 	int highfreq;
 	int switchfreq;
+	int selected_freq;
 };
 
 /* 22 kHz tone */

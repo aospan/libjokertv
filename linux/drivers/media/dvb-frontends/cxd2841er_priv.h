@@ -44,4 +44,65 @@ enum cxd2841er_dvbt2_profile_t {
 	DVBT2_PROFILE_LITE = 2
 };
 
+/* DVB-C constellation */
+enum sony_dvbc_constellation_t {
+	SONY_DVBC_CONSTELLATION_16QAM,
+	SONY_DVBC_CONSTELLATION_32QAM,
+	SONY_DVBC_CONSTELLATION_64QAM,
+	SONY_DVBC_CONSTELLATION_128QAM,
+	SONY_DVBC_CONSTELLATION_256QAM
+};
+
+enum cxd2841er_state {
+	STATE_SHUTDOWN = 0,
+	STATE_SLEEP_S,
+	STATE_ACTIVE_S,
+	STATE_SLEEP_TC,
+	STATE_ACTIVE_TC
+};
+
+struct cxd2841er_priv {
+	struct dvb_frontend		frontend;
+	struct i2c_adapter		*i2c;
+	u8				i2c_addr_slvx;
+	u8				i2c_addr_slvt;
+	const struct cxd2841er_config	*config;
+	enum cxd2841er_state		state;
+	u8				system;
+	enum cxd2841er_xtal		xtal;
+	enum fe_caps caps;
+	u32				flags;
+	u8				chip_id;
+	int				blind_scan_cancel;
+	int				system_sony;
+	/* The count of calculation for power spectrum calculation in BlindScan and TuneSRS
+            Value:
+            - 0: Reduce smoothing time from normal
+            - 1: Normal (Default)
+            - 2: 2 times smoother than normal
+            - 3: 4 times smoother than normal
+            - 4: 8 times smoother than normal
+            - 5: 16 times smoother than normal
+            - 6: 32 times smoother than normal
+            - 7: 64 times smoother than normal
+	*/
+	uint8_t dvbss2PowerSmooth;
+
+};
+
+int cxd2841er_write_reg(struct cxd2841er_priv *priv,
+			       u8 addr, u8 reg, u8 val);
+
+int cxd2841er_set_frontend_s(struct dvb_frontend *fe);
+
+int cxd2841er_dvbs2_set_symbol_rate(struct cxd2841er_priv *priv,
+					   u32 symbol_rate);
+
+int cxd2841er_read_regs(struct cxd2841er_priv *priv,
+			       u8 addr, u8 reg, u8 *val, u32 len);
+
+int cxd2841er_write_regs(struct cxd2841er_priv *priv,
+				u8 addr, u8 reg, const u8 *data, u32 len);
+
+u16 cxd2841er_read_agc_gain_s(struct cxd2841er_priv *priv);
 #endif

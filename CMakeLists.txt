@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.8.12)
 project (joker_tv)
 set (joker_tv_VERSION_MAJOR 1)
-set (joker_tv_VERSION_MINOR 6)
-set (joker_tv_VERSION_PATCH 4)
+set (joker_tv_VERSION_MINOR 7)
+set (joker_tv_VERSION_PATCH 0)
 set (joker_tv_VERSION
 	${joker_tv_VERSION_MAJOR}.${joker_tv_VERSION_MINOR}.${joker_tv_VERSION_PATCH})
 
@@ -83,10 +83,12 @@ set(PC_LIBUSB_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libusb-prefix/src/libusb/li
 SET (LINUX_SRC linux/drivers/media/dvb-frontends/helene.c
 	linux/drivers/media/dvb-frontends/lgdt3306a.c
 	linux/drivers/media/dvb-frontends/cxd2841er.c
+	linux/drivers/media/dvb-frontends/cxd2841er_blind_scan.c
 	linux/drivers/media/dvb-frontends/tps65233.c
 	linux/drivers/media/dvb-frontends/atbm888x.c
 	linux/drivers/media/dvb-core/dvb_math.c
-	src/u_drv_tune.c)
+	src/u_drv_tune.c
+	src/joker_blind_scan.c)
 
 SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_i2c.c

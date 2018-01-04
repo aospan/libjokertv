@@ -436,6 +436,16 @@ struct dvb_frontend_ops {
 
 	int (*write)(struct dvb_frontend* fe, const u8 buf[], int len);
 
+	int (*blind_scan_cancel)(struct dvb_frontend* fe);
+	int (*blind_scan)(struct dvb_frontend* fe,
+		u32	min_khz,
+		u32	max_khz,
+		u32	min_sr,
+		u32	max_sr,
+		void (*callback)(void *data),
+		void *arg
+		);
+
 	/* if this is set, it overrides the default swzigzag */
 	int (*tune)(struct dvb_frontend* fe,
 		    bool re_tune,

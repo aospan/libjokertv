@@ -149,6 +149,11 @@ struct joker_t {
 	/* XML file with lock results (RF Level, BER, etc) */
 	char *csv_out_filename;
 	FILE *csv_out_filename_fd;
+
+	/* blind scan (DVB-S/S2 only) */
+	int blind_scan;
+	char *blind_out_filename;
+	FILE *blind_out_filename_fd;
 };
 
 #ifdef __cplusplus

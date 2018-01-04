@@ -513,6 +513,8 @@ static enum helene_tv_system_t helene_get_tv_system(struct dvb_frontend *fe)
 		}
 	} else if (p->delivery_system == SYS_DVBS) {
 		system = SONY_HELENE_STV_DVBS;
+	} else if (p->delivery_system == SYS_DVBS_S2_AUTO) {
+		system = SONY_HELENE_STV_DVBS;
 	} else if (p->delivery_system == SYS_DVBS2) {
 		system = SONY_HELENE_STV_DVBS2;
 	} else if (p->delivery_system == SYS_ISDBS) {
@@ -541,7 +543,7 @@ static enum helene_tv_system_t helene_get_tv_system(struct dvb_frontend *fe)
 		system = SONY_HELENE_DTV_QAM;
 	}
 
-	dev_info(&priv->i2c->dev,
+	dev_dbg(&priv->i2c->dev,
 			"%s(): HELENE DTV system %d (delsys %d, bandwidth %d)\n",
 			__func__, (int)system, p->delivery_system,
 			p->bandwidth_hz);
@@ -691,10 +693,12 @@ static int helene_set_params_s(struct dvb_frontend *fe)
 
 	helene_write_regs(priv, 0x04, data, 18);
 
-	dev_dbg(&priv->i2c->dev, "%s(): tune done\n",
-			__func__);
+	dev_dbg(&priv->i2c->dev, "%s(): tune done. freq=%dkHz symbol_rate=%dkSyms\n",
+			__func__, frequencykHz, symbol_rate);
 
 	priv->frequency = frequency;
+	/* Tuner stabillization time */
+	msleep(50);
 	return 0;
 }
 

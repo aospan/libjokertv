@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Frequencies for TV channels in China
+     source http://www.dianziaihaozhe.com/tianxian/DTMB/2976.html
+     and https://en.wikipedia.org/wiki/Asian_television_frequencies -->
+<document>
+	<delivery_system standard="13">
+		<freq bandwidth="8" frequency_mhz="171" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="179" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="187" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="195" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="203" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="211" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="219" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="474" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="482" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="490" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="498" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="506" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="514" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="522" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="530" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="538" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="546" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="554" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="562" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="610" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="618" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="626" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="634" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="642" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="650" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="658" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="666" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="674" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="682" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="690" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="698" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="706" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="714" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="722" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="730" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="738" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="746" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="754" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="762" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="770" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="778" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="786" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="794" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="802" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="810" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="818" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="826" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="834" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="842" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="850" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="858" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="866" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="874" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="882" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="890" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="898" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="906" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="914" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="922" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="930" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="938" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="946" modulation="0"></freq>
+		<freq bandwidth="8" frequency_mhz="954" modulation="0"></freq>
+	</delivery_system>
+</document>

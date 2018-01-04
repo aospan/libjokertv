@@ -107,6 +107,7 @@ static void do_elements(struct joker_t * joker, xmlNode * a_node)
 				stat->avg_snr = 0;
 				stat->avg_ucblocks = 0;
 				stat->avg_count = 0;
+				stat->status = JOKER_NOLOCK;
 
 				if (tune(joker, &info)) {
 					printf("Tuning error. Exit.\n");
