@@ -15,12 +15,13 @@
 // so, choose 64 here (original was 128) for CentOS 5.5
 #define NUM_USB_PACKETS 128
 #define USB_PACKET_SIZE 1024
+#define USB_PACKET_SIZE_HIGH_BW_ISOC 3072
+#define ISOC_TRANSFER_SIZE 1024
 
 #define BIG_POOL_GAIN	16
 
 // Max size (in bytes) for TS storage (list)
-// default 2MB
-#define TS_LIST_SIZE_DEFAULT 1024*1024*2
+#define TS_LIST_SIZE_DEFAULT 1024*1024*128
 
 // Maximum size for TS loopback
 #define TS_LOOP_SIZE 16384

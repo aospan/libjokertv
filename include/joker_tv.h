@@ -154,6 +154,18 @@ struct joker_t {
 	int blind_scan;
 	char *blind_out_filename;
 	FILE *blind_out_filename_fd;
+
+	/* Raw data from usb */
+	char *raw_data_filename;
+	FILE *raw_data_filename_fd;
+
+	/* Enabled if high bandwidth usb isochronous transfer supported 
+	 * First implemented in Joker TV fw revision 0x2d
+	 * for more detail see xHCI spec Table B-2
+	 * */
+	int high_bandwidth_isoc_support;
+	/* Maximum isochronous packets size per microframe (125usec) */
+	int max_isoc_packets_size;
 };
 
 #ifdef __cplusplus

@@ -37,7 +37,7 @@ int joker_open(struct joker_t *joker)
 	int usb_devs, i, r, ret, transferred;
 	unsigned char buf[JCMD_BUF_LEN];
 	unsigned char in_buf[JCMD_BUF_LEN];
-	int isoc_len = USB_PACKET_SIZE;
+	int isoc_len = ISOC_TRANSFER_SIZE;
 
 	if (!joker)
 		return EINVAL;
@@ -75,7 +75,16 @@ int joker_open(struct joker_t *joker)
 		return ENODEV;
 	}
 
-	printf("usb device found. firmware version 0x%x\n", joker->fw_ver);
+	printf(" *** Joker TV usb device found. firmware version 0x%x\n", joker->fw_ver);
+	if (joker->fw_ver >= 0x2d) {
+		printf(" *** High bandwidth USB isochronous transfers supported. Max TS speed 187.5 Mbps\n");
+		joker->high_bandwidth_isoc_support = 1;
+		joker->max_isoc_packets_size = USB_PACKET_SIZE_HIGH_BW_ISOC;
+	} else {
+		printf(" *** High bandwidth USB isochronous transfers not supported. Max TS speed 62.5 Mbps\n");
+		printf(" *** Upgrade firmware for 0x2d or newer\n");
+		joker->max_isoc_packets_size = USB_PACKET_SIZE;
+	}
 
 	ret = libusb_set_configuration(devh, 1);
 	if (ret < 0) {

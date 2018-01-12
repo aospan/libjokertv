@@ -152,6 +152,7 @@ void show_help() {
 	printf("	--out out.csv	output CSV file with lock results (BER, etc). Example: --out ant1-result.csv \n");
 	printf("	--blind		Do blind scan (DVB-S/S2 only). Default: disabled\n");
 	printf("	--blind-out file.xml	Write blind scan results to file. Default: blind.xml\n");
+	printf("	--raw-data raw.bin	output raw data received from USB\n");
 	exit(0);
 }
 
@@ -160,6 +161,7 @@ static struct option long_options[] = {
 	{"out",  required_argument, 0, 0},
 	{"blind",  no_argument, 0, 0},
 	{"blind-out",  required_argument, 0, 0},
+	{"raw-data",  required_argument, 0, 0},
 	{ 0, 0, 0, 0}
 };
 
@@ -244,6 +246,11 @@ int main (int argc, char **argv)
 					strncpy(joker->blind_out_filename, optarg, len);
 				}
 
+				if (!strcasecmp(long_options[option_index].name, "raw-data")) {
+					len = strlen(optarg);
+					joker->raw_data_filename = (char*)calloc(1, len + 1);
+					strncpy(joker->raw_data_filename, optarg, len);
+				}
 				break;
 			case 'd':
 				delsys = atoi(optarg);
@@ -342,7 +349,7 @@ int main (int argc, char **argv)
 		printf("Can't open device \n");
 		return ret;
 	}
-	printf("allocated joker=%p \n", joker);
+	jdebug("allocated joker=%p \n", joker);
 
 	/* init CI */
 	if (joker->ci_enable) {
@@ -438,6 +445,8 @@ int main (int argc, char **argv)
 
 	while(disable_data)
 		sleep(3600);
+
+	joker->raw_data_filename_fd = fopen(joker->raw_data_filename, "w+");
 
 	/* start TS collection */
 	if((ret = start_ts(joker, &pool))) {

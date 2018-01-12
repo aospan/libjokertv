@@ -144,8 +144,8 @@ void* process_ts(void * data) {
 		while (pool->ts_list_size > pool->ts_list_size_max && !list_empty(&pool->ts_list_all)) {
 			node = list_first_entry(&pool->ts_list_all, struct ts_node, list);
 			pool->ts_list_size -= node->size;
+			printf("Memory limit: dropping TS node %p. ts_list_size=%d\n", node, pool->ts_list_size);
 			drop_ts_data(node);
-			jdebug("TS:all: drop node %p. ts_list_size=%d\n", node, pool->ts_list_size);
 		}
 
 		jdebug("TS:all: node %p inserted. ts_list_size=%d\n", node, pool->ts_list_size);
@@ -191,6 +191,7 @@ void record_callback(struct libusb_transfer *transfer)
 	struct ts_node * node = NULL;
 	int total_len = 0;
 	int off = 0, cnt = 0, ts_off = 0, len = 0;
+	struct joker_t *joker = pool->joker;
 
 	// free this transfer
 	if (!transfer->user_data) {
@@ -257,17 +258,25 @@ void record_callback(struct libusb_transfer *transfer)
 	for(i = 0; i < transfer->num_iso_packets; i++) {
 		pkt = transfer->iso_packet_desc[i];
 		len = transfer->iso_packet_desc[i].actual_length;
+		jdebug(stderr, "ISO pkt length=%d actual_length=%d status=0x%x\n",
+				transfer->iso_packet_desc[i].length,
+				transfer->iso_packet_desc[i].actual_length, pkt.status);
 		pool->pkt_count++;
 
 		if (pkt.status == LIBUSB_TRANSFER_COMPLETED && len > 0) {
 			pool->pkt_count_complete++;
 			pool->bytes += len;
 			if ((buf = libusb_get_iso_packet_buffer(transfer, i))) {
+				if (joker->raw_data_filename_fd > 0)
+					fwrite(buf, len, 1, joker->raw_data_filename_fd);
+
 				if (buf[TS_SIZE - pool->tail_size] == TS_SYNC)
 					ts_off = TS_SIZE - pool->tail_size; // tail is ok. use it
 				else
 					ts_off = next_ts_off(buf, len);
-				jdebug("	ts_off=%d tail_size=%d\n", ts_off, pool->tail_size);
+				jdebug("	foff=%lld ts_off=%d tail_size=%d len=%d\n",
+						ftell(joker->raw_data_filename_fd),
+						ts_off, pool->tail_size, len);
 				if (ts_off < 0)
 					continue;
 
@@ -376,16 +385,17 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 #endif
 
 	// create isochronous transfers
-	// USB isoc transfer should be delivered to Joker TV 
+	// USB isoc transfer (DATA_IN token) should be delivered to Joker TV 
 	// every microframe (125usec)
 	// One isoc transfer size is 1024 bytes (max 1024)
+	// Hight bandwidth isoc transfer can support up to 3 DATA token's in one microframe
 	for (index = 0; index < NUM_USB_BUFS; index++) {
-		pool->usb_buffers[index] = (uint8_t*)malloc(NUM_USB_PACKETS * USB_PACKET_SIZE);
-		memset(pool->usb_buffers[index], 0, NUM_USB_PACKETS * USB_PACKET_SIZE);
+		pool->usb_buffers[index] = (uint8_t*)malloc(NUM_USB_PACKETS * joker->max_isoc_packets_size);
+		memset(pool->usb_buffers[index], 0, NUM_USB_PACKETS * joker->max_isoc_packets_size);
 
 		pool->transfers[index] = libusb_alloc_transfer(NUM_USB_PACKETS);    
-		libusb_fill_iso_transfer(pool->transfers[index], dev, USB_EP3_IN, pool->usb_buffers[index], NUM_USB_PACKETS * USB_PACKET_SIZE, NUM_USB_PACKETS, cb, (void *)pool, 1000);
-		libusb_set_iso_packet_lengths(pool->transfers[index], USB_PACKET_SIZE);
+		libusb_fill_iso_transfer(pool->transfers[index], dev, USB_EP3_IN, pool->usb_buffers[index], NUM_USB_PACKETS * joker->max_isoc_packets_size, NUM_USB_PACKETS, cb, (void *)pool, 1000);
+		libusb_set_iso_packet_lengths(pool->transfers[index], joker->max_isoc_packets_size);
 
 		if ((ret = libusb_submit_transfer(pool->transfers[index]))) {
 			printf("ERROR:%d libusb_submit_transfer failed\n", ret);
