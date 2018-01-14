@@ -80,10 +80,12 @@ int joker_open(struct joker_t *joker)
 		printf(" *** High bandwidth USB isochronous transfers supported. Max TS speed 187.5 Mbps\n");
 		joker->high_bandwidth_isoc_support = 1;
 		joker->max_isoc_packets_size = USB_PACKET_SIZE_HIGH_BW_ISOC;
+		joker->max_isoc_packets_count = NUM_USB_PACKETS_HIGH_BW_ISOC;
 	} else {
 		printf(" *** High bandwidth USB isochronous transfers not supported. Max TS speed 62.5 Mbps\n");
 		printf(" *** Upgrade firmware for 0x2d or newer\n");
 		joker->max_isoc_packets_size = USB_PACKET_SIZE;
+		joker->max_isoc_packets_count = NUM_USB_PACKETS;
 	}
 
 	ret = libusb_set_configuration(devh, 1);

@@ -166,6 +166,8 @@ struct joker_t {
 	int high_bandwidth_isoc_support;
 	/* Maximum isochronous packets size per microframe (125usec) */
 	int max_isoc_packets_size;
+	/* Maximum isochronous packets per URB (used for libusb_submit_transfer) */
+	int max_isoc_packets_count;
 };
 
 #ifdef __cplusplus

@@ -390,11 +390,11 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	// One isoc transfer size is 1024 bytes (max 1024)
 	// Hight bandwidth isoc transfer can support up to 3 DATA token's in one microframe
 	for (index = 0; index < NUM_USB_BUFS; index++) {
-		pool->usb_buffers[index] = (uint8_t*)malloc(NUM_USB_PACKETS * joker->max_isoc_packets_size);
-		memset(pool->usb_buffers[index], 0, NUM_USB_PACKETS * joker->max_isoc_packets_size);
+		pool->usb_buffers[index] = (uint8_t*)malloc(joker->max_isoc_packets_count * joker->max_isoc_packets_size);
+		memset(pool->usb_buffers[index], 0, joker->max_isoc_packets_count * joker->max_isoc_packets_size);
 
-		pool->transfers[index] = libusb_alloc_transfer(NUM_USB_PACKETS);    
-		libusb_fill_iso_transfer(pool->transfers[index], dev, USB_EP3_IN, pool->usb_buffers[index], NUM_USB_PACKETS * joker->max_isoc_packets_size, NUM_USB_PACKETS, cb, (void *)pool, 1000);
+		pool->transfers[index] = libusb_alloc_transfer(joker->max_isoc_packets_count);    
+		libusb_fill_iso_transfer(pool->transfers[index], dev, USB_EP3_IN, pool->usb_buffers[index], joker->max_isoc_packets_count * joker->max_isoc_packets_size, joker->max_isoc_packets_count, cb, (void *)pool, 1000);
 		libusb_set_iso_packet_lengths(pool->transfers[index], joker->max_isoc_packets_size);
 
 		if ((ret = libusb_submit_transfer(pool->transfers[index]))) {
