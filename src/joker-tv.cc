@@ -446,7 +446,8 @@ int main (int argc, char **argv)
 	while(disable_data)
 		sleep(3600);
 
-	joker->raw_data_filename_fd = fopen(joker->raw_data_filename, "w+");
+	if (joker->raw_data_filename)
+		joker->raw_data_filename_fd = fopen(joker->raw_data_filename, "w+");
 
 	/* start TS collection */
 	if((ret = start_ts(joker, &pool))) {
