@@ -161,14 +161,6 @@ void* process_usb(void * data) {
 	int completed = 0;
 	struct big_pool_t * pool = (struct big_pool_t *)data;
 
-#ifdef __linux__ 
-	/* set FIFO schedule priority
-	 * for faster USB ISOC transfer processing */
-	struct sched_param p;
-	p.sched_priority = sched_get_priority_max(SCHED_FIFO);
-	sched_setscheduler(0, SCHED_FIFO, &p);
-#endif
-
 	while(!pool->cancel) {
 		struct timeval tv = {
 			.tv_sec = 0,
@@ -376,14 +368,6 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
 		return ret;
 	
-#ifdef __linux__ 
-	/* set FIFO schedule priority
-	 * for faster USB ISOC transfer processing */
-	struct sched_param p;
-	p.sched_priority = sched_get_priority_max(SCHED_FIFO);
-	sched_setscheduler(0, SCHED_FIFO, &p);
-#endif
-
 	// create isochronous transfers
 	// USB isoc transfer (DATA_IN token) should be delivered to Joker TV 
 	// every microframe (125usec)
