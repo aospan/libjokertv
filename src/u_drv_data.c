@@ -348,6 +348,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	int index = 0;
 	int transferred = 0, rc = 0, ret = 0;
 	unsigned char buf[JCMD_BUF_LEN];
+	int allocated = 0, max_isoc_packets_count_avail = 0;
 
 	if (!joker || !pool)
 		return EINVAL;
@@ -374,18 +375,38 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	// One isoc transfer size is 1024 bytes (max 1024)
 	// Hight bandwidth isoc transfer can support up to 3 DATA token's in one microframe
 	for (index = 0; index < NUM_USB_BUFS; index++) {
-		pool->usb_buffers[index] = (uint8_t*)malloc(joker->max_isoc_packets_count * joker->max_isoc_packets_size);
-		memset(pool->usb_buffers[index], 0, joker->max_isoc_packets_count * joker->max_isoc_packets_size);
+		// iterate number of isoc packets to find maximum allowed on this system
+		// usually it depends on OS available contig. memory
+		allocated = 0;
+		max_isoc_packets_count_avail = joker->max_isoc_packets_count;
+		while (max_isoc_packets_count_avail > 4 && !allocated) {
+			pool->usb_buffers[index] = (uint8_t*)malloc(max_isoc_packets_count_avail * joker->max_isoc_packets_size);
+			memset(pool->usb_buffers[index], 0, max_isoc_packets_count_avail * joker->max_isoc_packets_size);
 
-		pool->transfers[index] = libusb_alloc_transfer(joker->max_isoc_packets_count);    
-		libusb_fill_iso_transfer(pool->transfers[index], dev, USB_EP3_IN, pool->usb_buffers[index], joker->max_isoc_packets_count * joker->max_isoc_packets_size, joker->max_isoc_packets_count, cb, (void *)pool, 1000);
-		libusb_set_iso_packet_lengths(pool->transfers[index], joker->max_isoc_packets_size);
+			pool->transfers[index] = libusb_alloc_transfer(max_isoc_packets_count_avail);    
+			libusb_fill_iso_transfer(pool->transfers[index], dev, USB_EP3_IN,
+					pool->usb_buffers[index], max_isoc_packets_count_avail * joker->max_isoc_packets_size,
+					max_isoc_packets_count_avail, cb, (void *)pool, 1000);
+			libusb_set_iso_packet_lengths(pool->transfers[index], joker->max_isoc_packets_size);
 
-		if ((ret = libusb_submit_transfer(pool->transfers[index]))) {
-			printf("ERROR:%d libusb_submit_transfer failed\n", ret);
-			return EIO;
+			ret = libusb_submit_transfer(pool->transfers[index]);
+			if (ret == LIBUSB_ERROR_INVALID_PARAM) {
+				libusb_free_transfer(pool->transfers[index]);
+				pool->transfers[index] = NULL;
+				// try lower 
+				printf("%d packets not available. Will try lower \n", 
+						max_isoc_packets_count_avail);
+				max_isoc_packets_count_avail = max_isoc_packets_count_avail/2;
+				continue;
+			} else if (ret) {
+				printf("ERROR: libusb_submit_transfer failed. ret=%d\n", ret);
+				return -EIO;
+			}
+			printf("%d packets available. usb transfer %d (%p) done\n",
+					max_isoc_packets_count_avail,
+					index, pool->transfers[index]);
+			allocated = 1;
 		}
-		jdebug("submit usb transfer %d (%p) done\n", index, pool->transfers[index]);
 	}
 	
 	// start ISOC USB transfers processing thread

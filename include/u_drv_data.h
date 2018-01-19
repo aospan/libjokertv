@@ -11,10 +11,9 @@
 #include "joker_list.h"
 
 #define NUM_USB_BUFS 16
-// under CentOS 5.5 limit for URB size (?)
-// so, choose 64 here (original was 128) for CentOS 5.5
+// Linux kernel (drivers/usb/core/devio.c) has limit of 128 iso packets at once
 #define NUM_USB_PACKETS 128
-#define NUM_USB_PACKETS_HIGH_BW_ISOC 16
+#define NUM_USB_PACKETS_HIGH_BW_ISOC 128
 #define USB_PACKET_SIZE 1024
 #define USB_PACKET_SIZE_HIGH_BW_ISOC 3072
 #define ISOC_TRANSFER_SIZE 1024
