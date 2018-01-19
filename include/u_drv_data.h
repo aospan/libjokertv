@@ -14,7 +14,7 @@
 // under CentOS 5.5 limit for URB size (?)
 // so, choose 64 here (original was 128) for CentOS 5.5
 #define NUM_USB_PACKETS 128
-#define NUM_USB_PACKETS_HIGH_BW_ISOC 32
+#define NUM_USB_PACKETS_HIGH_BW_ISOC 16
 #define USB_PACKET_SIZE 1024
 #define USB_PACKET_SIZE_HIGH_BW_ISOC 3072
 #define ISOC_TRANSFER_SIZE 1024
