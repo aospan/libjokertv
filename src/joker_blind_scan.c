@@ -60,7 +60,7 @@ void blind_scan_callback (void *data)
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
 				res->tuneParam.symbolRateKSps);
 	else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS)
-		printf("progress=%u%%\r", res->progress);
+		printf("progress=%u%%\n", res->progress);
 }
 
 int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,

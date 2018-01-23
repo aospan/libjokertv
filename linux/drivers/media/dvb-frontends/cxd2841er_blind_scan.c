@@ -3720,6 +3720,27 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Start (sony_demod_dvbs_s2_b
     return  (result);
 }
 
+int dump_plist(char *prefix, sony_demod_dvbs_s2_blindscan_data_t * pList)
+{
+	sony_demod_dvbs_s2_blindscan_data_t *pCurrent = pList->pNext;
+	int cnt = 0;
+
+	printf("blindscan dump list:%s \n", prefix);
+	while(pCurrent){
+		printf("        power freqKHz=%d power=%d candidate freq=%d sr=%d min/max sr=%d/%d\n",
+				pCurrent->data.power.freqKHz, pCurrent->data.power.power,
+				pCurrent->data.candidate.centerFreqKHz, pCurrent->data.candidate.symbolRateKSps,
+				pCurrent->data.candidate.minSymbolRateKSps, pCurrent->data.candidate.maxSymbolRateKSps
+		      );
+		pCurrent = pCurrent->pNext;
+		cnt++;
+	}
+	printf("blindscan dump list:%s end. list size=%d\n", prefix, cnt);
+}
+
+#define LOVAL 157
+#define HIVAL 170
+
 sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2_blindscan_subseq_cs_t * pSeq)
 {
     sony_result_t result = SONY_RESULT_OK;
@@ -3784,7 +3805,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
 
     case CS_STATE_LOWER_SEARCHING:
         power = (int32_t)(pSeq->pSeqPM->power);
-        if ((pSeq->peakPower * 100) > (power * 137)){
+        if ((pSeq->peakPower * 100) > (power * LOVAL)){
             /* Next stage */
             pSeq->state = CS_STATE_UPPER_SEARCHING;
             pSeq->index = 1;
@@ -3797,7 +3818,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
             if (result != SONY_RESULT_OK){
                 return  (result);
             }
-        } else if ((power * 100) > (pSeq->peakPower * 150)){
+        } else if ((power * 100) > (pSeq->peakPower * HIVAL)){
             /* NG */
             pSeq->lowerFreqKHz = -1000; /* Invalid */
             result = finish_ng_cs (pSeq);
@@ -3824,10 +3845,10 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
 
     case CS_STATE_UPPER_SEARCHING:
         power = (int32_t)(pSeq->pSeqPM->power);
-        if ((pSeq->peakPower * 100) > (power * 137)){
+        if ((pSeq->peakPower * 100) > (power * LOVAL)){
             /* OK */
             result = finish_ok_cs (pSeq);
-        } else if ((power * 100) > (pSeq->peakPower * 150)){
+        } else if ((power * 100) > (pSeq->peakPower * HIVAL)){
             /* NG */
             pSeq->upperFreqKHz = -1000; /* Invalid */
             result = finish_ng_cs (pSeq);
@@ -6532,6 +6553,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 					return result;
 				}
 
+				dump_plist("SS1_FIN::pCandList1", pSeq->pCandList1);
+
 				/* Start fine search */
 				result = setProgress (pSeq, 10, 25, 0);
 				if (result != SONY_RESULT_OK){
@@ -6697,6 +6720,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				if (result != SONY_RESULT_OK){
 					return result;
 				}
+				dump_plist("FS2_START::pCandList1", pSeq->pCandList1);
 
 				result = setProgress (pSeq, 35, 55, 0);
 				if (result != SONY_RESULT_OK){
@@ -6735,6 +6759,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 					if (result != SONY_RESULT_OK){
 						return result;
 					}
+
+					dump_plist("FS2_FIN::pCandList2", pSeq->pCandList2);
 
 					pSeq->pCandCurrent = pSeq->pCandList2->pNext;
 					pSeq->seqState = BLINDSCAN_SEQ_STATE_CS_PREPARING;
@@ -6828,6 +6854,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_FS3_START:
+				dump_plist("FS3_START::pCandList1", pSeq->pCandList1);
 				result = sony_demod_dvbs_s2_blindscan_algo_DeleteDuplicate (&(pSeq->commonParams.storage), pSeq->pCandList1);
 				if (result != SONY_RESULT_OK){
 					return result;
