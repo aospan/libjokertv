@@ -390,7 +390,7 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 			libusb_set_iso_packet_lengths(pool->transfers[index], joker->max_isoc_packets_size);
 
 			ret = libusb_submit_transfer(pool->transfers[index]);
-			if (ret == LIBUSB_ERROR_INVALID_PARAM) {
+			if (ret) {
 				libusb_free_transfer(pool->transfers[index]);
 				pool->transfers[index] = NULL;
 				// try lower 
@@ -398,9 +398,6 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 						max_isoc_packets_count_avail);
 				max_isoc_packets_count_avail = max_isoc_packets_count_avail/2;
 				continue;
-			} else if (ret) {
-				printf("ERROR: libusb_submit_transfer failed. ret=%d\n", ret);
-				return -EIO;
 			}
 			printf("%d packets available. usb transfer %d (%p) done\n",
 					max_isoc_packets_count_avail,
