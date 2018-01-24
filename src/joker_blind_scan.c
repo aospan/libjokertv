@@ -83,7 +83,10 @@ int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
 	if (tone == JOKER_SEC_TONE_ON) {
 		// add 31Mhz because blind scan will add this for powerscan
 		// change this constant if symbolrate changed
-		freq_min = 1000 * (info->lnb.lowfreq + 2150 - info->lnb.highfreq + 31 * 2);
+		// freq_min = 1000 * (info->lnb.lowfreq + 2150 - info->lnb.highfreq + 31 * 2);
+		freq_min = 1000 * (info->lnb.switchfreq - info->lnb.highfreq);
+	} else {
+		freq_max = 1000 * (info->lnb.switchfreq - info->lnb.lowfreq);
 	}
 
 	printf("\n\t *** Blind scan quadrant %dv, %s LNB band (22khz %s) min/max freq=%d/%d\n",
