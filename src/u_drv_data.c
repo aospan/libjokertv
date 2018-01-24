@@ -361,6 +361,16 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 	if (pool->initialized != BIG_POOL_MAGIC)
 		pool_init(joker, pool);
 
+#ifdef __WIN32__
+	// USB isoch packets can lost under Windows if we do not increase priority
+	if(!SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS)) {
+		printf("Can't set high priority for current process error=%d \n", GetLastError());
+		printf("USB isoc packets can be lost \n");
+	} else {
+		printf("High priority was set \n");
+	}
+#endif
+	
 	joker_clean_ts(joker); // clean FIFO from previous TS
 
 	// disable TS traffic through CAM
