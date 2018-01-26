@@ -442,6 +442,7 @@ struct dvb_frontend_ops {
 		u32	max_khz,
 		u32	min_sr,
 		u32	max_sr,
+		bool	do_power_scan,
 		void (*callback)(void *data),
 		void *arg
 		);

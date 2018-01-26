@@ -151,7 +151,8 @@ void show_help() {
 	printf("	--in in.xml	XML file with lock instructions. Example: --in ./docs/atsc_north_america_freq.xml \n");
 	printf("	--out out.csv	output CSV file with lock results (BER, etc). Example: --out ant1-result.csv \n");
 	printf("	--blind		Do blind scan (DVB-S/S2 only). Default: disabled\n");
-	printf("	--blind-out file.xml	Write blind scan results to file. Default: blind.xml\n");
+	printf("	--blind-out file.csv	Write blind scan results to file. Example: blind.csv\n");
+	printf("	--blind-power file	Write power (dB) to file. Example: file\n");
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
 	exit(0);
 }
@@ -161,6 +162,7 @@ static struct option long_options[] = {
 	{"out",  required_argument, 0, 0},
 	{"blind",  no_argument, 0, 0},
 	{"blind-out",  required_argument, 0, 0},
+	{"blind-power",  required_argument, 0, 0},
 	{"raw-data",  required_argument, 0, 0},
 	{ 0, 0, 0, 0}
 };
@@ -245,7 +247,11 @@ int main (int argc, char **argv)
 					joker->blind_out_filename = (char*)calloc(1, len + 1);
 					strncpy(joker->blind_out_filename, optarg, len);
 				}
-
+				if (!strcasecmp(long_options[option_index].name, "blind-power")) {
+					len = strlen(optarg);
+					joker->blind_power_file_prefix = (char*)calloc(1, len + 1);
+					strncpy(joker->blind_power_file_prefix, optarg, len);
+				}
 				if (!strcasecmp(long_options[option_index].name, "raw-data")) {
 					len = strlen(optarg);
 					joker->raw_data_filename = (char*)calloc(1, len + 1);

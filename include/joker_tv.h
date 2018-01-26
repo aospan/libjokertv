@@ -154,6 +154,7 @@ struct joker_t {
 	int blind_scan;
 	char *blind_out_filename;
 	FILE *blind_out_filename_fd;
+	char *blind_power_file_prefix;
 
 	/* Raw data from usb */
 	char *raw_data_filename;

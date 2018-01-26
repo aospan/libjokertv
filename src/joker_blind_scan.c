@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <errno.h>
 typedef unsigned char           uint8_t;
 typedef unsigned short int      uint16_t;
 typedef unsigned int            uint32_t;
@@ -45,22 +46,68 @@ typedef unsigned int            uint32_t;
 
 void blind_scan_callback (void *data)
 {
+	sony_demod_dvbs_s2_blindscan_data_t *pCurrent = NULL;
 	sony_integ_dvbs_s2_blindscan_result_t * res =
 		(sony_integ_dvbs_s2_blindscan_result_t*) data;
+	int cnt = 0;
+	FILE *pfd = NULL;
+	char * filename = NULL;
 
-	struct tune_info_t *info = (struct tune_info_t *)res->callback_arg;
-	if (!info)
+	struct joker_t *joker = (struct joker_t *)res->callback_arg;
+	if (!joker || !joker->info)
 		return;
+	struct tune_info_t *info = joker->info;
 
-	if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT)
+	jdebug("%s: eventId=%d \n", __func__, res->eventId);
+	if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT) {
 		printf("\nDetected! progress=%u%% %s %dMHz (lnb freq=%d) %s symbol rate=%d ksym/s\n",
 				res->progress, (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
 				res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
 				info->lnb.selected_freq,
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
 				res->tuneParam.symbolRateKSps);
-	else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS)
+
+		// save results to file 
+		if (joker->blind_out_filename_fd) {
+			fprintf(joker->blind_out_filename_fd,
+					"\"%d\",\"%s\",\"%s\",\"%d\"\n",
+					res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
+					(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
+					(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
+					res->tuneParam.symbolRateKSps);
+			fflush(joker->blind_out_filename_fd);
+		}
+	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_POWER) {
+		if (!joker->blind_power_file_prefix)
+			return;
+
+		// save power
+		filename = calloc(1, 1024);
+		if(!filename)
+			return;
+		snprintf(filename, 1024, "%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
+				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v",
+				info->lnb.selected_freq);
+
+		pCurrent = res->pPowerList->pNext;
+		pfd = fopen(filename, "w+b");
+		if (pfd <= 0) {
+			printf("Can't open power list file %s error %d (%s)\n",
+					filename, errno, strerror(errno));
+			return;
+		}
+		while(pCurrent){
+			fprintf(pfd, "%d %.2f\n", pCurrent->data.power.freqKHz/1000 + info->lnb.selected_freq,
+					(double)pCurrent->data.power.power/100);
+			pCurrent = pCurrent->pNext;
+			cnt++;
+		}
+		fclose(pfd);
+		printf("power list (size %d) dumped to %s\n", cnt, filename);
+		free(filename);
+	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS) {
 		printf("progress=%u%%\r", res->progress);
+	}
 }
 
 int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
@@ -99,7 +146,10 @@ int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
 	fe->ops.set_voltage(fe, voltage);
 	info->lnb.selected_freq = (tone == JOKER_SEC_TONE_ON) ? info->lnb.highfreq : info->lnb.lowfreq;
 	info->voltage = voltage;
-	fe->ops.blind_scan(fe, freq_min, freq_max, 1000, 45000, blind_scan_callback, info);
+	joker->info = info;
+	fe->ops.blind_scan(fe, freq_min, freq_max, 1000, 45000,
+			joker->blind_power_file_prefix ? true : false,
+			blind_scan_callback, joker);
 }
 
 /*** Blind scan ***/
@@ -107,6 +157,21 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info,
 		struct dvb_frontend *fe)
 {
 	sony_integ_dvbs_s2_blindscan_param_t blindscanParam;
+
+	/* open file for blind scan results */
+	if (joker->blind_out_filename) {
+		joker->blind_out_filename_fd = fopen(joker->blind_out_filename, "w+b");
+		if (joker->blind_out_filename_fd < 0) {
+			printf("Can't open blind scan resulting file %s. Error=%d (%s)\n",
+					joker->blind_out_filename, errno, strerror(errno));
+			joker->blind_out_filename_fd = NULL;
+		}
+
+		// write file header
+		fprintf(joker->blind_out_filename_fd,
+				"freq_mhz,pol,standard,symbol_rate_ksps\n");
+		fflush(joker->blind_out_filename_fd);
+	}
 
 	/* Split frequncy range to four quadrants:
 	 *
@@ -127,6 +192,11 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info,
 	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_13);
 	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_OFF, JOKER_SEC_VOLTAGE_18);
 	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_18);
+
+	if (joker->blind_out_filename_fd) {
+		fclose(joker->blind_out_filename_fd);
+		joker->blind_out_filename_fd = NULL;
+	}
 
 	return 0;
 }
