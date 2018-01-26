@@ -88,13 +88,6 @@ int joker_open(struct joker_t *joker)
 		joker->max_isoc_packets_count = NUM_USB_PACKETS;
 	}
 
-	ret = libusb_set_configuration(devh, 1);
-	if (ret < 0) {
-		fprintf(stderr, "Can't set config: %s\n", libusb_error_name(ret));
-		libusb_close(devh);
-		return EIO;
-	}
-
 	ret = libusb_claim_interface(devh, 0);
 	if (ret < 0) {
 		fprintf(stderr, "Can't claim interface: %s\n", libusb_error_name(ret));
