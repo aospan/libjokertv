@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Frequencies for TV channels in Cuba -->
+<document>
+	<delivery_system standard="13">
+		<freq bandwidth="6" frequency_mhz="473" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="479" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="485" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="491" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="497" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="503" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="509" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="515" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="521" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="527" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="533" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="539" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="545" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="551" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="557" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="563" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="569" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="575" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="581" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="587" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="593" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="599" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="605" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="611" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="617" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="623" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="629" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="635" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="641" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="647" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="653" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="659" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="665" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="671" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="677" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="683" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="689" modulation="0"></freq>	
+		<freq bandwidth="6" frequency_mhz="695" modulation="0"></freq>	
+	</delivery_system>
+</document>
