@@ -450,6 +450,7 @@ static int joker_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	if (!joker)
 		return -EINVAL;
 
+	jdebug("%s: enable=%d \n", __func__, enable);
 	if (enable)
 		joker_unreset(joker, OC_I2C_RESET_GATE);
 	else
