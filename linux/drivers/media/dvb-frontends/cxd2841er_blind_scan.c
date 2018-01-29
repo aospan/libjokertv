@@ -7075,7 +7075,7 @@ int cxd2841er_blind_scan(struct dvb_frontend* fe,
 					fe->ops.tuner_ops.set_params(fe);
 				if ((priv->flags & CXD2841ER_USE_GATECTRL) && fe->ops.i2c_gate_ctrl)
 					fe->ops.i2c_gate_ctrl(fe, 0);
-				msleep(40);
+				msleep(100);
 
 				pSeq->commonParams.tuneReq.frequencyKHz = ((pSeq->commonParams.tuneReq.frequencyKHz + 2) / 4) * 4;
 			}
