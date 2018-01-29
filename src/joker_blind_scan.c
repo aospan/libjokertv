@@ -85,7 +85,8 @@ void blind_scan_callback (void *data)
 		filename = calloc(1, 1024);
 		if(!filename)
 			return;
-		snprintf(filename, 1024, "%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
+		snprintf(filename, 1024, "%s-%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
+				res->prefix,
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v",
 				info->lnb.selected_freq);
 
@@ -104,6 +105,38 @@ void blind_scan_callback (void *data)
 		}
 		fclose(pfd);
 		printf("power list (size %d) dumped to %s\n", cnt, filename);
+		free(filename);
+	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_CAND) {
+		if (!joker->blind_power_file_prefix)
+			return;
+
+		// save candidates
+		filename = calloc(1, 1024);
+		if(!filename)
+			return;
+		snprintf(filename, 1024, "cand-%s-%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
+				res->prefix,
+				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v",
+				info->lnb.selected_freq);
+
+		pCurrent = res->pCandList->pNext;
+		pfd = fopen(filename, "w+b");
+		if (pfd <= 0) {
+			printf("Can't open cand list file %s error %d (%s)\n",
+					filename, errno, strerror(errno));
+			return;
+		}
+		while(pCurrent){
+			fprintf(pfd, "candidate freq=%d sr=%d minSR=%d maxSR=%d\n",
+					pCurrent->data.candidate.centerFreqKHz,
+					pCurrent->data.candidate.symbolRateKSps,
+					pCurrent->data.candidate.minSymbolRateKSps,
+					pCurrent->data.candidate.maxSymbolRateKSps);
+			pCurrent = pCurrent->pNext;
+			cnt++;
+		}
+		fclose(pfd);
+		printf("cand list (size %d) dumped to %s\n", cnt, filename);
 		free(filename);
 	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS) {
 		printf("progress=%u%%\r", res->progress);

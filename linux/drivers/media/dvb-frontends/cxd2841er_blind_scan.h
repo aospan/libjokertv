@@ -29,7 +29,7 @@
 */
 #define SONY_DEMOD_DVBS_S2_BLINDSCAN_SEARCH_RANGE_MHZ    1220
 #define SONY_DEMOD_DVBS_S2_BLINDSCAN_DATA_MAX           10000
-#define SONY_DEMOD_DVBS_S2_BLINDSCAN_POWER_MAX ((SONY_DEMOD_DVBS_S2_BLINDSCAN_SEARCH_RANGE_MHZ + 45) * 2)
+#define SONY_DEMOD_DVBS_S2_BLINDSCAN_POWER_MAX ((SONY_DEMOD_DVBS_S2_BLINDSCAN_SEARCH_RANGE_MHZ + 45) * 20)
 
 /* Return codes */
 typedef enum {
@@ -251,9 +251,16 @@ typedef struct {
 
 /*** Common ***/
 typedef struct {
+	char * prefix;
         uint8_t isPower; 
 	sony_demod_dvbs_s2_blindscan_data_t * pPowerList;
 } sony_demod_dvbs_s2_blindscan_power_info_t;
+
+typedef struct {
+	char * prefix;
+        uint8_t isCand; 
+	sony_demod_dvbs_s2_blindscan_data_t * pCandList;
+} sony_demod_dvbs_s2_blindscan_cand_info_t;
 
 typedef struct {
         uint8_t isDetect;  /* 0: Not detect, 1: Detect */
@@ -286,6 +293,7 @@ typedef struct {
 	struct cxd2841er_priv *priv;
 	struct dvb_frontend* fe;
         uint32_t waitTime;                                      /**< Wait time in ms */
+        sony_demod_dvbs_s2_blindscan_cand_info_t candInfo;    /**< Candidates information */
         sony_demod_dvbs_s2_blindscan_power_info_t powerInfo;    /**< Power information for spectrum draw */
         sony_demod_dvbs_s2_blindscan_det_info_t detInfo;        /**< Detected channel information */
         sony_demod_dvbs_s2_blindscan_tune_req_t tuneReq;        /**< Request to tune information */
@@ -303,7 +311,8 @@ typedef struct sony_stopwatch_t {
 typedef enum {
 	SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT,    /**< Detect channel. */
 	SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS,  /**< Update progress. */
-	SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_POWER	/**< Power info for spectrum draw */
+	SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_POWER,	/**< Power info for spectrum draw */
+	SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_CAND		/**< Candidates info */
 } sony_integ_dvbs_s2_blindscan_event_id_t;
 
 typedef struct {
@@ -317,11 +326,13 @@ typedef struct {
 	    /* If "eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT", this value is valid. */
 	    sony_dvbs_s2_tune_param_t tuneParam;
 	    sony_demod_dvbs_s2_blindscan_data_t* pPowerList;      /**< Power list. */
+	    sony_demod_dvbs_s2_blindscan_data_t* pCandList;      /**< Cand list. */
 	    /*
 	     *                  If "eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS", this value is valid.
 	     *                              The range of this value is 0 - 100 in percentage.
 	     */
 	    uint8_t progress;
+	    char *prefix;
 	    void *callback_arg;
 }sony_integ_dvbs_s2_blindscan_result_t;
 
@@ -512,6 +523,7 @@ typedef struct {
 
         sony_demod_dvbs_s2_blindscan_power_t powerArray[SONY_DEMOD_DVBS_S2_BLINDSCAN_POWER_MAX];
         sony_demod_dvbs_s2_blindscan_data_t dataArray[SONY_DEMOD_DVBS_S2_BLINDSCAN_DATA_MAX];
+	bool do_power_scan; /* callback call with power data */
 } sony_demod_dvbs_s2_blindscan_seq_t;
 
 typedef struct {

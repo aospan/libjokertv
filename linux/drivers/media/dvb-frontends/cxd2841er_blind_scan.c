@@ -35,6 +35,9 @@
 #include "cxd2841er_priv.h"
 #include "cxd2841er_blind_scan.h"
 
+static sony_result_t sony_tuner_helene_sat_AGCLevel2AGCdB (uint32_t AGCLevel,
+		int32_t * pAGCdB);
+
 /*** utility ***/
 #define MASKUPPER(n) (((n) == 0) ? 0 : (0xFFFFFFFFU << (32 - (n))))
 #define MASKLOWER(n) (((n) == 0) ? 0 : (0xFFFFFFFFU >> (32 - (n))))
@@ -3728,6 +3731,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
     sony_result_t result = SONY_RESULT_OK;
     int32_t power = 0;
     int32_t stepFreqKHz = 0;
+    struct cxd2841er_priv *priv = pSeq->pCommonParams->priv;
 
     if(!pSeq) {
         return  (SONY_RESULT_ERROR_ARG);
@@ -3757,6 +3761,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
     case CS_STATE_PEAK_SEARCHING:
         /* Get result */
         power = (int32_t)(pSeq->pSeqPM->power);
+        dev_dbg(&priv->i2c->dev, "%s(): CS_STATE_PEAK_SEARCHING power=%d freq=%d (%d)\n",
+                __func__, power, (pSeq->index) * 100, pSeq->freqOffsetKHz + (pSeq->index * 100)); 
         if ((pSeq->index == -5) || (pSeq->peakPower < power)){
             pSeq->peakPower = power;
             pSeq->peakFreqOfsKHz = (pSeq->index) * 100;
@@ -3777,6 +3783,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
             if (result != SONY_RESULT_OK){
                 return  (result);
             }
+            dev_dbg(&priv->i2c->dev, "%s(): CS_STATE_PEAK_SEARCHING final peak freq=%d (%d) index=%d\n",
+                    __func__, pSeq->peakFreqOfsKHz, pSeq->freqOffsetKHz + (pSeq->index * 100), pSeq->index);
             pSeq->lowerFreqKHz = pSeq->freqOffsetKHz + (pSeq->peakFreqOfsKHz - stepFreqKHz);
             result = sony_demod_dvbs_s2_blindscan_subseq_pm_Start (pSeq->pSeqPM, pSeq->lowerFreqKHz);
             if (result != SONY_RESULT_OK){
@@ -3795,6 +3803,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
             if (result != SONY_RESULT_OK){
                 return  (result);
             }
+            dev_dbg(&priv->i2c->dev, "%s(): CS_STATE_LOWER_SEARCHING final lowerFreqKHz=%d\n",
+                    __func__, pSeq->lowerFreqKHz);
             pSeq->upperFreqKHz = pSeq->freqOffsetKHz + (pSeq->peakFreqOfsKHz + stepFreqKHz);
             result = sony_demod_dvbs_s2_blindscan_subseq_pm_Start (pSeq->pSeqPM, pSeq->upperFreqKHz);
             if (result != SONY_RESULT_OK){
@@ -3813,6 +3823,9 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
                     return  (result);
                 }
                 pSeq->lowerFreqKHz = pSeq->freqOffsetKHz + (pSeq->peakFreqOfsKHz - stepFreqKHz);
+                dev_dbg(&priv->i2c->dev, "%s(): CS_STATE_LOWER_SEARCHING index=%d stepFreqKHz=%d lowerFreqKHz=%d (%d)\n",
+                        __func__, pSeq->index, stepFreqKHz, pSeq->peakFreqOfsKHz - stepFreqKHz,
+				pSeq->lowerFreqKHz);
                 result = sony_demod_dvbs_s2_blindscan_subseq_pm_Start (pSeq->pSeqPM, pSeq->lowerFreqKHz);
                 if (result != SONY_RESULT_OK){
                     return  (result);
@@ -3828,6 +3841,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
     case CS_STATE_UPPER_SEARCHING:
         power = (int32_t)(pSeq->pSeqPM->power);
         if ((pSeq->peakPower * 100) > (power * LOVAL)){
+            dev_dbg(&priv->i2c->dev, "%s(): CS_STATE_UPPER_SEARCHING upper found peak=%d power=%d \n",
+                    __func__, pSeq->peakPower, power);
             /* OK */
             result = finish_ok_cs (pSeq);
         } else if ((power * 100) > (pSeq->peakPower * HIVAL)){
@@ -3843,6 +3858,9 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_cs_Sequence(sony_demod_dvbs_s2
                     return  (result);
                 }
                 pSeq->upperFreqKHz = pSeq->freqOffsetKHz + (pSeq->peakFreqOfsKHz + stepFreqKHz);
+                dev_dbg(&priv->i2c->dev, "%s(): CS_STATE_UPPER_SEARCHING index=%d power=%d stepFreqKHz=%d upperFreqKHz=%d (%d)\n",
+                        __func__, pSeq->index, power, stepFreqKHz, pSeq->peakFreqOfsKHz + stepFreqKHz,
+                        pSeq->upperFreqKHz);
                 result = sony_demod_dvbs_s2_blindscan_subseq_pm_Start (pSeq->pSeqPM, pSeq->upperFreqKHz);
                 if (result != SONY_RESULT_OK){
                     return  (result);
@@ -3911,9 +3929,11 @@ static sony_result_t get_step_cs (int32_t stepCount, int32_t * pValue)
 static sony_result_t finish_ok_cs (sony_demod_dvbs_s2_blindscan_subseq_cs_t * pSeq)
 {
     sony_result_t result = SONY_RESULT_OK;
+    struct cxd2841er_priv *priv = NULL;
     if(!pSeq) {
         return  (SONY_RESULT_ERROR_ARG);
     }
+    priv = pSeq->pCommonParams->priv;
     if (pSeq->upperFreqKHz > pSeq->lowerFreqKHz){
         pSeq->coarseSymbolRateKSps = (uint32_t)(pSeq->upperFreqKHz - pSeq->lowerFreqKHz);
         pSeq->isExist = 1;
@@ -3921,6 +3941,8 @@ static sony_result_t finish_ok_cs (sony_demod_dvbs_s2_blindscan_subseq_cs_t * pS
         pSeq->coarseSymbolRateKSps = 0;
         pSeq->isExist = 0;
     }
+    dev_dbg(&priv->i2c->dev, "%s(): final upperFreqKHz=%d lowerFreqKHz=%d coarseSymbolRateKSps=%d\n",
+            __func__, pSeq->upperFreqKHz, pSeq->lowerFreqKHz, pSeq->coarseSymbolRateKSps);
     pSeq->isEnable = 0;
     result = sony_demod_dvbs_s2_blindscan_CS_FIN (pSeq->pCommonParams->priv);
     return  (result);
@@ -3988,12 +4010,16 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_pm_Sequence (sony_demod_dvbs_s
 			if (result != SONY_RESULT_OK){
 				return  (result);
 			}
+            // prophylactic stabilize
+            msleep(10);
 
 			/* Scan start */
 			result = sony_demod_dvbs_s2_blindscan_PS_START (pSeq->pCommonParams->priv);
 			if (result != SONY_RESULT_OK){
 				return  (result);
 			}
+            // prophylactic stabilize
+            msleep(10);
 
 			pSeq->state = PM_STATE_WAITING_CSFIN;
 			pSeq->pCommonParams->waitTime = 0;
@@ -4512,6 +4538,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 		case SS_STATE_START:
 			result = sony_demod_dvbs_s2_blindscan_PS_INIT (pSeq->pCommonParams->priv, pSeq->ocfr_csk);
 			if (result != SONY_RESULT_OK){
+				dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: PS_INIT failed \n",
+						__func__);
 				return  (result);
 			}
 			offsetFreq = (int32_t)pSeq->tunerStepFreqKHz / 2;
@@ -4523,6 +4551,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 					pSeq->stepFreqKHz,
 					ckaFreqKHz);
 			if (result != SONY_RESULT_OK){
+				dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: PS_SET failed \n",
+						__func__);
 				return  (result);
 			}
 			pSeq->currentFreqKHz = (uint32_t)((int32_t)pSeq->minFreqKHz + offsetFreq);
@@ -4542,6 +4572,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 		case SS_STATE_RF_TUNED:
 			result = sony_demod_dvbs_s2_monitor_IFAGCOut (pSeq->pCommonParams->priv, &(pSeq->agcLevel));
 			if (result != SONY_RESULT_OK){
+				dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: IFAGCOut failed \n",
+						__func__);
 				return (result);
 			}
 			pSeq->pCommonParams->agcInfo.isRequest = 1;
@@ -4554,8 +4586,12 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 			pSeq->agc_x100dB = pSeq->pCommonParams->agcInfo.agc_x100dB;
 			result = sony_demod_dvbs_s2_blindscan_PS_START (pSeq->pCommonParams->priv);
 			if (result != SONY_RESULT_OK){
+				dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: PS_START failed \n",
+						__func__);
 				return  (result);
 			}
+            // prophylactic stabilize
+            msleep(20);
 			result = sony_stopwatch_start (&pSeq->stopwatch);
 			if (result != SONY_RESULT_OK){
 				return  (result);
@@ -4572,14 +4608,18 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 			}
 			result = sony_demod_dvbs_s2_blindscan_GetCSFIN (pSeq->pCommonParams->priv, &csfin);
 			if (result != SONY_RESULT_OK){
+				dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: GetCSFIN failed \n",
+						__func__);
 				return  (result);
 			}
 			if (csfin){
 				pSeq->state = SS_STATE_READ_CS;
 				pSeq->pCommonParams->waitTime = 0;
 			} else {
-				if (elapsedTime > 10000){
+				if (elapsedTime > 100000){
 					/* Timeout error */
+					dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: SONY_RESULT_ERROR_TIMEOUT failed \n",
+							__func__);
 					return SONY_RESULT_ERROR_TIMEOUT;
 				}
 			}
@@ -4588,6 +4628,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 		case SS_STATE_READ_CS:
 			result = sony_demod_dvbs_s2_blindscan_GetCSRDEND(pSeq->pCommonParams->priv, &csrdend);
 			if (result != SONY_RESULT_OK){
+				dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: GetCSRDEND failed \n",
+						__func__);
 				return  (result);
 			}
 			if (csrdend){
@@ -4605,12 +4647,16 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 
 				result = sony_demod_dvbs_s2_blindscan_GetCSINFO (pSeq->pCommonParams->priv, &csfreq, &cspow);
 				if (result != SONY_RESULT_OK){
+					dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: GetCSINFO failed \n",
+							__func__);
 					return  (result);
 				}
 
 				/* Add to power list */
 				result = sony_demod_dvbs_s2_blindscan_AllocPower (&(pSeq->pCommonParams->storage), &pTempPower);
 				if (result != SONY_RESULT_OK){
+					dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: AllocPower failed \n",
+							__func__);
 					return  (result);
 				}
 
@@ -4637,6 +4683,10 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 					 */
 					pTempPower->power = (int32_t)((sony_math_log10 (cspow) - 421) * 10) - pSeq->pCommonParams->agcInfo.agc_x100dB;
 
+					dev_dbg(&pSeq->pCommonParams->priv->i2c->dev, "CS freqKHz=%d power=%d csfreq=%d agc=%d (%d)\n",
+							pTempPower->freqKHz,
+							pTempPower->power, csfreq, pSeq->agcLevel,
+							pSeq->pCommonParams->agcInfo.agc_x100dB);
 					dev_dbg(&pSeq->pCommonParams->priv->i2c->dev,
 							"%s(): add PowerList pTempPower=%d freq=%d kHz\n",
 							__func__, pTempPower, pTempPower->freqKHz); 
@@ -4655,12 +4705,16 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_ss_Sequence(sony_demod_dvbs_s2
 			pSeq->isEnable = 0;
 			result = sony_demod_dvbs_s2_blindscan_PS_FIN (pSeq->pCommonParams->priv);
 			if (result != SONY_RESULT_OK){
+				dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: PS_FIN failed \n",
+						__func__);
 				return result;
 			}
 			pSeq->pCommonParams->waitTime = 0;
 			break;
 
 		default:
+			dev_err(&pSeq->pCommonParams->priv->i2c->dev, "%s: SONY_RESULT_ERROR_SW_STATE failed \n",
+					__func__);
 			return SONY_RESULT_ERROR_SW_STATE;
 	}
 
@@ -6321,10 +6375,8 @@ int cxd2841er_blind_scan_init(struct dvb_frontend* fe,
 		return -EINVAL;
 
 	pSeq->isContinue = 1;
-	if (do_power_scan)
-		pSeq->seqState = BLINDSCAN_SEQ_STATE_SPECTRUM;
-	else
-		pSeq->seqState = BLINDSCAN_SEQ_STATE_START;
+	pSeq->do_power_scan = do_power_scan;
+	pSeq->seqState = BLINDSCAN_SEQ_STATE_START;
 	pSeq->minFreqKHz = minFreqKHz;
 	pSeq->maxFreqKHz = maxFreqKHz;
 	pSeq->minSymbolRateKSps = minSymbolRateKSps;
@@ -6432,11 +6484,22 @@ int cxd2841er_blind_scan_init(struct dvb_frontend* fe,
 	return SONY_RESULT_OK;
 }
 
-int dump_power(sony_demod_dvbs_s2_blindscan_seq_t * pSeq)
+int dump_power(char * prefix, sony_demod_dvbs_s2_blindscan_seq_common_t * pCommonParams,
+		sony_demod_dvbs_s2_blindscan_data_t * pPowerList)
 {
 	// state machine will dump power soon
-	pSeq->commonParams.powerInfo.pPowerList = pSeq->subseqSS.pPowerList;
-	pSeq->commonParams.powerInfo.isPower = 1;
+	pCommonParams->powerInfo.pPowerList = pPowerList;
+	pCommonParams->powerInfo.isPower = 1;
+	pCommonParams->powerInfo.prefix = prefix;
+}
+
+int dump_cand(char * prefix, sony_demod_dvbs_s2_blindscan_seq_common_t * pCommonParams,
+		sony_demod_dvbs_s2_blindscan_data_t * pCandList)
+{
+	// state machine will dump candidates soon
+	pCommonParams->candInfo.pCandList = pCandList;
+	pCommonParams->candInfo.isCand = 1;
+	pCommonParams->candInfo.prefix = prefix;
 }
 
 sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blindscan_seq_t * pSeq)
@@ -6503,28 +6566,8 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 		/* Main sequence */
 		switch(pSeq->seqState)
 		{
-			case BLINDSCAN_SEQ_STATE_SPECTRUM:
-				/* Get power spectrum (1st) */
-				result = sony_demod_dvbs_s2_blindscan_subseq_ss_Start(&pSeq->subseqSS,
-						pSeq->minPowerFreqKHz,
-						pSeq->maxPowerFreqKHz,
-						500,
-						20000,
-						priv->dvbss2PowerSmooth);
-				if (result != SONY_RESULT_OK){
-					dev_err(&priv->i2c->dev, "%s(): ss_Start spectrum failed \n", __func__); 
-					return result;
-				}
-				pSeq->commonParams.waitTime = 0;
-				pSeq->seqState = BLINDSCAN_SEQ_STATE_SPECTRUM_SAVE;
-				break;
-
-			case BLINDSCAN_SEQ_STATE_SPECTRUM_SAVE:
-				dump_power(pSeq);
-				pSeq->seqState = BLINDSCAN_SEQ_STATE_START;
-				break;
-
 			case BLINDSCAN_SEQ_STATE_START:
+				dev_info(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_START\n", __func__); 
 				if (pSeq->maxSymbolRateKSps >= 20000){
 					/* === Stage 1 === */
 					/* Get power spectrum (1st) */
@@ -6539,15 +6582,21 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 						return result;
 					}
 					pSeq->commonParams.waitTime = 0;
-					pSeq->seqState = BLINDSCAN_SEQ_STATE_SS1_FIN;
+					pSeq->seqState = BLINDSCAN_SEQ_STATE_SPECTRUM_SAVE;
 				} else {
 					/* Skip stage 1 */
 					pSeq->commonParams.waitTime = 0;
 					pSeq->seqState = BLINDSCAN_SEQ_STATE_STAGE1_FIN;
 				}
 				break;
+			case BLINDSCAN_SEQ_STATE_SPECTRUM_SAVE:
+				dump_power("SS1", pSeq->subseqSS.pCommonParams, pSeq->subseqSS.pPowerList);
+				pSeq->seqState = BLINDSCAN_SEQ_STATE_SS1_FIN;
+				break;
 
 			case BLINDSCAN_SEQ_STATE_SS1_FIN:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_SS1_FIN\n", __func__); 
+				dump_power("SS1_avg", pSeq->subseqSS.pCommonParams, pSeq->subseqSS.pPowerList);
 				/* Get candidate (MP) */
 				result = sony_demod_dvbs_s2_blindscan_algo_GetCandidateMp (priv, &(pSeq->commonParams.storage),
 						pSeq->subseqSS.pPowerList,
@@ -6572,6 +6621,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				if (result != SONY_RESULT_OK){
 					return result;
 				}
+				dump_cand("SS1", pSeq->subseqSS.pCommonParams, pSeq->pCandList1);
 
 				result = sony_demod_dvbs_s2_blindscan_subseq_fs_Start(&pSeq->subseqFS, pSeq->pCandList1, 19900, 45000, pSeq->pDetectedList);
 				if (result != SONY_RESULT_OK){
@@ -6584,6 +6634,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_STAGE1_FIN:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_STAGE1_FIN\n", __func__); 
 				if (pSeq->minSymbolRateKSps < 20000){
 					/* Stage 2 or 3 */
 					result = sony_demod_dvbs_s2_blindscan_ClearDataList (&(pSeq->commonParams.storage), pSeq->pCandList1);
@@ -6620,6 +6671,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_SS2_START:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_SS2_START\n", __func__); 
 				if (pSeq->pBandCurrent){
 					result = sony_demod_dvbs_s2_blindscan_ClearPowerList (&(pSeq->commonParams.storage), pSeq->subseqSS.pPowerList);
 					if (result != SONY_RESULT_OK){
@@ -6644,7 +6696,9 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_SS2_FIN:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_SS2_FIN\n", __func__); 
 				{   
+					dump_power("SS2", pSeq->subseqSS.pCommonParams, pSeq->subseqSS.pPowerList);
 					sony_demod_dvbs_s2_blindscan_data_t * pList;
 					sony_demod_dvbs_s2_blindscan_data_t * pLast1;
 					sony_demod_dvbs_s2_blindscan_data_t * pLast2;
@@ -6728,6 +6782,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_FS2_START:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_FS2_START\n", __func__); 
 				result = sony_demod_dvbs_s2_blindscan_algo_SortBySymbolrate (&(pSeq->commonParams.storage), pSeq->pCandList1, 20000);
 				if (result != SONY_RESULT_OK){
 					return result;
@@ -6738,6 +6793,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 					return result;
 				}
 
+				dump_cand("FS2", pSeq->subseqSS.pCommonParams, pSeq->pCandList1);
 				result = sony_demod_dvbs_s2_blindscan_subseq_fs_Start (&pSeq->subseqFS, pSeq->pCandList1, 4975, 20000, pSeq->pDetectedList);
 				if (result != SONY_RESULT_OK){
 					return result;
@@ -6748,6 +6804,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_FS2_FIN:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_FS2_FIN\n", __func__); 
 				{   
 					sony_demod_dvbs_s2_blindscan_data_t * pCurrent = NULL;
 					result = sony_demod_dvbs_s2_blindscan_ClearDataList (&(pSeq->commonParams.storage), pSeq->pCandList1);
@@ -6770,6 +6827,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 					if (result != SONY_RESULT_OK){
 						return result;
 					}
+					dump_cand("FS2-List2", pSeq->subseqSS.pCommonParams, pSeq->pCandList2);
 
 					pSeq->pCandCurrent = pSeq->pCandList2->pNext;
 					pSeq->seqState = BLINDSCAN_SEQ_STATE_CS_PREPARING;
@@ -6791,6 +6849,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_CS_PREPARING:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_CS_PREPARING\n", __func__); 
 				if (pSeq->candIndex > pSeq->candCount){
 					pSeq->candIndex = pSeq->candCount;
 				}
@@ -6832,6 +6891,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_CS_TUNED:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_CS_TUNED\n", __func__); 
 				{   
 					result = sony_demod_dvbs_s2_blindscan_subseq_cs_Start (&(pSeq->subseqCS), 0);
 					if (result != SONY_RESULT_OK){
@@ -6842,6 +6902,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_CS_FIN:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_CS_FIN\n", __func__); 
 				if (pSeq->subseqCS.isExist){
 					sony_demod_dvbs_s2_blindscan_data_t * pTemp = NULL;
 					result = sony_demod_dvbs_s2_blindscan_AllocData (&(pSeq->commonParams.storage), &pTemp);
@@ -6854,6 +6915,10 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 					pTemp->data.candidate.maxSymbolRateKSps = ((pSeq->subseqCS.coarseSymbolRateKSps * 1600) + 999) / 1000;
 					pSeq->pCandLast->pNext = pTemp;
 					pSeq->pCandLast = pSeq->pCandLast->pNext;
+					dev_dbg(&priv->i2c->dev, "%s(): exist. cand freq=%d sr/min/max=%d/%d/%d\n",
+							__func__, pTemp->data.candidate.centerFreqKHz,
+							pTemp->data.candidate.symbolRateKSps, pTemp->data.candidate.minSymbolRateKSps,
+							pTemp->data.candidate.maxSymbolRateKSps); 
 				}
 				/* Go to next candidate */
 				pSeq->candIndex++;
@@ -6863,6 +6928,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_FS3_START:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_FS3_START\n", __func__); 
 				result = sony_demod_dvbs_s2_blindscan_algo_DeleteDuplicate (&(pSeq->commonParams.storage), pSeq->pCandList1);
 				if (result != SONY_RESULT_OK){
 					return result;
@@ -6873,6 +6939,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 					return result;
 				}
 
+				dump_cand("FS3", pSeq->subseqSS.pCommonParams, pSeq->pCandList1);
 				result = sony_demod_dvbs_s2_blindscan_subseq_fs_Start(&pSeq->subseqFS, pSeq->pCandList1, 1000, 5000, pSeq->pDetectedList);
 				if (result != SONY_RESULT_OK){
 					return result;
@@ -6883,6 +6950,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 				break;
 
 			case BLINDSCAN_SEQ_STATE_FINISH:
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_FINISH\n", __func__); 
 				/* Finish */
 				pSeq->isContinue = 0;
 				pSeq->commonParams.waitTime = 0;
@@ -6987,11 +7055,6 @@ int cxd2841er_blind_scan(struct dvb_frontend* fe,
 					symbolRateKSps = 45000;
 				}
 
-				dev_dbg(&priv->i2c->dev, "aospan:RFtune %d kHz system=%d symbolRateKSps=%d \n",
-						pSeq->commonParams.tuneReq.frequencyKHz,
-						pSeq->commonParams.tuneReq.system,
-						symbolRateKSps);
-
 				/* RF Tune */
 				if (pSeq->commonParams.tuneReq.system == SONY_DTV_SYSTEM_DVBS2) 
 						fe->dtv_property_cache.delivery_system = SYS_DVBS2;
@@ -7002,6 +7065,12 @@ int cxd2841er_blind_scan(struct dvb_frontend* fe,
 
 				if ((priv->flags & CXD2841ER_USE_GATECTRL) && fe->ops.i2c_gate_ctrl)
 					fe->ops.i2c_gate_ctrl(fe, 1);
+
+				dev_info(&priv->i2c->dev, "aospan:RFtune %d kHz system=%d symbolRateKSps=%d \n",
+						pSeq->commonParams.tuneReq.frequencyKHz,
+						pSeq->commonParams.tuneReq.system,
+						symbolRateKSps);
+
 				if (fe->ops.tuner_ops.set_params)
 					fe->ops.tuner_ops.set_params(fe);
 				if ((priv->flags & CXD2841ER_USE_GATECTRL) && fe->ops.i2c_gate_ctrl)
@@ -7013,9 +7082,21 @@ int cxd2841er_blind_scan(struct dvb_frontend* fe,
 
 			if (pSeq->commonParams.powerInfo.isPower){
 				pSeq->commonParams.powerInfo.isPower = 0;
-				/* Prepare callback information.(Detected channel) */
+				/* Prepare callback information */
 				blindscanResult.eventId = SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_POWER;
 				blindscanResult.pPowerList = pSeq->commonParams.powerInfo.pPowerList;
+				blindscanResult.prefix = pSeq->commonParams.powerInfo.prefix;
+
+				/* Callback */
+				callback((void*)&blindscanResult);
+			}
+
+			if (pSeq->commonParams.candInfo.isCand){
+				pSeq->commonParams.candInfo.isCand = 0;
+				/* Prepare callback information */
+				blindscanResult.eventId = SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_CAND;
+				blindscanResult.pCandList = pSeq->commonParams.candInfo.pCandList;
+				blindscanResult.prefix = pSeq->commonParams.candInfo.prefix;
 
 				/* Callback */
 				callback((void*)&blindscanResult);
