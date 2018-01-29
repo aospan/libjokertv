@@ -6567,7 +6567,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_seq_Sequence (sony_demod_dvbs_s2_blin
 		switch(pSeq->seqState)
 		{
 			case BLINDSCAN_SEQ_STATE_START:
-				dev_info(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_START\n", __func__); 
+				dev_dbg(&priv->i2c->dev, "%s(): BLINDSCAN_SEQ_STATE_START\n", __func__); 
 				if (pSeq->maxSymbolRateKSps >= 20000){
 					/* === Stage 1 === */
 					/* Get power spectrum (1st) */
@@ -7066,7 +7066,7 @@ int cxd2841er_blind_scan(struct dvb_frontend* fe,
 				if ((priv->flags & CXD2841ER_USE_GATECTRL) && fe->ops.i2c_gate_ctrl)
 					fe->ops.i2c_gate_ctrl(fe, 1);
 
-				dev_info(&priv->i2c->dev, "aospan:RFtune %d kHz system=%d symbolRateKSps=%d \n",
+				dev_dbg(&priv->i2c->dev, "aospan:RFtune %d kHz system=%d symbolRateKSps=%d \n",
 						pSeq->commonParams.tuneReq.frequencyKHz,
 						pSeq->commonParams.tuneReq.system,
 						symbolRateKSps);
