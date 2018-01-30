@@ -31,6 +31,15 @@
 #define SONY_DEMOD_DVBS_S2_BLINDSCAN_DATA_MAX           10000
 #define SONY_DEMOD_DVBS_S2_BLINDSCAN_POWER_MAX ((SONY_DEMOD_DVBS_S2_BLINDSCAN_SEARCH_RANGE_MHZ + 45) * 20)
 
+/*------------------------------------------------------------------------------
+ *  Const char definitions
+ *  ------------------------------------------------------------------------------*/
+static const char *DVBS_S2_IQSense[] = { "Normal IQ", "Inverted IQ" };
+static const char *DVBS2_CodeRate[] = { "1/2", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "8/9", "9/10", "7/8", "RSVD 29", "RSVD 30", "RSVD 31", "Invalid" };
+static const char *DVBS2_Modulation[] = { "QPSK", "8PSK", "16APSK", "32APSK", "RSVD 29", "RSVD 30", "RSVD 31", "Dummy PLL Frame", "Invalid" };
+static const char *DVBS2_FECFrame[] = { "Normal", "Short" };
+static const char *DVBS_CodeRate[] = { "1/2", "2/3", "3/4", "5/6", "7/8", "Invalid" };
+
 /* Return codes */
 typedef enum {
 	SONY_RESULT_OK,              /**< Function was successfully actioned */
@@ -319,6 +328,8 @@ typedef struct {
 	sony_dtv_system_t system;       /**< System of the channel. */
 	uint32_t centerFreqKHz;         /**< Center frequency in kHz of the DVB-S/S2 channel. */
 	uint32_t symbolRateKSps;        /**< Symbol rate in kHz of the DVB-S/S2 channel. */
+    sony_dvbs2_plscode_t plscode; // for DVB-S2 only !
+    sony_dvbs_coderate_t coderate; // for DVB-S only !
 } sony_dvbs_s2_tune_param_t;
 
 typedef struct {

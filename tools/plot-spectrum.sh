@@ -45,23 +45,33 @@ fi
 
 #get LOCKed transponders
 #format example: "11889","13v V(R)","DVB-S2","7198"
-while IFS=, read -r freq pol standard ksym
+while IFS=, read -r freq pol standard ksym other
 do
     freq=${freq//\"}
     standard=${standard//\"}
     ksym=${ksym//\"}
     pol=${pol//\"}
+    other=${other//\"}
     if [ "$freq" -eq "$freq" ] 2>/dev/null && [[ "$pol" =~ "${voltage}".+ ]]; then
-        labels+="set arrow from $freq, graph 0 to $freq, graph 1 nohead"
+        if [ "${voltage}" = "13" ]; then
+            pol_short="V"
+        else
+            pol_short="H"
+        fi
+        labels+="set arrow from $freq, graph 0 to $freq, graph 1 nohead ls 50"
         labels+=$'\n'
-        labels+="set label \"$standard $freq MHz $pol $ksym ksym\" at $freq-5,graph 0 rotate"
+        labels+="set label \"$standard $freq$pol_short $ksym $other\" at $freq-5,graph 0 rotate textcolor rgb \"black\""
         labels+=$'\n'
     fi
 done < $locked
 
+datetime=`date -R`
+
 #draw final spectrum
 echo "Generating spectrum ..."
 gnuplot -persist <<-EOFMarker
+    set title "$datetime"
+    set style line 50 lt 1 lc rgb "black" lw 1
     set grid xtics
     set xtics 40 format "%.1f" scale 2 rotate
     set grid x2tics

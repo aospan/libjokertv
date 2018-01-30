@@ -52,6 +52,7 @@ void blind_scan_callback (void *data)
 	int cnt = 0;
 	FILE *pfd = NULL;
 	char * filename = NULL;
+    char buf[1024];
 
 	struct joker_t *joker = (struct joker_t *)res->callback_arg;
 	if (!joker || !joker->info)
@@ -60,21 +61,25 @@ void blind_scan_callback (void *data)
 
 	jdebug("%s: eventId=%d \n", __func__, res->eventId);
 	if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT) {
-		printf("\nDetected! progress=%u%% %s %dMHz (lnb freq=%d) %s symbol rate=%d ksym/s\n",
-				res->progress, (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
-				res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
-				info->lnb.selected_freq,
-				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
-				res->tuneParam.symbolRateKSps);
+        snprintf(buf, 1024,
+                "\"%d\",\"%s\",\"%s\",\"%d\",\"%s\",\"%s\",\"%s\"\n",
+                res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
+                (info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
+                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
+                res->tuneParam.symbolRateKSps,
+                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
+                "QPSK" : DVBS2_Modulation[res->tuneParam.plscode.modulation],
+                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
+                DVBS_CodeRate[res->tuneParam.coderate] : \
+                DVBS2_CodeRate[res->tuneParam.plscode.codeRate],
+                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
+                "" : res->tuneParam.plscode.isPilotOn ? "PilotOn" : "PilotOff");
+
+		printf("\nDetected! progress=%u%% %s", res->progress, buf);
 
 		// save results to file 
 		if (joker->blind_out_filename_fd) {
-			fprintf(joker->blind_out_filename_fd,
-					"\"%d\",\"%s\",\"%s\",\"%d\"\n",
-					res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
-					(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
-					(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
-					res->tuneParam.symbolRateKSps);
+            fprintf(joker->blind_out_filename_fd, "%s", buf);
 			fflush(joker->blind_out_filename_fd);
 		}
 	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_POWER) {
@@ -139,7 +144,7 @@ void blind_scan_callback (void *data)
 		printf("cand list (size %d) dumped to %s\n", cnt, filename);
 		free(filename);
 	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS) {
-		printf("progress=%u%%\r", res->progress);
+		printf("progress=%u%%\n", res->progress);
 	}
 }
 
@@ -202,7 +207,7 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info,
 
 		// write file header
 		fprintf(joker->blind_out_filename_fd,
-				"freq_mhz,pol,standard,symbol_rate_ksps\n");
+				"freq_mhz,pol,standard,symbol_rate_ksps,modulation,fec,pilot\n");
 		fflush(joker->blind_out_filename_fd);
 	}
 
