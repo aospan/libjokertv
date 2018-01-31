@@ -65,12 +65,13 @@ do
     fi
 done < $locked
 
-datetime=`date -R`
+title=`date -R`
 
 #draw final spectrum
 echo "Generating spectrum ..."
 gnuplot -persist <<-EOFMarker
-    set title "$datetime"
+    set title "Built with Joker TV at $title \n\
+        https://tv.jokersys.com"
     set style line 50 lt 1 lc rgb "black" lw 1
     set grid xtics
     set xtics 40 format "%.1f" scale 2 rotate
