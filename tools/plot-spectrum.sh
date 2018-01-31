@@ -70,7 +70,7 @@ title=`date -R`
 #draw final spectrum
 echo "Generating spectrum ..."
 gnuplot -persist <<-EOFMarker
-    set title "Built with Joker TV at $title \n\
+    set title "Built with Joker TV on $title \n\
         https://tv.jokersys.com"
     set style line 50 lt 1 lc rgb "black" lw 1
     set grid xtics
