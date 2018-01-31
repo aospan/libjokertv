@@ -43,6 +43,16 @@ else
     colour="blue"
 fi
 
+#get min freq from power list
+minfreq=0
+while IFS=" " read -r freq val
+do
+    freq=${freq//\"}
+    if [ "$freq" -lt "$minfreq" ] || [[ "$minfreq" -eq "0" ]] ; then
+        minfreq=$freq
+    fi
+done < $power
+
 #get LOCKed transponders
 #format example: "11889","13v V(R)","DVB-S2","7198"
 while IFS=, read -r freq pol standard ksym other
@@ -52,7 +62,7 @@ do
     ksym=${ksym//\"}
     pol=${pol//\"}
     other=${other//\"}
-    if [ "$freq" -eq "$freq" ] 2>/dev/null && [[ "$pol" =~ "${voltage}".+ ]]; then
+    if [ "$freq" -eq "$freq" ] 2>/dev/null && [[ "$freq" -ge "$minfreq" ]] && [[ "$pol" =~ "${voltage}".+ ]]; then
         if [ "${voltage}" = "13" ]; then
             pol_short="V"
         else
