@@ -219,7 +219,7 @@ static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 			}
 		}
 
-		if (ignore) {
+		if (ignore || (p_program->i_number == 0x0 && p_program->i_pid == 0x10 /* NIT */)) {
 			p_program = p_program->p_next;
 			continue;
 		}
