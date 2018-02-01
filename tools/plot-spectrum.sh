@@ -51,7 +51,7 @@ do
     if [ "$freq" -lt "$minfreq" ] || [[ "$minfreq" -eq "0" ]] ; then
         minfreq=$freq
     fi
-done < $power
+done < "$power"
 
 #get LOCKed transponders
 #format example: "11889","13v V(R)","DVB-S2","7198"
@@ -73,7 +73,7 @@ do
         labels+="set label \"$standard $freq$pol_short $ksym $other\" at $freq-5,graph 0 rotate textcolor rgb \"black\""
         labels+=$'\n'
     fi
-done < $locked
+done < "$locked"
 
 title=`date -R`
 
