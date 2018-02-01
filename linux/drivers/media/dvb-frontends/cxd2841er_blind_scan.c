@@ -3362,12 +3362,12 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 	uint32_t detSymbolRateKSps = 0;
 	uint32_t ratioMax = 0;
 	uint32_t ratioMin = 0;
-    struct cxd2841er_priv *priv = NULL;
+	struct cxd2841er_priv *priv = NULL;
 
 	if(!pSeq) {
 		return  (SONY_RESULT_ERROR_ARG);
 	}
-    priv = pSeq->pCommonParams->priv;
+	priv = pSeq->pCommonParams->priv;
 
 	switch(pSeq->state)
 	{
@@ -3477,14 +3477,14 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 				return  (result);
 			}
 			if (srsfin){
-                dev_dbg(&priv->i2c->dev, "%s(): srsfin\n", __func__); 
+				dev_dbg(&priv->i2c->dev, "%s(): srsfin\n", __func__); 
 				/* Check TRL lock */
 				result = sony_demod_dvbs_s2_blindscan_CheckTRLLock (pSeq->pCommonParams->priv, &trllock);
 				if (result != SONY_RESULT_OK){
 					return  (result);
 				}
 				if (trllock){
-                    dev_dbg(&priv->i2c->dev, "%s(): trllock\n", __func__); 
+					dev_dbg(&priv->i2c->dev, "%s(): trllock\n", __func__); 
 					/* Symbol rate information */
 					result = sony_demod_dvbs_s2_monitor_SymbolRate (pSeq->pCommonParams->priv, &detSymbolRateSps);
 					switch(result)
@@ -3492,11 +3492,11 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 						case SONY_RESULT_OK:
 							/* Set symbol rate */
 							pSeq->detSymbolRateSps = detSymbolRateSps;
-                            dev_dbg(&priv->i2c->dev, "%s(): detSymbolRateSps=%d\n", __func__, detSymbolRateSps); 
+							dev_dbg(&priv->i2c->dev, "%s(): detSymbolRateSps=%d\n", __func__, detSymbolRateSps); 
 							break;
 
 						case SONY_RESULT_ERROR_HW_STATE:
-                            dev_dbg(&priv->i2c->dev, "%s(): not detSymbolRateSps\n", __func__); 
+							dev_dbg(&priv->i2c->dev, "%s(): not detSymbolRateSps\n", __func__); 
 							/* Not detect */
 							result = finish_ng (pSeq);
 							return  (result);
@@ -3505,7 +3505,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 							return  (result);
 					}
 					detSymbolRateKSps = (detSymbolRateSps + 500) / 1000;
-					pSeq->timeout = ((3600000 + (detSymbolRateKSps - 1)) / detSymbolRateKSps) + 150;
+					pSeq->timeout = ((3600000 + (detSymbolRateKSps - 1)) / detSymbolRateKSps) + 350;
 					result = sony_stopwatch_start (&(pSeq->stopwatch));
 					if (result != SONY_RESULT_OK){
 						return  (result);
@@ -3513,13 +3513,13 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 					pSeq->state = BT_STATE_WAIT_TSLOCK;
 					pSeq->pCommonParams->waitTime = 10;
 				} else {
-                    dev_dbg(&priv->i2c->dev, "%s(): TRL unlock \n", __func__); 
+					dev_dbg(&priv->i2c->dev, "%s(): TRL unlock \n", __func__); 
 					/* TRL unlock */
 					result = finish_ng (pSeq);
 				}
 			} else {
 				if (elapsedTime > 10000){
-                    dev_dbg(&priv->i2c->dev, "%s(): timeout \n", __func__); 
+					dev_dbg(&priv->i2c->dev, "%s(): timeout \n", __func__); 
 					/* Timeout */
 					result = finish_ng (pSeq);
 				} else {
@@ -3545,7 +3545,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 			}
 
 			if (tslock){
-                dev_dbg(&priv->i2c->dev, "%s(): tslock\n", __func__); 
+				dev_dbg(&priv->i2c->dev, "%s(): tslock\n", __func__); 
 				/* Store system information */
 				pSeq->pCommonParams->priv->system_sony = pSeq->detSystem;
 
@@ -3553,8 +3553,9 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 				result = finish_ok_bt (pSeq);
 				return  (result);
 			} else {
-                dev_dbg(&priv->i2c->dev, "%s(): no tslock .1\n", __func__); 
+				dev_dbg(&priv->i2c->dev, "%s(): no tslock .1\n", __func__); 
 				if (elapsedTime > pSeq->timeout){
+					dev_dbg(&priv->i2c->dev, "%s(): no tslock .1 timeout=%d\n", __func__, pSeq->timeout); 
 					uint8_t plscLock = 0;
 					uint8_t pilotOn = 0;
 					/* Not detected channel */
@@ -3597,7 +3598,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 				return  (result);
 			}
 			if (tslock){
-                dev_dbg(&priv->i2c->dev, "%s(): tslock .2\n", __func__); 
+				dev_dbg(&priv->i2c->dev, "%s(): tslock .2\n", __func__); 
 				/* Store system information */
 				pSeq->pCommonParams->priv->system_sony = pSeq->detSystem;
 
@@ -3606,7 +3607,7 @@ sony_result_t sony_demod_dvbs_s2_blindscan_subseq_bt_Sequence (sony_demod_dvbs_s
 				return  (result);
 			} else {
 				if (elapsedTime > pSeq->timeout){
-                    dev_dbg(&priv->i2c->dev, "%s(): tslock .2 timeout\n", __func__); 
+					dev_dbg(&priv->i2c->dev, "%s(): tslock .2 timeout\n", __func__); 
 					result = finish_ng (pSeq);
 					return  (result);
 				} else {
