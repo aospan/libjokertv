@@ -183,15 +183,16 @@ void record_callback(struct libusb_transfer *transfer)
 	struct ts_node * node = NULL;
 	int total_len = 0;
 	int off = 0, cnt = 0, ts_off = 0, len = 0;
-	struct joker_t *joker = pool->joker;
-
+	struct joker_t *joker = NULL;
+        
 	// free this transfer
 	if (!transfer->user_data) {
-		printf ("%s: no user data\n", __func__);
+		jdebug("%s: no user data\n", __func__);
 		transfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
 		libusb_free_transfer(transfer);
 		return;
 	}
+    joker = pool->joker;
 
 	// looks like we stopping TS processing. do not submit this transfer
 	if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
@@ -358,8 +359,12 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 		return EINVAL;
 
 	// sanity check
-	if (pool->initialized != BIG_POOL_MAGIC)
-		pool_init(joker, pool);
+	if (pool->initialized != BIG_POOL_MAGIC) {
+		if (pool_init(joker, pool)) {
+            printf("Can't init pool ! Stop TS processing ... \n");
+            return EINVAL;
+        }
+    }
 
 #ifdef __WIN32__
 	// USB isoch packets can lost under Windows if we do not increase priority
