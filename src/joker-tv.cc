@@ -522,7 +522,7 @@ int main (int argc, char **argv)
 				fprintf(joker->blind_programs_filename_fd,
 						"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<satellites>\n");
 				fprintf(joker->blind_programs_filename_fd,
-						"\t<sat name=\"blindscan\" scan_date=%s>\n", datetime);
+						"\t<sat name=\"blindscan\" scan_date=\"%s\">\n", datetime);
 				fflush(joker->blind_programs_filename_fd);
 			}
 
