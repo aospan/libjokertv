@@ -409,12 +409,12 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 				libusb_free_transfer(pool->transfers[index]);
 				pool->transfers[index] = NULL;
 				// try lower 
-				printf("%d packets not available. Will try lower \n", 
+				jdebug("%d packets not available. Will try lower \n", 
 						max_isoc_packets_count_avail);
 				max_isoc_packets_count_avail = max_isoc_packets_count_avail/2;
 				continue;
 			}
-			printf("%d packets available. usb transfer %d (%p) done\n",
+			jdebug("%d packets available. usb transfer %d (%p) done\n",
 					max_isoc_packets_count_avail,
 					index, pool->transfers[index]);
 			allocated = 1;

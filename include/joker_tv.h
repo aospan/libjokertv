@@ -31,6 +31,7 @@
 typedef void(*status_callback_t)(void *data);
 typedef void(*ci_callback_t)(void *data);
 typedef void(*mmi_callback_t)(void *data, unsigned char *buf, int len);
+typedef void(*blind_scan_callback_t)(void *data);
 struct tune_info_t;
 
 #define JOKER_LOCK 0
@@ -154,7 +155,10 @@ struct joker_t {
 	int blind_scan;
 	char *blind_out_filename;
 	FILE *blind_out_filename_fd;
+	char *blind_programs_filename;
+	FILE *blind_programs_filename_fd;
 	char *blind_power_file_prefix;
+	blind_scan_callback_t blind_scan_cb;
 
 	/* Raw data from usb */
 	char *raw_data_filename;

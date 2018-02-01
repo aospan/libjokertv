@@ -58,6 +58,23 @@ enum joker_fe_modulation {
   JOKER_QAM_4_NR,
 };
 
+enum joker_fe_code_rate {
+	JOKER_FEC_NONE = 0, /* 0 */
+	JOKER_FEC_1_2, /* 1 */
+	JOKER_FEC_2_3, /* 2 */
+	JOKER_FEC_3_4, /* 3 */
+	JOKER_FEC_4_5, /* 4 */
+	JOKER_FEC_5_6, /* 5 */
+	JOKER_FEC_6_7, /* 6 */
+	JOKER_FEC_7_8, /* 7 */
+	JOKER_FEC_8_9, /* 8 */
+	JOKER_FEC_AUTO, /* 9 */
+	JOKER_FEC_3_5, /* 10 */
+	JOKER_FEC_9_10, /* 11 */
+	JOKER_FEC_2_5, /* 12 */
+	JOKER_FEC_1_3, /* 13 */
+};
+
 enum joker_fe_sec_voltage {
 	JOKER_SEC_VOLTAGE_13,
 	JOKER_SEC_VOLTAGE_18,
@@ -85,7 +102,8 @@ struct tune_info_t {
 	enum	joker_fe_delivery_system delivery_system;
 	enum	joker_fe_modulation      modulation;
 	enum	joker_fe_sec_voltage	voltage;
-	enum joker_fe_sec_tone_mode	tone;
+	enum	joker_fe_sec_tone_mode	tone;
+	enum	joker_fe_code_rate	coderate;
 	struct joker_lnb_t	lnb;
 	uint64_t	frequency; /* in HZ, 64-bit int used for freqs higher than 4GHz */
 	uint32_t	symbol_rate;

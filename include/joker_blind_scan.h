@@ -14,10 +14,22 @@
 extern "C" {
 #endif
 
-typedef void(*blind_scan_callback_t)(void *data);
+typedef enum {
+	EVENT_DETECT,    /**< Detect channel. */
+	EVENT_PROGRESS,  /**< Update progress. */
+	EVENT_POWER,	/**< Power info for spectrum draw */
+	EVENT_CAND		/**< Candidates info */
+} blind_scan_res_event_id_t;
 
-int blind_scan(struct joker_t *joker, struct tune_info_t *info,
-		struct dvb_frontend *fe);
+typedef struct blind_scan_res_t {
+    blind_scan_res_event_id_t event_id;
+    int progress;
+    struct joker_t *joker;
+    struct tune_info_t *info; // found transponder
+    struct list_head *programs; // found programs inside transponder
+} blind_scan_res_t;
+
+int blind_scan(struct joker_t *joker, struct tune_info_t *info);
 
 #ifdef __cplusplus
 }

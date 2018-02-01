@@ -35,6 +35,7 @@
 #include "joker_xml.h"
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
+#include "joker_blind_scan.h"
 
 // status & statistics callback
 // will be called periodically after 'tune' call
@@ -74,6 +75,59 @@ void service_name_update(struct program_t *program)
 			printf("	ES pid=0x%x type=0x%x\n",
 					es->pid, es->type);
 		}
+	}
+}
+
+static const int convert2xml_pol[] = { 18, 13 };
+
+// blind scan callback
+void blind_scan_callback(void *data)
+{
+	blind_scan_res_t * res = (blind_scan_res_t *)data;
+	struct program_t *program = NULL, *tmp = NULL;
+	struct program_es_t*es = NULL;
+
+	if (res->event_id == EVENT_DETECT) {
+		// save found transponder and programs to file
+		if (res->joker->blind_programs_filename_fd > 0) {
+			// transponder
+			// convert values to satellites xml format
+			fprintf(res->joker->blind_programs_filename_fd,
+					"\t\t<transponder frequency=\"%lld\" symbol_rate=\"%d\" "
+					"polarization=\"%d\" fec_inner=\"%d\" system=\"%d\" modulation=\"%d\">\n",
+					(long long)res->info->frequency, res->info->symbol_rate,
+					res->info->voltage == JOKER_SEC_VOLTAGE_13 ? 1 : 0,
+					res->info->coderate,
+					res->info->delivery_system == JOKER_SYS_DVBS ? 0 : 1,
+					res->info->modulation);
+
+			// programs belongs to this transponder
+			list_for_each_entry_safe(program, tmp, res->programs, list) {
+				fprintf(res->joker->blind_programs_filename_fd,
+						"\t\t\t<program number=\"%d\" name=\"%s\">\n",
+						program->number, program->name);
+				if(!list_empty(&program->es_list)) {
+					list_for_each_entry(es, &program->es_list, list) {
+						fprintf(res->joker->blind_programs_filename_fd,
+						"\t\t\t\t<pid id=\"0x%x\" type=\"0x%x\"/>\n",
+								es->pid, es->type);
+					}
+				}
+				fprintf(res->joker->blind_programs_filename_fd,
+						"\t\t\t</program>\n");
+			}
+
+			// transponder footer
+			fprintf(res->joker->blind_programs_filename_fd, "\t\t</transponder>\n");
+			fflush(res->joker->blind_programs_filename_fd);
+		}
+
+		printf("%s: found transponder freq=%lld\n", __func__, (long long)res->info->frequency);
+
+		list_for_each_entry_safe(program, tmp, res->programs, list)
+			printf("Program number=%d name=%s\n", program->number, program->name);
+	} else if (res->event_id == EVENT_PROGRESS) {
+		printf("progress=%.2d%%\n", res->progress);
 	}
 }
 
@@ -153,6 +207,7 @@ void show_help() {
 	printf("	--blind		Do blind scan (DVB-S/S2 only). Default: disabled\n");
 	printf("	--blind-out file.csv	Write blind scan results to file. Example: blind.csv\n");
 	printf("	--blind-power file	Write power (dB) to file. Example: file\n");
+	printf("	--blind-programs file.xml	Write blind scan programs to file. Example: blind.xml\n");
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
 	exit(0);
 }
@@ -163,6 +218,7 @@ static struct option long_options[] = {
 	{"blind",  no_argument, 0, 0},
 	{"blind-out",  required_argument, 0, 0},
 	{"blind-power",  required_argument, 0, 0},
+	{"blind-programs",  required_argument, 0, 0},
 	{"raw-data",  required_argument, 0, 0},
 	{ 0, 0, 0, 0}
 };
@@ -197,6 +253,11 @@ int main (int argc, char **argv)
 	int len = 0;
 	int descramble_programs = 0;
 	int option_index = 0;
+	char datetime[512];
+	time_t now = time(NULL);
+	struct tm *t = localtime(&now);
+
+	strftime(datetime, sizeof(datetime)-1, "%d %b %Y %H:%M", t);
 
 	/* disable output buffering
 	 * helps under Windows with stdout delays
@@ -216,6 +277,7 @@ int main (int argc, char **argv)
 	joker->status_callback = &status_callback_f;
 	joker->ci_info_callback = &ci_info_callback_f;
 	joker->ci_caid_callback = &ci_caid_callback_f;
+	joker->blind_scan_cb = &blind_scan_callback;
 
 	// clear descramble program list
 	joker_en50221_descramble_clear(joker);
@@ -246,6 +308,11 @@ int main (int argc, char **argv)
 					len = strlen(optarg);
 					joker->blind_out_filename = (char*)calloc(1, len + 1);
 					strncpy(joker->blind_out_filename, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "blind-programs")) {
+					len = strlen(optarg);
+					joker->blind_programs_filename = (char*)calloc(1, len + 1);
+					strncpy(joker->blind_programs_filename, optarg, len);
 				}
 				if (!strcasecmp(long_options[option_index].name, "blind-power")) {
 					len = strlen(optarg);
@@ -439,7 +506,34 @@ int main (int argc, char **argv)
 			printf("Tuning error. Exit.\n");
 			return -1;
 		}
+
 		if (joker->blind_scan) {
+			// open out file 
+			if (joker->blind_programs_filename) {
+				joker->blind_programs_filename_fd = fopen(joker->blind_programs_filename, "w+b");
+				if (joker->blind_programs_filename_fd < 0) {
+					printf("Can't open blind scan resulting file %s. Error=%d (%s)\n",
+							joker->blind_programs_filename, errno, strerror(errno));
+					joker->blind_programs_filename_fd = NULL;
+					return -1;
+				}
+
+				// write file header
+				fprintf(joker->blind_programs_filename_fd,
+						"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<satellites>\n");
+				fprintf(joker->blind_programs_filename_fd,
+						"\t<sat name=\"blindscan\" scan_date=%s>\n", datetime);
+				fflush(joker->blind_programs_filename_fd);
+			}
+
+			blind_scan(joker, &info);
+
+			// write footer
+			if (joker->blind_programs_filename_fd > 0) {
+				fprintf(joker->blind_programs_filename_fd, "\t</sat>\n</satellites>\n");
+				fclose(joker->blind_programs_filename_fd);
+				joker->blind_programs_filename_fd = NULL;
+			}
 			printf("Blind scan done \n");
 			return 0;
 		}

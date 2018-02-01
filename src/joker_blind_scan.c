@@ -41,8 +41,27 @@ typedef unsigned int            uint32_t;
 #include "pthread.h"
 #include "joker_i2c.h"
 #include "joker_fpga.h"
-#include "u_drv_tune.h"
+#include "joker_ts.h"
 #include "joker_blind_scan.h"
+#include "u_drv_tune.h"
+#include "u_drv_data.h"
+
+// this callback will be called when new service name arrived
+void service_name_cb(struct program_t *program)
+{
+	struct program_es_t*es = NULL;
+	jdebug("callback:%s program number=%d name=%s type=0x%x. video:%s audio:%s\n",
+			__func__, program->number, program->name, program->service_type,
+			program->has_video ? "yes" : "",
+			program->has_audio ? "yes" : "");
+
+	if(!list_empty(&program->es_list)) {
+		list_for_each_entry(es, &program->es_list, list) {
+			jdebug("    ES pid=0x%x type=0x%x\n",
+					es->pid, es->type);
+		}   
+	}
+}
 
 void blind_scan_callback (void *data)
 {
@@ -52,36 +71,130 @@ void blind_scan_callback (void *data)
 	int cnt = 0;
 	FILE *pfd = NULL;
 	char * filename = NULL;
-    char buf[1024];
-
+	char buf[1024];
+	struct program_t *program = NULL, *tmp = NULL;
+	struct list_head *programs = NULL;
+	struct big_pool_t pool;
+	int ret = 0;
+	int ready = 0, timeout = 0;
+	blind_scan_res_t blind_scan_res;
 	struct joker_t *joker = (struct joker_t *)res->callback_arg;
+	struct tune_info_t *info = NULL;
+
 	if (!joker || !joker->info)
 		return;
-	struct tune_info_t *info = joker->info;
+	info = joker->info;
+
+	// prepare result for main callback
+	memset(&blind_scan_res, 0, sizeof(blind_scan_res));
+	blind_scan_res.progress = res->progress;
+	blind_scan_res.joker = joker;
+	blind_scan_res.info = info;
 
 	jdebug("%s: eventId=%d \n", __func__, res->eventId);
 	if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT) {
-        snprintf(buf, 1024,
-                "\"%d\",\"%s\",\"%s\",\"%d\",\"%s\",\"%s\",\"%s\"\n",
-                res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
-                (info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
-                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
-                res->tuneParam.symbolRateKSps,
-                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
-                "QPSK" : DVBS2_Modulation[res->tuneParam.plscode.modulation],
-                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
-                DVBS_CodeRate[res->tuneParam.coderate] : \
-                DVBS2_CodeRate[res->tuneParam.plscode.codeRate],
-                (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
-                "" : res->tuneParam.plscode.isPilotOn ? "PilotOn" : "PilotOff");
+		snprintf(buf, 1024,
+				"\"%d\",\"%s\",\"%s\",\"%d\",\"%s\",\"%s\",\"%s\"\n",
+				res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
+				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
+				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
+				res->tuneParam.symbolRateKSps,
+				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
+				"QPSK" : DVBS2_Modulation[res->tuneParam.plscode.modulation],
+				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
+				DVBS_CodeRate[res->tuneParam.coderate] : \
+				DVBS2_CodeRate[res->tuneParam.plscode.codeRate],
+				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
+				"" : res->tuneParam.plscode.isPilotOn ? "PilotOn" : "PilotOff");
+
+		// fill info about found transponder
+		info->delivery_system = (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? JOKER_SYS_DVBS : JOKER_SYS_DVBS2;
+
+		// HZ
+		info->frequency = 1000*(uint64_t)res->tuneParam.centerFreqKHz + 1000*1000*(uint64_t)info->lnb.selected_freq;
+		info->symbol_rate = 1000*res->tuneParam.symbolRateKSps;
+		info->bandwidth_hz = 0;
+
+		// "glue" values with upper level (outside of libjokertv)
+		if (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) {
+			info->delivery_system = JOKER_SYS_DVBS;
+			info->modulation = JOKER_QPSK;
+			if (res->tuneParam.coderate > sizeof(DVBS_CodeRate2joker))
+				info->coderate = 0;
+			else
+				info->coderate = DVBS_CodeRate2joker[res->tuneParam.coderate];
+		} else {
+			info->delivery_system = JOKER_SYS_DVBS2;
+			if (res->tuneParam.plscode.codeRate > sizeof(DVBS2_CodeRate2joker))
+				info->coderate = 0;
+			else
+				info->coderate = DVBS2_CodeRate2joker[res->tuneParam.plscode.codeRate];
+			switch (res->tuneParam.plscode.modulation) {
+				case SONY_DVBS2_MODULATION_8PSK:
+					info->modulation = JOKER_PSK_8;
+					break;
+				case SONY_DVBS2_MODULATION_16APSK:
+					info->modulation = JOKER_APSK_16;
+					break;
+				case SONY_DVBS2_MODULATION_32APSK:
+					info->modulation = JOKER_APSK_32;
+					break;
+				case SONY_DVBS2_MODULATION_QPSK:
+				default:
+					info->modulation = JOKER_QPSK;
+					break;
+			}
+		}
 
 		printf("\nDetected! progress=%u%% %s", res->progress, buf);
 
 		// save results to file 
 		if (joker->blind_out_filename_fd) {
-            fprintf(joker->blind_out_filename_fd, "%s", buf);
+			fprintf(joker->blind_out_filename_fd, "%s", buf);
 			fflush(joker->blind_out_filename_fd);
 		}
+
+		// Start TS 
+		memset(&pool, 0, sizeof(struct big_pool_t));
+		pool.service_name_callback = &service_name_cb;
+		if((ret = start_ts(joker, &pool))) {
+			printf("start_ts failed. err=%d \n", ret);
+			return;
+		}
+
+		/* get TV programs list */
+		jdebug("Trying to get programs list ... \n");
+		programs = get_programs(&pool);
+
+		// wait until all tv channel names arrived
+		timeout = 20;
+		while (timeout--) {
+			ready = 1;
+			list_for_each_entry_safe(program, tmp, programs, list) {
+				if (!strlen(program->name)) {
+					ready = 0;
+					break;
+				}
+			}
+			if (ready) {
+				jdebug("All programs has a name. Breaking ... \n");
+				break;
+			}
+			jdebug("Not all programs has a name. not breaking ... \n");
+			msleep(500);
+		}
+		blind_scan_res.programs = programs;
+		blind_scan_res.event_id = EVENT_DETECT;
+
+		if (joker->blind_scan_cb)
+			joker->blind_scan_cb (&blind_scan_res);
+
+		// Stop TS
+		if((ret = stop_ts(joker, &pool))) {
+			printf("stop_ts failed. err=%d \n", ret);
+			return;
+		}
+
 	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_POWER) {
 		if (!joker->blind_power_file_prefix)
 			return;
@@ -144,8 +257,13 @@ void blind_scan_callback (void *data)
 		printf("cand list (size %d) dumped to %s\n", cnt, filename);
 		free(filename);
 	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS) {
-		printf("progress=%u%%\n", res->progress);
+		blind_scan_res.programs = programs;
+		blind_scan_res.event_id = EVENT_PROGRESS;
+		if (joker->blind_scan_cb)
+			joker->blind_scan_cb (&blind_scan_res);
 	}
+
+	return;
 }
 
 int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
@@ -184,6 +302,7 @@ int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
 	fe->ops.set_voltage(fe, voltage);
 	info->lnb.selected_freq = (tone == JOKER_SEC_TONE_ON) ? info->lnb.highfreq : info->lnb.lowfreq;
 	info->voltage = voltage;
+	info->tone = tone;
 	joker->info = info;
 	fe->ops.blind_scan(fe, freq_min, freq_max, 1000, 45000,
 			joker->blind_power_file_prefix ? true : false,
@@ -191,10 +310,10 @@ int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
 }
 
 /*** Blind scan ***/
-int blind_scan(struct joker_t *joker, struct tune_info_t *info,
-		struct dvb_frontend *fe)
+int blind_scan(struct joker_t *joker, struct tune_info_t *info)
 {
 	sony_integ_dvbs_s2_blindscan_param_t blindscanParam;
+	struct dvb_frontend *fe = (struct dvb_frontend *)joker->fe_opaque;
 
 	/* open file for blind scan results */
 	if (joker->blind_out_filename) {
@@ -203,6 +322,7 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info,
 			printf("Can't open blind scan resulting file %s. Error=%d (%s)\n",
 					joker->blind_out_filename, errno, strerror(errno));
 			joker->blind_out_filename_fd = NULL;
+			return -EIO;
 		}
 
 		// write file header

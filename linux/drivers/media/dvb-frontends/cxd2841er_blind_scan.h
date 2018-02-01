@@ -34,11 +34,14 @@
 /*------------------------------------------------------------------------------
  *  Const char definitions
  *  ------------------------------------------------------------------------------*/
+static const char *DVBS2_Modulation[] = { "QPSK", "8PSK", "16APSK", "32APSK", "RSVD 29", "RSVD 30", "RSVD 31", "Dummy PLL Frame", "Invalid" };
 static const char *DVBS_S2_IQSense[] = { "Normal IQ", "Inverted IQ" };
 static const char *DVBS2_CodeRate[] = { "1/2", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "8/9", "9/10", "7/8", "RSVD 29", "RSVD 30", "RSVD 31", "Invalid" };
-static const char *DVBS2_Modulation[] = { "QPSK", "8PSK", "16APSK", "32APSK", "RSVD 29", "RSVD 30", "RSVD 31", "Dummy PLL Frame", "Invalid" };
+static const int DVBS2_CodeRate2joker[] = { 1 /* "1/2" */, 13 /* "1/3" */, 12 /* "2/5" */, 1 /* "1/2" */, 10 /* "3/5" */, 2 /* "2/3" */, 3 /* "3/4" */, 4 /* "4/5" */, 5 /* "5/6" */, 8 /* "8/9" */, 11 /* "9/10" */, 7 /* "7/8" */, 0 /* "RSVD 29" */, 0 /* "RSVD 30" */, 0 /* "RSVD 31" */, 0 /* "Invalid" */ };
+
 static const char *DVBS2_FECFrame[] = { "Normal", "Short" };
 static const char *DVBS_CodeRate[] = { "1/2", "2/3", "3/4", "5/6", "7/8", "Invalid" };
+static const int DVBS_CodeRate2joker[] = { 1 /* "1/2" */, 2 /* "2/3" */, 3 /* "3/4" */, 5 /* "5/6" */, 7 /* "7/8" */ };
 
 /* Return codes */
 typedef enum {

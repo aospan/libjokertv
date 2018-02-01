@@ -676,37 +676,33 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			return -1;
 		}
 
-		if (!joker->blind_scan) {
-			/* use LNB settings to calculate correct frequency */
-			if (info->lnb.switchfreq) {
-				if (info->frequency / 1000 > info->lnb.switchfreq * 1000) {
-					lo_freq = info->lnb.highfreq * 1000;
-					// switch to high band enabling 22kHz tone
-					info->tone = JOKER_SEC_TONE_ON;
-				} else {
-					lo_freq = info->lnb.lowfreq * 1000;
-				}
+		// do not make actual tune when blind scanning
+		if (joker->blind_scan)
+			return 0;
+
+		/* use LNB settings to calculate correct frequency */
+		if (info->lnb.switchfreq) {
+			if (info->frequency / 1000 > info->lnb.switchfreq * 1000) {
+				lo_freq = info->lnb.highfreq * 1000;
+				// switch to high band enabling 22kHz tone
+				info->tone = JOKER_SEC_TONE_ON;
 			} else {
 				lo_freq = info->lnb.lowfreq * 1000;
 			}
-			fe->dtv_property_cache.frequency = abs(info->frequency / 1000 - lo_freq) * 1000;
-
-			fe->ops.set_tone(fe, info->tone);
-			fe->ops.set_voltage(fe, info->voltage);
-
-			printf("Channel freq %.2f MHz, LO %.2f MHz, L-Band freq %.2f MHz 22kHz tone %s\n",
-					info->frequency / 1000000., lo_freq / 1000., fe->dtv_property_cache.frequency / 1000000.,
-					(info->tone == JOKER_SEC_TONE_ON) ? "On":"Off");
+		} else {
+			lo_freq = info->lnb.lowfreq * 1000;
 		}
+		fe->dtv_property_cache.frequency = abs(info->frequency / 1000 - lo_freq) * 1000;
+
+		fe->ops.set_tone(fe, info->tone);
+		fe->ops.set_voltage(fe, info->voltage);
+
+		printf("Channel freq %.2f MHz, LO %.2f MHz, L-Band freq %.2f MHz 22kHz tone %s\n",
+				info->frequency / 1000000., lo_freq / 1000., fe->dtv_property_cache.frequency / 1000000.,
+				(info->tone == JOKER_SEC_TONE_ON) ? "On":"Off");
 	}
 
-	if (joker->blind_scan) {
-		blind_scan(joker, info, fe);
-		fprintf(stderr,"\n");
-		return 0;
-	}
-
-	/* actual tune call */
+ 	/* actual tune call */
 	fe->ops.tune(fe, 1 /*re_tune*/, 0 /*flags*/, &delay, &status);
 	joker_i2c_gate_ctrl(fe, 0);
 
