@@ -84,6 +84,7 @@
 #define EREMOTEIO       121     /* Remote I/O error */
 
 
+#define msleep(x) msleep_msecs(x);
 
 #define IS_REACHABLE(x) 1
 typedef unsigned char           u8;

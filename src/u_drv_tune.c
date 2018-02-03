@@ -267,10 +267,11 @@ void warn_slowpath_null(const char *file, int line)
 			__func__, file, line);
 }
 
-void msleep(unsigned int msecs)
+void msleep_msecs(unsigned int msecs)
 {
 	usleep(1000*msecs);
 }
+#define msleep(x) msleep_msecs(x);
 
 u64 ktime_get_ns(void)
 {

@@ -20,6 +20,9 @@ extern "C" {
 /* get current time in usec */
 uint64_t getus();
 
+void msleep_msecs(unsigned int msecs);
+#define msleep(x) msleep_msecs(x);
+
 void hexdump(unsigned char * buf, int size);
 
 /* put chips into reset state
