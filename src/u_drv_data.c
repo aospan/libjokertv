@@ -24,6 +24,7 @@
 #include <libusb.h>
 #include <pthread.h>
 #include "joker_tv.h"
+#include "joker_ts_filter.h"
 #include "joker_fpga.h"
 #include "u_drv_data.h"
 #include "joker_utils.h"
@@ -56,6 +57,7 @@ int pool_init(struct joker_t *joker, struct big_pool_t * pool)
 		return -EINVAL;
 
 	pool->joker = joker;
+	joker->pool = pool;
 	pool->node_counter = 0;
 	pool->tail_size = 0;
 	pool->ts_list_size = 0;
@@ -251,7 +253,7 @@ void record_callback(struct libusb_transfer *transfer)
 	for(i = 0; i < transfer->num_iso_packets; i++) {
 		pkt = transfer->iso_packet_desc[i];
 		len = transfer->iso_packet_desc[i].actual_length;
-		jdebug(stderr, "ISO pkt length=%d actual_length=%d status=0x%x\n",
+		jdebug("ISO pkt length=%d actual_length=%d status=0x%x\n",
 				transfer->iso_packet_desc[i].length,
 				transfer->iso_packet_desc[i].actual_length, pkt.status);
 		pool->pkt_count++;
@@ -377,6 +379,16 @@ int start_ts(struct joker_t *joker, struct big_pool_t *pool)
 #endif
 	
 	joker_clean_ts(joker); // clean FIFO from previous TS
+
+	// enable TS PID filtering if programs specified
+	// here we enable only service PID's
+	// PID's related to program (PMT, Video, Audio, etc) will be enabled later
+	if (!list_empty(&pool->selected_programs_list)) {
+		ts_filter_only_service_pids(joker);
+	} else {
+		// unblock all PID's if no programs selected
+		ts_filter_all(joker, TS_FILTER_UNBLOCK); // receive full TS
+	}
 
 	// disable TS traffic through CAM
 	buf[0] = J_CMD_CI_TS;
@@ -535,6 +547,41 @@ int next_ts_off(unsigned char *buf, size_t size)
 	return -1;
 }
 
+
+int replace_pat(struct big_pool_t *pool, unsigned char *data, int size)
+{
+	int off = 0;
+	int pid = 0;
+	char * pat = NULL;
+	uint8_t cnt = 0;
+
+	if(!pool)
+		return -EINVAL;
+	
+	pat = pool->generated_pat_pkt;
+
+	jdebug("PKT: size:%d \n", size);
+	// data already aligned to TS packets
+	for (off = 0; off <= (size - TS_SIZE); ) {
+		if (data[off] == TS_SYNC) {
+			pid = ((int)data[off+1]&0x1f)<<8 | data[off+2];
+			jdebug(" PKT: off=%d pid=0x%x \n", off, pid);
+			if (pid == 0x0 /* PAT */) {
+				cnt = pat[3]&0xf;
+				cnt += 1;
+				pat[3] = (pat[3]&0xf0) | (cnt&0xf);
+				memcpy(&data[off], pat, TS_SIZE);
+				jdebug("	PAT replaced. off=%d pid=0x%x cnt=0x%x\n", off, pid, cnt);
+			}
+			off += TS_SIZE;
+		} else {
+			off++;
+		}
+	}
+
+	return 0;
+}
+
 int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 {
 	struct ts_node *node = NULL, *tmp = NULL;
@@ -559,6 +606,15 @@ int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 			jdebug("req:%d \n", size);
 			list_for_each_entry_safe(node, tmp, &pool->ts_list_all, list)
 			{
+				if (pool->generated_pat_pkt && !node->pat_replaced) {
+					// replace PAT to our own
+					// this hackish way should be refactored (regenerate TS ?)
+					replace_pat(pool, node->data, node->size);
+					node->pat_replaced = 1;
+				} else {
+					jdebug("Do not replace PAT \n");
+				}
+
 				jdebug("	node=%d size:%d read_off=%d\n", node->counter, node->size, node->read_off);
 				if (remain > (node->size - node->read_off)) {
 					// copy all node to output
@@ -581,6 +637,7 @@ int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 		}
 		pthread_mutex_unlock(&pool->threading->mux_all);
 	}
+
 
 	return res_off;
 }
@@ -618,6 +675,7 @@ void* process_ts_loop(void * data) {
 			return (void *)-EIO;
 		}
 
+		jdebug("%s: send %d bytes \n", __func__, nbytes);
 		if ((ret = joker_send_ts_loop(joker, buf, nbytes))) {
 			printf("%s: can't send %d bytes \n", __func__, nbytes);
 			return (void *)-EIO;

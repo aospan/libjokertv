@@ -26,6 +26,12 @@ extern "C" {
 int ts_filter_one(struct joker_t *joker, int block, int pid);
 int ts_filter_all(struct joker_t *joker, int block);
 
+// Allow only service PID's (information from https://en.wikipedia.org/wiki/MPEG_transport_stream):
+// 0x00 ... 0x1F - PAT, CAT, TSDT, IPMP, NIT, SDT, EIT, etc
+// 0x1FFB - ATSC MGT
+// All other PID's are blocked
+int ts_filter_only_service_pids(struct joker_t *joker);
+
 #ifdef __cplusplus
 }
 #endif

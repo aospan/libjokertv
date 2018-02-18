@@ -41,6 +41,7 @@ struct ts_node {
 	unsigned char * data;
 	int size;
 	int read_off;
+	int pat_replaced;
 	struct list_head list;
 };
 
@@ -85,11 +86,14 @@ struct big_pool_t {
 	int ts_list_size_max;
 
 	/* PSI related stuff */
+	struct list_head selected_programs_list;
 	struct list_head programs_list;
 	service_name_callback_t service_name_callback;
 	void *pat_dvbpsi;
 	void *sdt_dvbpsi;
 	void *atsc_dvbpsi;
+	void *generated_pat;
+	void *generated_pat_pkt;
 
 	uint32_t initialized;
 	struct joker_t *joker;

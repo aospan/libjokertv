@@ -32,6 +32,7 @@
 #include "joker_en50221.h"
 #include "joker_spi.h"
 #include "joker_ts.h"
+#include "joker_ts_filter.h"
 #include "joker_xml.h"
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
@@ -202,6 +203,7 @@ void show_help() {
 	printf("	-i port		TCP port for MMI (CAM) server. Default: 7777\n");
 	printf("	-k filename.ts	Send TS traffic to Joker TV. TS will return back (loop) Default: none\n");
 	printf("	-r		Send QUERY CA PMT to CAM (check is descrambling possible). Default: disabled\n");
+	printf("	--program num	Save only selected programs (not full TS). Example: --program 1 --program 2\n");
 	printf("	--in in.xml	XML file with lock instructions. Example: --in ./docs/atsc_north_america_freq.xml \n");
 	printf("	--out out.csv	output CSV file with lock results (BER, etc). Example: --out ant1-result.csv \n");
 	printf("	--blind		Do blind scan (DVB-S/S2 only). Default: disabled\n");
@@ -216,6 +218,7 @@ static struct option long_options[] = {
 	{"in",  required_argument, 0, 0},
 	{"out",  required_argument, 0, 0},
 	{"blind",  no_argument, 0, 0},
+	{"program",  required_argument, 0, 0},
 	{"blind-out",  required_argument, 0, 0},
 	{"blind-power",  required_argument, 0, 0},
 	{"blind-programs",  required_argument, 0, 0},
@@ -282,6 +285,8 @@ int main (int argc, char **argv)
 	// clear descramble program list
 	joker_en50221_descramble_clear(joker);
 
+	INIT_LIST_HEAD(&pool.selected_programs_list);
+
 	while (1) {
 		c = getopt_long (argc, argv, "q:k:d:y:z:m:f:s:o:b:l:tpu:w:i:nhecjgr", long_options, &option_index);
 		if (c == -1)
@@ -299,6 +304,18 @@ int main (int argc, char **argv)
 					len = strlen(optarg);
 					joker->csv_out_filename = (char*)calloc(1, len + 1);
 					strncpy(joker->csv_out_filename, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "program")) {
+					printf("selected program %d \n", atoi(optarg));
+
+					program = (struct program_t*)malloc(sizeof(*program));
+					if (!program)
+						return -ENOMEM;
+
+					program->joker = joker;
+					memset(&program->name, 0, SERVICE_NAME_LEN);
+					program->number = atoi(optarg);
+					list_add_tail(&program->list, &pool.selected_programs_list);
 				}
 				if (!strcasecmp(long_options[option_index].name, "blind")) {
 					joker->blind_scan = 1;
@@ -472,6 +489,7 @@ int main (int argc, char **argv)
 			printf("Can't set TS source (TS generator) \n");
 			return ret;
 		}
+
 	} else if (joker->loop_ts_filename) {
 		/* USB bulk selected */
 		buf[0] = J_CMD_TS_INSEL_WRITE;
@@ -560,7 +578,8 @@ int main (int argc, char **argv)
 		start_ts_loop(joker);
 	}
 
-	if (decode_program || descramble_programs) {
+	if (decode_program || descramble_programs || 
+			!list_empty(&pool.selected_programs_list)) {
 		/* get TV programs list */
 		printf("Trying to get programs list ... \n");
 		programs = get_programs(&pool);

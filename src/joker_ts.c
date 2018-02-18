@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <joker_tv.h>
 #include <joker_ts.h>
+#include <joker_ts_filter.h>
 #include <joker_utils.h>
 #include <u_drv_data.h>
 
@@ -179,8 +180,12 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 
 		list_add_tail(&es->list, &program->es_list);
 
-		jdebug("    | 0x%02x (%s) @ 0x%x (%d)\n",
-				p_es->i_type, GetTypeName(p_es->i_type),
+		// allow PID in TS PID filtering
+		if (is_program_selected(program->joker->pool, p_pmt->i_program_number))
+			ts_filter_one(program->joker, TS_FILTER_UNBLOCK, p_es->i_pid);
+
+		jdebug("    | 0x%02x @ 0x%x (%d)\n",
+				p_es->i_type,
 				p_es->i_pid, p_es->i_pid);
 		p_es = p_es->p_next;
 	}
@@ -194,6 +199,125 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 			current_section->p_data, current_section->i_length);
 
 	dvbpsi_pmt_delete(p_pmt);
+}
+
+int add_program_to_pat(struct big_pool_t *pool, int program_number, int pmt_pid)
+{
+	if (!pool)
+		return -EINVAL;
+
+	if (!pool->generated_pat) {
+		pool->generated_pat = calloc(1, sizeof(dvbpsi_pat_t));
+		if (!pool->generated_pat)
+			return -ENOMEM;
+		dvbpsi_pat_init((dvbpsi_pat_t*)pool->generated_pat, 1, 0, 1 /* b_current_next high - PAT active now */ );
+	}
+
+	dvbpsi_pat_program_add((dvbpsi_pat_t*)pool->generated_pat, program_number, pmt_pid);
+	jdebug("Program %d with pmt pid %d added to PAT \n", program_number, pmt_pid);
+}
+
+static void writePSI(uint8_t* p_packet, dvbpsi_psi_section_t* p_section)
+{
+	p_packet[0] = 0x47;
+
+	while(p_section)
+	{
+		size_t i_bytes_written = 0;
+		uint8_t* p_pos_in_ts;
+		uint8_t* p_byte = p_section->p_data;
+		uint8_t* p_end =   p_section->p_payload_end
+			+ (p_section->b_syntax_indicator ? 4 : 0);
+
+		p_packet[1] |= 0x40;
+		p_packet[3] = (p_packet[3] & 0x0f) | 0x10;
+
+		p_packet[4] = 0x00; /* pointer_field */
+		p_pos_in_ts = p_packet + 5;
+
+		while((p_pos_in_ts < p_packet + 188) && (p_byte < p_end))
+			*(p_pos_in_ts++) = *(p_byte++);
+		while(p_pos_in_ts < p_packet + 188)
+			*(p_pos_in_ts++) = 0xff;
+		if(i_bytes_written == 0)
+		{ 
+			jdebug(stderr,"eof detected ... aborting\n");
+			return;
+		}
+		p_packet[3] = (p_packet[3] + 1) & 0x0f;
+
+		while(p_byte < p_end)
+		{ 
+			p_packet[1] &= 0xbf;
+			p_packet[3] = (p_packet[3] & 0x0f) | 0x10;
+
+			p_pos_in_ts = p_packet + 4;
+
+			while((p_pos_in_ts < p_packet + 188) && (p_byte < p_end))
+				*(p_pos_in_ts++) = *(p_byte++);
+			while(p_pos_in_ts < p_packet + 188)
+				*(p_pos_in_ts++) = 0xff;
+			if(i_bytes_written == 0)
+			{
+				jdebug(stderr,"eof detected ... aborting\n");
+				return;
+			}
+			p_packet[3] = (p_packet[3] + 1) & 0x0f;
+		}
+
+		p_section = p_section->p_next;
+	}
+}
+
+int generate_pat_pkt(struct big_pool_t *pool)
+{
+	dvbpsi_t *p_dvbpsi = NULL;
+	dvbpsi_pat_t pat;
+	dvbpsi_psi_section_t* p_section1;
+	char * packet = NULL;
+
+	if (!pool)
+		return -EINVAL;
+
+	if (!pool->generated_pat_pkt) {
+		pool->generated_pat_pkt = calloc(1, TS_SIZE);
+		if (!pool->generated_pat_pkt)
+			return -ENOMEM;
+	}
+
+	packet = pool->generated_pat_pkt;
+
+	p_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_DEBUG);
+	if (p_dvbpsi == NULL)
+		return -ENOMEM;
+
+	p_section1 = dvbpsi_pat_sections_generate(p_dvbpsi, (dvbpsi_pat_t*)pool->generated_pat, 250);
+
+	packet[0] = 0x47;
+	packet[1] = packet[2] = 0x00;
+	packet[3] = 0x00;
+	writePSI(packet, p_section1);
+
+	dvbpsi_delete(p_dvbpsi);
+
+	jdebug("PAT generated\n");
+}
+
+int is_program_selected (struct big_pool_t *pool, int program_number)
+{
+	struct program_t *program = NULL;
+	if (!pool)
+		return 0;
+
+	jdebug("%s: searching program %d \n", __func__, program_number);
+
+	if(!list_empty(&pool->selected_programs_list))
+		list_for_each_entry(program, &pool->selected_programs_list, list)
+			if (program->number == program_number)
+				return 1;
+
+	jdebug("%s: program %d not selected \n", __func__, program_number);
+	return 0;
 }
 
 static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
@@ -251,6 +375,12 @@ static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 			dvbpsi_delete(program->pmt_dvbpsi);
 			p_program = p_program->p_next;
 			continue;
+		}
+
+		// allow PID in TS PID filtering
+		if (is_program_selected(pool, p_program->i_number)) {
+			ts_filter_one(pool->joker, TS_FILTER_UNBLOCK, p_program->i_pid);
+			add_program_to_pat(pool, p_program->i_number, p_program->i_pid);
 		}
 
 		pool->hooks[p_program->i_pid] = &pmt_hook;
@@ -693,6 +823,9 @@ struct list_head * get_programs(struct big_pool_t *pool)
 
 	// parse ATSC channels
 	pool->hooks[0x1FFB] = &atsc_hook;
+
+	if (!list_empty(&pool->selected_programs_list))
+		generate_pat_pkt(pool);
 
 	// OK exit
 	return &pool->programs_list;
