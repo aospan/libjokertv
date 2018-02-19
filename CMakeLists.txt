@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.8.12)
 project (joker_tv)
 set (joker_tv_VERSION_MAJOR 1)
-set (joker_tv_VERSION_MINOR 8)
-set (joker_tv_VERSION_PATCH 3)
+set (joker_tv_VERSION_MINOR 9)
+set (joker_tv_VERSION_PATCH 0)
 set (joker_tv_VERSION
 	${joker_tv_VERSION_MAJOR}.${joker_tv_VERSION_MINOR}.${joker_tv_VERSION_PATCH})
 
