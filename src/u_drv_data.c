@@ -69,6 +69,9 @@ int pool_init(struct joker_t *joker, struct big_pool_t * pool)
 	INIT_LIST_HEAD(&pool->ts_list_all);
 	INIT_LIST_HEAD(&pool->programs_list);
 
+	if (!pool->selected_programs_list.next)
+		INIT_LIST_HEAD(&pool->selected_programs_list);
+
 	// alloc threading stuff
 	pool->threading = malloc(sizeof(struct thread_opaq_t));
 	if (!pool->threading)
