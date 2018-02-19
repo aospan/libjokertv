@@ -68,6 +68,9 @@ struct program_t {
 	// last used PMT stuff
 	uint8_t i_version;
 	int b_current_next;
+
+	// SDT
+	void *generated_sdt_pkt;
 };
 
 struct list_head * get_programs(struct big_pool_t *pool);
@@ -75,6 +78,8 @@ struct list_head * get_programs(struct big_pool_t *pool);
 /* convert name to utf-8
  * first byte can be used as codepage (see ETSI EN 300 468 V1.11.1 (2010-04) */
 int dvb_to_utf(char * buf, size_t insize, char * _outbuf, int maxlen);
+
+void * get_next_sdt(struct big_pool_t *pool);
 
 #ifdef __cplusplus
 }

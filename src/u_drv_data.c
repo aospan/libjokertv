@@ -24,6 +24,7 @@
 #include <libusb.h>
 #include <pthread.h>
 #include "joker_tv.h"
+#include "joker_ts.h"
 #include "joker_ts_filter.h"
 #include "joker_fpga.h"
 #include "u_drv_data.h"
@@ -547,13 +548,13 @@ int next_ts_off(unsigned char *buf, size_t size)
 	return -1;
 }
 
-
 int replace_pat(struct big_pool_t *pool, unsigned char *data, int size)
 {
 	int off = 0;
 	int pid = 0;
-	char * pat = NULL;
-	uint8_t cnt = 0;
+	char *pkt = NULL;
+	char *pat = NULL;
+	char *sdt = NULL;
 
 	if(!pool)
 		return -EINVAL;
@@ -567,12 +568,36 @@ int replace_pat(struct big_pool_t *pool, unsigned char *data, int size)
 			pid = ((int)data[off+1]&0x1f)<<8 | data[off+2];
 			jdebug(" PKT: off=%d pid=0x%x \n", off, pid);
 			if (pid == 0x0 /* PAT */) {
-				cnt = pat[3]&0xf;
-				cnt += 1;
-				pat[3] = (pat[3]&0xf0) | (cnt&0xf);
+				if (pool->pat_counter == 0x10)
+					pool->pat_counter = 0;
+				pat[3] = (pat[3]&0xf0) | (pool->pat_counter&0x0f);
+				pool->pat_counter++;
 				memcpy(&data[off], pat, TS_SIZE);
-				jdebug("	PAT replaced. off=%d pid=0x%x cnt=0x%x\n", off, pid, cnt);
+				jdebug("	PAT replaced. off=%d pid=0x%x\n", off, pid);
+			} else if (pid == 0x11 /* SDT */) {
+				// current hackish SDT generator disabled
+				// all SDT will be replaced to null packets (hack !)
+				// no SDT info in output stream !
+				// TODO: rework SDT generator ! 
+				sdt = get_next_sdt(pool);
+				if (!sdt) {
+					// hack: replace SDT to null packet !
+					pkt = &data[off];
+					pkt[0] = 0x47;
+					pkt[1] = 0x1F;
+					pkt[2] = 0xFF;
+					pkt[3] = 0;
+					continue;
+				}
+
+				if (pool->sdt_counter == 0x10)
+					pool->sdt_counter = 0;
+				sdt[3] = (sdt[3]&0xf0) | (pool->sdt_counter&0x0f);
+				pool->sdt_counter++;
+				memcpy(&data[off], sdt, TS_SIZE);
+				printf("	SDT replaced. off=%d pid=0x%x\n", off, pid);
 			}
+
 			off += TS_SIZE;
 		} else {
 			off++;

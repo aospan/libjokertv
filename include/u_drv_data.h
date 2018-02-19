@@ -92,8 +92,15 @@ struct big_pool_t {
 	void *pat_dvbpsi;
 	void *sdt_dvbpsi;
 	void *atsc_dvbpsi;
-	void *generated_pat;
-	void *generated_pat_pkt;
+	char *generated_pat;
+	char *generated_pat_pkt;
+	uint8_t pat_counter;
+
+	// SDT
+	char *sdt_pkt_array;
+	int sdt_count;
+	int cur_sdt;
+	uint8_t sdt_counter;
 
 	uint32_t initialized;
 	struct joker_t *joker;

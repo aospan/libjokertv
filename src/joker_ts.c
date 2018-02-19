@@ -217,9 +217,31 @@ int add_program_to_pat(struct big_pool_t *pool, int program_number, int pmt_pid)
 	jdebug("Program %d with pmt pid %d added to PAT \n", program_number, pmt_pid);
 }
 
-static void writePSI(uint8_t* p_packet, dvbpsi_psi_section_t* p_section)
+uint8_t *alloc_ts(uint8_t* p_packet_origin, int pkts_allocated)
 {
-	p_packet[0] = 0x47;
+	uint8_t* p_packet = NULL;
+
+	p_packet = realloc(p_packet_origin, TS_SIZE*pkts_allocated);
+	if (!p_packet)
+		return 0;
+	memset(p_packet + TS_SIZE*(pkts_allocated-1), 0, TS_SIZE);
+
+	return p_packet;
+}
+
+// return allocated pkts (each TS_SIZE long)
+// caller should free allocated memory
+int psi_pkts_generate(uint8_t** p_packet_ret, dvbpsi_psi_section_t* p_section, int pid)
+{
+	uint8_t* buf = NULL;
+	uint8_t* p_packet = NULL;
+	int pkts_allocated = 0;
+
+	pkts_allocated++;
+	if (!(buf = alloc_ts(buf, pkts_allocated))) {
+		return 0;
+	}
+	p_packet = buf + TS_SIZE*(pkts_allocated-1);
 
 	while(p_section)
 	{
@@ -229,8 +251,12 @@ static void writePSI(uint8_t* p_packet, dvbpsi_psi_section_t* p_section)
 		uint8_t* p_end =   p_section->p_payload_end
 			+ (p_section->b_syntax_indicator ? 4 : 0);
 
-		p_packet[1] |= 0x40;
-		p_packet[3] = (p_packet[3] & 0x0f) | 0x10;
+		jdebug("%s: packet1 start. size=%d\n", __func__, p_end - p_byte);
+
+		p_packet[0] = 0x47;
+		p_packet[1] = 0x40 | (pid>>8)&0x1f;
+		p_packet[2] = (pid&0xff);
+		p_packet[3] = 0x10;
 
 		p_packet[4] = 0x00; /* pointer_field */
 		p_pos_in_ts = p_packet + 5;
@@ -239,17 +265,23 @@ static void writePSI(uint8_t* p_packet, dvbpsi_psi_section_t* p_section)
 			*(p_pos_in_ts++) = *(p_byte++);
 		while(p_pos_in_ts < p_packet + 188)
 			*(p_pos_in_ts++) = 0xff;
-		if(i_bytes_written == 0)
-		{ 
-			jdebug(stderr,"eof detected ... aborting\n");
-			return;
+		jdebug("%s: packet1 done \n", __func__);
+		
+		// write next packets
+		if (p_byte < p_end) {
+			// allocate next packet
+			pkts_allocated++;
+			buf = alloc_ts(buf, pkts_allocated);
+			p_packet = buf + TS_SIZE*(pkts_allocated-1);
 		}
-		p_packet[3] = (p_packet[3] + 1) & 0x0f;
 
+		jdebug("%s: packet2 start. size=%d\n", __func__, p_end - p_byte);
 		while(p_byte < p_end)
 		{ 
-			p_packet[1] &= 0xbf;
-			p_packet[3] = (p_packet[3] & 0x0f) | 0x10;
+			p_packet[0] = 0x47;
+			p_packet[1] = (pid>>8)&0x1f;
+			p_packet[2] = (pid&0xff);
+			p_packet[3] = 0x10;
 
 			p_pos_in_ts = p_packet + 4;
 
@@ -257,16 +289,15 @@ static void writePSI(uint8_t* p_packet, dvbpsi_psi_section_t* p_section)
 				*(p_pos_in_ts++) = *(p_byte++);
 			while(p_pos_in_ts < p_packet + 188)
 				*(p_pos_in_ts++) = 0xff;
-			if(i_bytes_written == 0)
-			{
-				jdebug(stderr,"eof detected ... aborting\n");
-				return;
-			}
-			p_packet[3] = (p_packet[3] + 1) & 0x0f;
+
+			jdebug("%s: packet2 done. size=%d\n", __func__, p_end - p_byte);
 		}
 
 		p_section = p_section->p_next;
 	}
+	*p_packet_ret = buf;
+
+	return pkts_allocated;
 }
 
 int generate_pat_pkt(struct big_pool_t *pool)
@@ -275,32 +306,26 @@ int generate_pat_pkt(struct big_pool_t *pool)
 	dvbpsi_pat_t pat;
 	dvbpsi_psi_section_t* p_section1;
 	char * packet = NULL;
+	int allocated = 0;
 
 	if (!pool)
 		return -EINVAL;
 
-	if (!pool->generated_pat_pkt) {
-		pool->generated_pat_pkt = calloc(1, TS_SIZE);
-		if (!pool->generated_pat_pkt)
-			return -ENOMEM;
-	}
-
-	packet = pool->generated_pat_pkt;
-
+	if (pool->generated_pat_pkt)
+		return 0;
 	p_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_DEBUG);
 	if (p_dvbpsi == NULL)
 		return -ENOMEM;
 
 	p_section1 = dvbpsi_pat_sections_generate(p_dvbpsi, (dvbpsi_pat_t*)pool->generated_pat, 250);
 
-	packet[0] = 0x47;
-	packet[1] = packet[2] = 0x00;
-	packet[3] = 0x00;
-	writePSI(packet, p_section1);
+	allocated = psi_pkts_generate(&pool->generated_pat_pkt, p_section1, 0x00 /* PAT */);
 
 	dvbpsi_delete(p_dvbpsi);
 
-	jdebug("PAT generated\n");
+	jdebug("PAT generated. allocated=%d\n", allocated);
+
+	return 0;
 }
 
 int is_program_selected (struct big_pool_t *pool, int program_number)
@@ -588,7 +613,57 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 	}
 };
 
+int generate_sdt_pkt(struct big_pool_t *pool, struct program_t *program, dvbpsi_sdt_t* p_sdt)
+{
+	dvbpsi_t *p_dvbpsi = NULL;
+	dvbpsi_pat_t pat;
+	dvbpsi_psi_section_t* p_section1;
+	char * packet = NULL;
+	int allocated;
 
+	if (!pool || !program || !p_sdt)
+		return -EINVAL;
+
+	if (program->generated_sdt_pkt)
+		return 0;
+
+	p_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_DEBUG);
+	if (p_dvbpsi == NULL)
+		return -ENOMEM;
+
+	p_section1 = dvbpsi_sdt_sections_generate(p_dvbpsi, p_sdt);
+
+	allocated = psi_pkts_generate(&program->generated_sdt_pkt, p_section1, 0x11 /* SDT */);
+	if (allocated <= 0)
+		return -ENOMEM;
+
+	dvbpsi_delete(p_dvbpsi);
+
+	printf("SDT generated for program %d size=%d\n", program->number, allocated);
+
+	// add SDT to array
+	pool->sdt_pkt_array = realloc(pool->sdt_pkt_array, TS_SIZE * (pool->sdt_count + allocated));
+	if (!pool->sdt_pkt_array)
+		return -ENOMEM;
+
+	memcpy(pool->sdt_pkt_array + TS_SIZE * pool->sdt_count, program->generated_sdt_pkt, allocated * TS_SIZE);
+	pool->sdt_count += allocated;
+
+	printf("SDT generated for program %d sdt_count=%d\n", program->number, pool->sdt_count);
+}
+
+void * get_next_sdt(struct big_pool_t *pool)
+{
+	char * ptr = NULL;
+
+	ptr = pool->sdt_pkt_array + TS_SIZE * pool->cur_sdt;
+
+	pool->cur_sdt++;
+	if (pool->cur_sdt >= pool->sdt_count)
+		pool->cur_sdt = 0;
+
+	return (void*)ptr;
+}
 
 /*****************************************************************************
  * DumpSDT
@@ -620,6 +695,12 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 					// call service name callback with new name
 					if (pool->service_name_callback)
 						pool->service_name_callback(program);
+
+					// TODO: rework SDT generator ! 
+					// generate SDT packet if program selected
+					// if (is_program_selected(pool, program->number)) {
+						// generate_sdt_pkt(pool, program, p_sdt);
+					// }
 				}
 			}
 		}
