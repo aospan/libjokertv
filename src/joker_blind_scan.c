@@ -350,7 +350,6 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info)
 	 * -----------------------------------
 	 * 10700V to 11900V  (force to 11700)| 11550V (force to 11700) to 12750V
 	 */
-	printf("\n\tBlind scan will scan four quadrants (13v/18v 22khz on/off)\n");
 
 	// scan only two quadrants if LNB has only one LO
 	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_OFF, JOKER_SEC_VOLTAGE_13);
@@ -360,6 +359,9 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info)
 		// scan another two quadrants if LNB has two LO
 		blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_13);
 		blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_18);
+		printf("\n\tBlind scan will scan four quadrants (13v/18v 22khz on/off)\n");
+	} else {
+		printf("\n\tBlind scan will scan two quadrants (13v/18v 22khz off)\n");
 	}
 
 	if (joker->blind_out_filename_fd) {
