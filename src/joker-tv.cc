@@ -65,7 +65,8 @@ void status_callback_f(void *data)
 // this callback will be called when new service name arrived
 void service_name_update(struct program_t *program)
 {
-	struct program_es_t*es = NULL;
+	struct program_es_t *es = NULL;
+	struct program_ca_t *ca = NULL;
 	printf("callback:%s program number=%d name=%s type=0x%x. video:%s audio:%s\n",
 			__func__, program->number, program->name, program->service_type,
 			program->has_video ? "yes" : "",
@@ -77,6 +78,14 @@ void service_name_update(struct program_t *program)
 					es->pid, es->type);
 		}
 	}
+
+	if(!list_empty(&program->ca_list)) {
+		list_for_each_entry(ca, &program->ca_list, list) {
+			printf("	CA pid=0x%x caid=0x%x\n",
+					ca->pid, ca->caid);
+		}
+	}
+
 }
 
 static const int convert2xml_pol[] = { 18, 13 };

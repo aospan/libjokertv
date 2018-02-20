@@ -130,10 +130,13 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 {
 	struct program_t *program = (struct program_t *)data;
 	struct program_es_t*es = NULL;
+	struct program_ca_t*ca = NULL;
 	int audio = 0, video = 0;
 	struct dvbpsi_psi_section_s *current_section = NULL;
 	dvbpsi_pmt_es_t* p_es = p_pmt->p_first_es;
 	int ignore = 0;
+	dvbpsi_descriptor_t *p_descriptor_l = NULL;
+	int pid = 0, caid = 0;
 
 	jdebug(  "\n");
 	jdebug(  "New active PMT\n");
@@ -189,6 +192,50 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 				p_es->i_pid, p_es->i_pid);
 		p_es = p_es->p_next;
 	}
+
+	// loop descriptors
+	p_descriptor_l = p_pmt->p_first_descriptor;
+	while(p_descriptor_l)
+	{ 
+		if (p_descriptor_l->i_tag == 0x09 /* CA */) {
+			// CA descriptor found
+			pid = ((p_descriptor_l->p_data[2]&0x1F) <<8) | p_descriptor_l->p_data[3];
+			caid = p_descriptor_l->p_data[0] << 8 | p_descriptor_l->p_data[1];
+
+			// avoid duplicates
+			// WARNING: one PID can be used twice in CA descriptors
+			// we need only PID/CAID, so we drop duplicates
+			ignore = 0;
+			if(!list_empty(&program->ca_list)) {
+				list_for_each_entry(ca, &program->ca_list, list) {
+					if (ca->pid == pid && ca->caid == caid)
+						ignore = 1; // ignore, already in the list
+				}
+			}
+
+			if (ignore) {
+				p_descriptor_l = p_descriptor_l->p_next;
+				continue;
+			}
+
+			ca = (struct program_ca_t*)calloc(1, sizeof(*ca));
+			if (!ca)
+				break;
+
+			ca->pid = pid;
+			ca->caid = caid;
+
+			// allow PID in TS PID filtering
+			if (is_program_selected(program->joker->pool, p_pmt->i_program_number))
+				ts_filter_one(program->joker, TS_FILTER_UNBLOCK, pid);
+
+			list_add_tail(&ca->list, &program->ca_list);
+			jdebug ("add to CA list for program=%d caid=0x%x pid=0x%x \n",
+					program->number, caid, pid);
+		}
+		p_descriptor_l = p_descriptor_l->p_next;
+	}
+
 
 	// get pointer to "raw" PMT (unparsed)
 	current_section = ((dvbpsi_t*)program->pmt_dvbpsi)->p_decoder->p_current_section;
@@ -381,6 +428,7 @@ static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 		memset(&program->name, 0, SERVICE_NAME_LEN);
 		program->number = p_program->i_number;
 		INIT_LIST_HEAD(&program->es_list);
+		INIT_LIST_HEAD(&program->ca_list);
 		list_add_tail(&program->list, &pool->programs_list);
 
 		jdebug("    | %14d @ 0x%x (%d)\n",

@@ -46,6 +46,14 @@ struct program_es_t
 	struct list_head list;
 };
 
+// Conditional Access descriptors info
+struct program_ca_t
+{
+	uint16_t                       pid;
+	uint16_t                      caid;
+	struct list_head list;
+};
+
 struct program_t {
 	int number;
 	unsigned char name[SERVICE_NAME_LEN];
@@ -53,6 +61,7 @@ struct program_t {
 	int pmt_pid;
 	void * pmt_dvbpsi;
 	struct list_head es_list; // elementary streams belongs to this program
+	struct list_head ca_list; // Conditional Access descriptors info
 	struct list_head list;
 	int has_video;
 	int has_audio;
