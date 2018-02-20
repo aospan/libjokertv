@@ -28,6 +28,7 @@
 #include <psi.h>
 #include <descriptor.h>
 #include <pat.h>
+#include <cat.h>
 #include <pmt.h>
 #include <dr.h>
 #include <demux.h>
@@ -464,6 +465,63 @@ static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 	dvbpsi_pat_delete(p_pat);
 }
 
+static void DumpCAT(void* data, dvbpsi_cat_t* p_cat)
+{
+	struct program_t *program = NULL;
+	struct big_pool_t *pool = (struct big_pool_t *)data;
+	int ignore = 0;
+	dvbpsi_descriptor_t *p_descriptor_l = NULL;
+	int pid = 0, caid = 0;
+	struct program_ca_t*ca = NULL;
+
+	// loop descriptors
+	p_descriptor_l = p_cat->p_first_descriptor;
+	while(p_descriptor_l)
+	{ 
+		if (p_descriptor_l->i_tag == 0x09 /* CA */) {
+			// CA descriptor found
+			pid = ((p_descriptor_l->p_data[2]&0x1F) <<8) | p_descriptor_l->p_data[3];
+			caid = p_descriptor_l->p_data[0] << 8 | p_descriptor_l->p_data[1];
+
+			// avoid duplicates
+			// WARNING: one PID can be used twice in CA descriptors
+			// we need only PID/CAID, so we drop duplicates
+			ignore = 0;
+			if(!list_empty(&pool->ca_list)) {
+				list_for_each_entry(ca, &pool->ca_list, list) {
+					if (ca->pid == pid && ca->caid == caid)
+						ignore = 1; // ignore, already in the list
+				}
+			}
+
+			if (ignore) {
+				p_descriptor_l = p_descriptor_l->p_next;
+				continue;
+			}
+
+			ca = (struct program_ca_t*)calloc(1, sizeof(*ca));
+			if (!ca)
+				break;
+
+			ca->pid = pid;
+			ca->caid = caid;
+
+			// allow PID in TS PID filtering
+			if(!list_empty(&pool->selected_programs_list))
+				ts_filter_one(pool->joker, TS_FILTER_UNBLOCK, pid);
+
+			list_add_tail(&ca->list, &pool->ca_list);
+			jdebug ("add to CA list for pool caid=0x%x pid=0x%x \n",
+					caid, pid);
+		}
+		p_descriptor_l = p_descriptor_l->p_next;
+	}
+
+
+
+	dvbpsi_cat_delete(p_cat);
+}
+
 /*****************************************************************************
  * DumpDescriptors
  *****************************************************************************/
@@ -876,6 +934,13 @@ void pat_hook(void *data, unsigned char *pkt)
 	dvbpsi_packet_push(pool->pat_dvbpsi, pkt);
 }
 
+void cat_hook(void *data, unsigned char *pkt)
+{
+	struct big_pool_t * pool = (struct big_pool_t *)data;
+	jdebug("%s:pool=%p pkt=%p\n", __func__, pool, pkt);
+	dvbpsi_packet_push(pool->cat_dvbpsi, pkt);
+}
+
 void sdt_hook(void *data, unsigned char *pkt)
 {
 	struct big_pool_t * pool = (struct big_pool_t *)data;
@@ -922,8 +987,14 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	if (!dvbpsi_AttachDemux(pool->atsc_dvbpsi, NewSubtable, pool))
 		goto out;
 
+	// Attach CAT
+	pool->cat_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
+	if (!dvbpsi_cat_attach(pool->cat_dvbpsi, DumpCAT, pool))
+		goto out;
+
 	// install hooks
 	pool->hooks[0x00] = &pat_hook;
+	pool->hooks[0x01] = &cat_hook;
 
 	// check program list (PAT parse)
 	while (cnt-- > 0 && list_empty(&pool->programs_list))

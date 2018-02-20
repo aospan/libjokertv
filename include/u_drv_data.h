@@ -90,11 +90,13 @@ struct big_pool_t {
 	struct list_head programs_list;
 	service_name_callback_t service_name_callback;
 	void *pat_dvbpsi;
+	void *cat_dvbpsi;
 	void *sdt_dvbpsi;
 	void *atsc_dvbpsi;
 	char *generated_pat;
 	char *generated_pat_pkt;
 	uint8_t pat_counter;
+	struct list_head ca_list; // another CA list inside each program
 
 	// SDT
 	char *sdt_pkt_array;
