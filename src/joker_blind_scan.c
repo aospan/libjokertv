@@ -95,7 +95,7 @@ void blind_scan_callback (void *data)
 	if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT) {
 		snprintf(buf, 1024,
 				"\"%d\",\"%s\",\"%s\",\"%d\",\"%s\",\"%s\",\"%s\"\n",
-				res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq,
+				abs(res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq),
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
 				res->tuneParam.symbolRateKSps,
@@ -111,7 +111,7 @@ void blind_scan_callback (void *data)
 		info->delivery_system = (res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? JOKER_SYS_DVBS : JOKER_SYS_DVBS2;
 
 		// HZ
-		info->frequency = 1000*(uint64_t)res->tuneParam.centerFreqKHz + 1000*1000*(uint64_t)info->lnb.selected_freq;
+		info->frequency = 1000*1000*(int64_t)abs(res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq);
 		info->symbol_rate = 1000*res->tuneParam.symbolRateKSps;
 		info->bandwidth_hz = 0;
 
@@ -206,7 +206,7 @@ void blind_scan_callback (void *data)
 		snprintf(filename, 1024, "%s-%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
 				res->prefix,
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v",
-				info->lnb.selected_freq);
+				abs(info->lnb.selected_freq));
 
 		pCurrent = res->pPowerList->pNext;
 		pfd = fopen(filename, "w+b");
@@ -216,7 +216,7 @@ void blind_scan_callback (void *data)
 			return;
 		}
 		while(pCurrent){
-			fprintf(pfd, "%d %.2f\n", pCurrent->data.power.freqKHz/1000 + info->lnb.selected_freq,
+			fprintf(pfd, "%d %.2f\n", abs(pCurrent->data.power.freqKHz/1000 + info->lnb.selected_freq),
 					(double)pCurrent->data.power.power/100);
 			pCurrent = pCurrent->pNext;
 			cnt++;
@@ -235,7 +235,7 @@ void blind_scan_callback (void *data)
 		snprintf(filename, 1024, "cand-%s-%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
 				res->prefix,
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v",
-				info->lnb.selected_freq);
+				abs(info->lnb.selected_freq));
 
 		pCurrent = res->pCandList->pNext;
 		pfd = fopen(filename, "w+b");
@@ -283,13 +283,15 @@ int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
 	 * 9750 + 2150 = 11900 Mhz
 	 * 
 	 */
-	if (tone == JOKER_SEC_TONE_ON) {
-		// add 31Mhz because blind scan will add this for powerscan
-		// change this constant if symbolrate changed
-		// freq_min = 1000 * (info->lnb.lowfreq + 2150 - info->lnb.highfreq + 31 * 2);
-		freq_min = 1000 * (info->lnb.switchfreq - info->lnb.highfreq);
-	} else {
-		freq_max = 1000 * (info->lnb.switchfreq - info->lnb.lowfreq);
+	if (info->lnb.switchfreq) {
+		if (tone == JOKER_SEC_TONE_ON) {
+			// add 31Mhz because blind scan will add this for powerscan
+			// change this constant if symbolrate changed
+			// freq_min = 1000 * (info->lnb.lowfreq + 2150 - info->lnb.highfreq + 31 * 2);
+			freq_min = 1000 * (info->lnb.switchfreq - info->lnb.highfreq);
+		} else {
+			freq_max = 1000 * (info->lnb.switchfreq - info->lnb.lowfreq);
+		}
 	}
 
 	printf("\n\t *** Blind scan quadrant %dv, %s LNB band (22khz %s) min/max freq=%d/%d\n",
@@ -301,6 +303,10 @@ int blind_scan_do_quadrant(struct joker_t *joker, struct tune_info_t *info,
 	fe->ops.set_tone(fe, tone);
 	fe->ops.set_voltage(fe, voltage);
 	info->lnb.selected_freq = (tone == JOKER_SEC_TONE_ON) ? info->lnb.highfreq : info->lnb.lowfreq;
+	// hack: detect C band LNB
+	// TODO: rework for more reliable way to detect C band LNB
+	if (info->lnb.lowfreq < 6000)
+		info->lnb.selected_freq *= -1;
 	info->voltage = voltage;
 	info->tone = tone;
 	joker->info = info;
@@ -346,10 +352,15 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info)
 	 */
 	printf("\n\tBlind scan will scan four quadrants (13v/18v 22khz on/off)\n");
 
+	// scan only two quadrants if LNB has only one LO
 	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_OFF, JOKER_SEC_VOLTAGE_13);
-	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_13);
 	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_OFF, JOKER_SEC_VOLTAGE_18);
-	blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_18);
+
+	if (info->lnb.switchfreq) {
+		// scan another two quadrants if LNB has two LO
+		blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_13);
+		blind_scan_do_quadrant(joker, info, fe, JOKER_SEC_TONE_ON, JOKER_SEC_VOLTAGE_18);
+	}
 
 	if (joker->blind_out_filename_fd) {
 		fclose(joker->blind_out_filename_fd);
