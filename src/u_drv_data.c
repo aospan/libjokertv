@@ -591,6 +591,7 @@ int replace_pat(struct big_pool_t *pool, unsigned char *data, int size)
 					pkt[1] = 0x1F;
 					pkt[2] = 0xFF;
 					pkt[3] = 0;
+					off += TS_SIZE;
 					continue;
 				}
 
