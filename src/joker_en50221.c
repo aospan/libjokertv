@@ -557,6 +557,8 @@ extern int dvbca_link_write(int fd, uint8_t slot, uint8_t connection_id,
 	if ((ret = joker_ci_write_data(joker, buf, data_length+2)) < 0)
 		return -EIO;
 
+	cam_pcap_write_event(joker, JOKER_PCAP_DATA_HOST_TO_CAM, buf, data_length+2);
+
 	free(buf);
 	return ret;
 }
@@ -608,6 +610,7 @@ extern int dvbca_link_read(int fd, uint8_t *slot, uint8_t *connection_id,
 		memcpy(data + dst_off, buf+2, size-2);
 		dst_off += size-2;
 		more_data = buf[1]&0x80;
+		cam_pcap_write_event(joker, JOKER_PCAP_DATA_CAM_TO_HOST, buf, size);
 	}
 
 	free(buf);

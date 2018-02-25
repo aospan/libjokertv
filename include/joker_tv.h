@@ -163,6 +163,10 @@ struct joker_t {
 	/* Raw data from usb */
 	char *raw_data_filename;
 	FILE *raw_data_filename_fd;
+	
+	/* CAM interaction dump file */
+	char *cam_pcap_filename;
+	FILE *cam_pcap_filename_fd;
 
 	/* Enabled if high bandwidth usb isochronous transfer supported 
 	 * First implemented in Joker TV fw revision 0x2d

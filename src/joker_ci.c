@@ -308,6 +308,8 @@ int joker_ci_read_tuple(struct joker_t * joker, struct ci_tuple_t *tuple)
 		tuple->data[i] = buf[i*2];
 	}
 
+	cam_pcap_write_event(joker, JOKER_PCAP_CIS_READ, (char*)tuple, tuple->size + 2);
+
 	return 0;
 }
 
@@ -521,6 +523,7 @@ int joker_ci_init_interface(struct joker_t * joker)
 	struct joker_ci_t * ci = NULL;
 	int ret;
 	unsigned char buf[JCMD_BUF_LEN];
+	struct joker_dvbci_cor cor;
 
 	if (!joker || !joker->joker_ci_opaque)
 		return -EINVAL;
@@ -542,6 +545,10 @@ int joker_ci_init_interface(struct joker_t * joker)
 		printf("CAM: can't write to offset 0x%x \n", ci->tuple_cur_offset);
 		return -EIO;
 	}
+
+	cor.addr = htons((uint16_t)ci->config_base);
+	cor.val = ci->config_option;
+	cam_pcap_write_event(joker, JOKER_PCAP_COR_WRITE, (char*)&cor, sizeof(cor));
 
 	ret = joker_ci_rw(joker, JOKER_CI_CTRL_READ | JOKER_CI_CTRL_MEM, ci->config_base, buf, 1);
 	if (ret < 0) {
@@ -627,6 +634,62 @@ int joker_ci_link_init(struct joker_t * joker)
 	return 0;
 }
 
+int cam_pcap_write_header(struct joker_t * joker)
+{
+	joker_pcap_hdr_t hdr;
+
+	if (!joker || joker->cam_pcap_filename_fd <= 0)
+		return -EINVAL;
+
+	// pcap format description here:
+	// https://wiki.wireshark.org/Development/LibpcapFileFormat
+	// version 2.4
+	hdr.magic_number = 0xa1b2c3d4;
+	hdr.version_major = 2;
+	hdr.version_minor = 4;
+	hdr.thiszone = 0;
+	hdr.sigfigs = 0;
+	hdr.snaplen = 0xffffffff;
+	hdr.network = JOKER_LINKTYPE_DVB_CI;
+
+	fwrite(&hdr, sizeof(hdr), 1, joker->cam_pcap_filename_fd);
+	fflush(joker->cam_pcap_filename_fd);
+	jdebug("%s: header written \n", __func__);
+
+	return 0;
+}
+
+int cam_pcap_write_event(struct joker_t * joker, uint8_t event, char * data, uint16_t len)
+{
+	joker_pcaprec_hdr_t rec;
+	struct joker_dvbci_header ci_hdr;
+	struct timeval tv;
+
+	if (!joker || joker->cam_pcap_filename_fd <= 0)
+		return -EINVAL;
+
+	gettimeofday(&tv,NULL);
+
+	// write record first
+	rec.ts_sec = tv.tv_sec;
+	rec.ts_usec = tv.tv_usec;
+	rec.incl_len = len + sizeof(ci_hdr);
+	rec.orig_len = len + sizeof(ci_hdr);
+	fwrite(&rec, sizeof(rec), 1, joker->cam_pcap_filename_fd);
+
+	// write event
+	ci_hdr.version = 0;
+	ci_hdr.event = event;
+	ci_hdr.len = htons(len);
+	fwrite(&ci_hdr, sizeof(ci_hdr), 1, joker->cam_pcap_filename_fd);
+
+	fwrite(data, len, 1, joker->cam_pcap_filename_fd);
+	fflush(joker->cam_pcap_filename_fd);
+
+	jdebug("%s: event 0x%x written \n", __func__, event);
+	return 0;
+}
+
 void* joker_ci_worker(void * data)
 {
 	struct joker_t * joker = (struct joker_t *)data;
@@ -637,6 +700,7 @@ void* joker_ci_worker(void * data)
 	struct joker_ci_t * ci = NULL;
 	int ci_timeout = 0;
 	int try = 10;
+	char event;
 
 	if (joker->joker_ci_opaque) {
 		printf("CAM already initialized ? Call joker_ci_close to deinit\n");
@@ -679,6 +743,24 @@ void* joker_ci_worker(void * data)
 	} else {
 		printf("CAM detected\n");
 	}
+
+	// open pcap dump
+	if(joker->cam_pcap_filename) {
+		joker->cam_pcap_filename_fd = fopen(joker->cam_pcap_filename, "w+b");
+		if (joker->cam_pcap_filename_fd < 0) {
+			printf("Can't open PCAP CAM dump file. Error=%s (%d) \n",
+					strerror(errno), errno);
+		} else {
+			// write header to pcap file
+			cam_pcap_write_header(joker);
+		}
+	}
+
+	// wire CAM PCAP event about CAM detection
+	event = JOKER_PCAP_CAM_IN;
+	cam_pcap_write_event(joker, JOKER_PCAP_HW_EVT, &event, 1);
+	event = JOKER_PCAP_POWER_ON;
+	cam_pcap_write_event(joker, JOKER_PCAP_HW_EVT, &event, 1);
 
 	ci->cam_detected = 1;
 
@@ -767,9 +849,16 @@ int joker_ci_close(struct joker_t * joker)
 	pthread_join(joker->ci_threading->ci_thread, NULL);
 	printf("CI thread done \n");
 
+	// free allocated resources
 	if (joker->joker_ci_opaque) {
 		free(joker->joker_ci_opaque);
 		joker->joker_ci_opaque = NULL;
+	}
+
+	// close PCAP dump file
+	if (joker->cam_pcap_filename_fd > 0) {
+		fclose(joker->cam_pcap_filename_fd);
+		joker->cam_pcap_filename_fd = NULL;
 	}
 
 	return 0;

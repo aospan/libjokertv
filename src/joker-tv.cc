@@ -220,6 +220,7 @@ void show_help() {
 	printf("	--blind-power file	Write power (dB) to file. Example: file\n");
 	printf("	--blind-programs file.xml	Write blind scan programs to file. Example: blind.xml\n");
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
+	printf("	--cam-pcap cam.pcap	dump all CAM interaction to file. Use Wireshark to parse this file.\n");
 	exit(0);
 }
 
@@ -232,6 +233,7 @@ static struct option long_options[] = {
 	{"blind-power",  required_argument, 0, 0},
 	{"blind-programs",  required_argument, 0, 0},
 	{"raw-data",  required_argument, 0, 0},
+	{"cam-pcap",  required_argument, 0, 0},
 	{ 0, 0, 0, 0}
 };
 
@@ -349,6 +351,11 @@ int main (int argc, char **argv)
 					len = strlen(optarg);
 					joker->raw_data_filename = (char*)calloc(1, len + 1);
 					strncpy(joker->raw_data_filename, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "cam-pcap")) {
+					len = strlen(optarg);
+					joker->cam_pcap_filename = (char*)calloc(1, len + 1);
+					strncpy(joker->cam_pcap_filename, optarg, len);
 				}
 				break;
 			case 'd':
