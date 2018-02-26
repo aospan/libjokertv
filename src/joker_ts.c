@@ -21,6 +21,7 @@
 #include <joker_ts.h>
 #include <joker_ts_filter.h>
 #include <joker_utils.h>
+#include <joker_en50221.h>
 #include <u_drv_data.h>
 
 #include <stdbool.h>
@@ -30,6 +31,7 @@
 #include <pat.h>
 #include <cat.h>
 #include <pmt.h>
+#include <tot.h>
 #include <dr.h>
 #include <demux.h>
 #include <sdt.h>
@@ -771,6 +773,30 @@ void * get_next_sdt(struct big_pool_t *pool)
 	return (void*)ptr;
 }
 
+static void DumpTOT(void* data, dvbpsi_tot_t* p_tot)
+{
+	struct program_t *program = NULL;
+	struct big_pool_t *pool = (struct big_pool_t *)data;
+	uint8_t dvbdate[5];
+	time_t t;
+
+	
+	dvbdate[0] = (p_tot->i_utc_time >> 32)&0xFF;
+	dvbdate[1] = (p_tot->i_utc_time >> 24)&0xFF;
+	dvbdate[2] = (p_tot->i_utc_time >> 16)&0xFF;
+	dvbdate[3] = (p_tot->i_utc_time >> 8)&0xFF;
+	dvbdate[4] = (p_tot->i_utc_time)&0xFF;
+
+	t = dvbdate_to_unixtime(dvbdate);
+
+	// update en50221 stack with new dvb time arrived
+	joker_en50221_set_dvbtime(pool, t);
+
+	jdebug("%s: i_utc_time=%llu time_t=%llu - %s\n",
+			__func__, p_tot->i_utc_time, t, ctime(&t));
+
+}
+
 /*****************************************************************************
  * DumpSDT
  *****************************************************************************/
@@ -916,6 +942,11 @@ static void NewSubtable(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_exten
 			if (!dvbpsi_sdt_attach(p_dvbpsi, i_table_id, i_extension, DumpSDT, data))
 				fprintf(stderr, "Failed to attach SDT subdecoder\n");
 			break;
+		case 0x70: // TDT
+		case 0x73: // TOT
+			if (!dvbpsi_tot_attach(p_dvbpsi, i_table_id, i_extension, DumpTOT, data))
+				fprintf(stderr, "Failed to attach TDT/TOT subdecoder\n");
+			break;
 		case 0xC8: // ATSC VCT
 		case 0xC9: // ATSC VCT
 			if (!dvbpsi_atsc_AttachVCT(p_dvbpsi, i_table_id, i_extension, handle_atsc_VCT, data))
@@ -945,14 +976,21 @@ void sdt_hook(void *data, unsigned char *pkt)
 {
 	struct big_pool_t * pool = (struct big_pool_t *)data;
 	jdebug("%s:pool=%p pkt=%p\n", __func__, pool, pkt);
-	dvbpsi_packet_push(pool->sdt_dvbpsi, pkt);
+	dvbpsi_packet_push(pool->si_dvbpsi, pkt);
 }
 
 void atsc_hook(void *data, unsigned char *pkt)
 {
 	struct big_pool_t * pool = (struct big_pool_t *)data;
 	jdebug("%s:pool=%p pkt=%p\n", __func__, pool, pkt);
-	dvbpsi_packet_push(pool->atsc_dvbpsi, pkt);
+	dvbpsi_packet_push(pool->si_dvbpsi, pkt);
+}
+
+void tdt_hook(void *data, unsigned char *pkt)
+{
+	struct big_pool_t * pool = (struct big_pool_t *)data;
+	jdebug("%s:pool=%p TDT pkt=%p\n", __func__, pool, pkt);
+	dvbpsi_packet_push(pool->si_dvbpsi, pkt);
 }
 
 struct list_head * get_programs(struct big_pool_t *pool)
@@ -973,18 +1011,11 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	if (!dvbpsi_pat_attach(pool->pat_dvbpsi, DumpPAT, pool))
 		goto out;
 
-	// Attach SDT
-	pool->sdt_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
-	if (pool->sdt_dvbpsi == NULL)
+	// Attach SI demux (for SDT, TOT/TDT, ATSC )
+	pool->si_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
+	if (pool->si_dvbpsi == NULL)
 		goto out;
-	if (!dvbpsi_AttachDemux(pool->sdt_dvbpsi, NewSubtable, pool))
-		goto out;
-
-	// Attach ATSC
-	pool->atsc_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
-	if (pool->atsc_dvbpsi == NULL)
-		goto out;
-	if (!dvbpsi_AttachDemux(pool->atsc_dvbpsi, NewSubtable, pool))
+	if (!dvbpsi_AttachDemux(pool->si_dvbpsi, NewSubtable, pool))
 		goto out;
 
 	// Attach CAT
@@ -993,8 +1024,9 @@ struct list_head * get_programs(struct big_pool_t *pool)
 		goto out;
 
 	// install hooks
-	pool->hooks[0x00] = &pat_hook;
-	pool->hooks[0x01] = &cat_hook;
+	pool->hooks[J_TRANSPORT_PAT_PID] = &pat_hook;
+	pool->hooks[J_TRANSPORT_CAT_PID] = &cat_hook;
+	pool->hooks[J_TRANSPORT_TDT_PID] = &tdt_hook;
 
 	// check program list (PAT parse)
 	while (cnt-- > 0 && list_empty(&pool->programs_list))
@@ -1019,7 +1051,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	printf("All PAT/PMT parse done. Program list is ready now.\n");
 
 	// parse SDT only after PAT and PMT !
-	pool->hooks[0x11] = &sdt_hook;
+	pool->hooks[J_TRANSPORT_SDT_PID] = &sdt_hook;
 
 	// parse ATSC channels
 	pool->hooks[0x1FFB] = &atsc_hook;
@@ -1038,16 +1070,10 @@ out:
 		dvbpsi_delete(pool->pat_dvbpsi);
 	}
 
-	if (pool->sdt_dvbpsi)
+	if (pool->si_dvbpsi)
 	{
-		dvbpsi_DetachDemux(pool->sdt_dvbpsi);
-		dvbpsi_delete(pool->sdt_dvbpsi);
-	}
-
-	if (pool->atsc_dvbpsi)
-	{
-		dvbpsi_DetachDemux(pool->atsc_dvbpsi);
-		dvbpsi_delete(pool->atsc_dvbpsi);
+		dvbpsi_DetachDemux(pool->si_dvbpsi);
+		dvbpsi_delete(pool->si_dvbpsi);
 	}
 
 	return NULL;

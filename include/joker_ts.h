@@ -22,6 +22,20 @@ extern "C" {
 
 #define SERVICE_NAME_LEN	128
 
+#define J_TRANSPORT_PAT_PID 0x00
+#define J_TRANSPORT_CAT_PID 0x01
+#define J_TRANSPORT_NIT_PID 0x10
+#define J_TRANSPORT_SDT_PID 0x11
+#define J_TRANSPORT_BAT_PID 0x11
+#define J_TRANSPORT_EIT_PID 0x12
+#define J_TRANSPORT_CIT_PID 0x12
+#define J_TRANSPORT_RST_PID 0x13
+#define J_TRANSPORT_TDT_PID 0x14
+#define J_TRANSPORT_TOT_PID 0x14
+#define J_TRANSPORT_RNT_PID 0x16
+#define J_TRANSPORT_DIT_PID 0x1e
+#define J_TRANSPORT_SIT_PID 0x1f
+
 /* service types
  * defined in DVB Document A038 (July 2014) 
  * Table 87: Service type coding

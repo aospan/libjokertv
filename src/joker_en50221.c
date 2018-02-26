@@ -167,6 +167,7 @@ struct joker_en50221_t {
 	int ca_connected;
 	int pmt_pid;
 	int ca_session_number;
+	int datetime_session_number;
 
 	// instances of resources we actually implement here
 	struct en50221_app_rm *rm_resource;
@@ -189,6 +190,10 @@ struct joker_en50221_t {
 	// protect access to CAM from another threads
 	pthread_mutex_t mux;
 	struct list_head programs_list;
+
+	uint8_t datetime_response_interval;
+	time_t datetime_next_send;
+	time_t datetime_dvbtime;
 };
 
 int joker_ci_poll(struct pollfd *fds, nfds_t nfds, int timeout, void *arg)
@@ -437,44 +442,6 @@ int joker_ci_en50221_close(struct joker_t * joker)
 	return 0;
 }
 
-/********************* helper functions from dvb-apps ************************/
-uint32_t integer_to_bcd(uint32_t intval)
-{
-	uint32_t val = 0;
-
-	int i;
-	for(i=0; i<=28;i+=4) {
-		val |= ((intval % 10) << i);
-		intval /= 10;
-	}
-
-	return val;
-}
-
-void unixtime_to_dvbdate(time_t unixtime, dvbdate_t dvbdate)
-{
-	struct tm tm;
-	double l = 0;
-	int mjd;
-
-	/* the undefined value */
-	if (unixtime == -1) {
-		memset(dvbdate, 0xff, 5);
-		return;
-	}
-
-	gmtime_r(&unixtime, &tm);
-	tm.tm_mon++;
-	if ((tm.tm_mon == 1) || (tm.tm_mon == 2)) l = 1;
-	mjd = 14956 + tm.tm_mday + (int) ((tm.tm_year - l) * 365.25) + (int) ((tm.tm_mon + 1 + l * 12) * 30.6001);
-
-	dvbdate[0] = (mjd & 0xff00) >> 8;
-	dvbdate[1] = mjd & 0xff;
-	dvbdate[2] = integer_to_bcd(tm.tm_hour);
-	dvbdate[3] = integer_to_bcd(tm.tm_min);
-	dvbdate[4] = integer_to_bcd(tm.tm_sec);
-}
-
 /**
  * Open a CA device. Multiple CAMs can be accessed through a CA device.
  *
@@ -712,6 +679,8 @@ int test_session_callback(void *arg, int reason, uint8_t slot_id, uint16_t sessi
 
 			if (resource_id == EN50221_APP_RM_RESOURCEID) {
 				en50221_app_rm_enq(jen->rm_resource, session_number);
+			} else if (resource_id == EN50221_APP_DATETIME_RESOURCEID) {
+				jen->datetime_session_number = session_number;
 			} else if (resource_id == EN50221_APP_AI_RESOURCEID) {
 				en50221_app_ai_enquiry(jen->ai_resource, session_number);
 			} else if (resource_id == EN50221_APP_CA_RESOURCEID) {
@@ -732,6 +701,12 @@ int test_session_callback(void *arg, int reason, uint8_t slot_id, uint16_t sessi
 					slot_id, resource_id, session_number);
 			break;
 		case S_SCALLBACK_REASON_CLOSE:
+			if (resource_id == EN50221_APP_DATETIME_RESOURCEID) {
+				jen->datetime_session_number = -1;
+			} else if (resource_id == EN50221_APP_CA_RESOURCEID) {
+				jen->ca_session_number = -1;
+			}
+
 			jdebug("%02x:Connection to resource %08x, session_number %i closed\n",
 					slot_id, resource_id, session_number);
 			break;
@@ -826,6 +801,8 @@ int test_datetime_enquiry_callback(void *arg, uint8_t slot_id, uint16_t session_
 	if (en50221_app_datetime_send(jen->datetime_resource, session_number, time(NULL), -1)) {
 		printf("%02x:Failed to send datetime\n", slot_id);
 	}
+
+	jen->datetime_response_interval = response_interval;
 
 	return 0;
 }
@@ -1193,6 +1170,23 @@ int test_app_mmi_list_callback(void *arg, uint8_t slot_id, uint16_t session_numb
 	return 0;
 }
 
+/* set dvb time arrived in TDT/TOT PSI packets */
+void joker_en50221_set_dvbtime(struct big_pool_t *pool, time_t datetime_dvbtime)
+{
+	struct joker_t * joker = NULL;
+	struct joker_en50221_t * jen = NULL;
+
+	if (!pool)
+		return;
+
+	joker = pool->joker;
+	if (!joker || !joker->joker_en50221_opaque)
+		return (void *)-EINVAL;
+	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
+
+	jen->datetime_dvbtime = datetime_dvbtime;
+}
+
 void *ci_poll_func(void* arg) {
 	struct en50221_transport_layer *tl = NULL;
 	int lasterror = 0;
@@ -1216,6 +1210,20 @@ void *ci_poll_func(void* arg) {
 						en50221_tl_get_error(tl));
 			}
 			lasterror = error;
+		}
+
+		// send date/time response
+		if (jen->datetime_session_number != -1) {
+			time_t cur_time = time(NULL);
+			if (jen->datetime_response_interval
+					&& jen->datetime_dvbtime
+					&& (cur_time > jen->datetime_next_send)) {
+				en50221_app_datetime_send(jen->datetime_resource,
+						jen->datetime_session_number,
+						jen->datetime_dvbtime, 0);
+				jen->datetime_next_send = cur_time + jen->datetime_response_interval;
+				jdebug("%s: datetime sent to CAM. interval=%d\n", __func__, jen->datetime_response_interval );
+			}
 		}
 	}
 

@@ -100,6 +100,7 @@ SET (JOKERTV_SRC src/u_drv_data.c
 	src/joker_en50221_server.c
 	3party/libucsi/mpeg/pmt_section.c
 	3party/libucsi/crc32.c
+	3party/libucsi/dvb/types.c
 	src/joker_xml.c
 	src/joker_ts.c
 	src/joker_ts_filter.c)

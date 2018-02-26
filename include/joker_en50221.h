@@ -69,6 +69,9 @@ int joker_en50221_mmi_enter(struct joker_t * joker, mmi_callback_t cb);
  * return 0 if success */
 int joker_en50221_mmi_call(struct joker_t * joker, const unsigned char *buf, int len);
 
+/* set dvb time arrived in TDT/TOT PSI packets */
+void joker_en50221_set_dvbtime(struct big_pool_t *pool, time_t datetime_dvbtime);
+
 #ifdef __cplusplus
 }
 #endif
