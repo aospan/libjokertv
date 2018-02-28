@@ -1181,7 +1181,7 @@ void joker_en50221_set_dvbtime(struct big_pool_t *pool, time_t datetime_dvbtime)
 
 	joker = pool->joker;
 	if (!joker || !joker->joker_en50221_opaque)
-		return (void *)-EINVAL;
+		return;
 	jen = (struct joker_en50221_t *)joker->joker_en50221_opaque;
 
 	jen->datetime_dvbtime = datetime_dvbtime;
@@ -1419,15 +1419,12 @@ int joker_en50221_sync_cam(struct joker_t * joker)
 		}
 	}
 
-	if (count > 0) {
-		printf ("Enabling TS traffic through CAM \n");
-		// enable/disable TS traffic through CAM
-		buf[0] = J_CMD_CI_TS;
-		buf[1] = joker->ci_ts_enable; // enable or disable
-		if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
-			return -EIO;
-		printf ("Enabled TS traffic through CAM\n");
-	}
+	printf ("%s TS traffic through CAM \n", joker->ci_ts_enable ? "Enable" : "Disable");
+	// enable/disable TS traffic through CAM
+	buf[0] = J_CMD_CI_TS;
+	buf[1] = joker->ci_ts_enable; // enable or disable
+	if ((ret = joker_cmd(joker, buf, 2, NULL /* in_buf */, 0 /* in_len */)))
+		return -EIO;
 
 	return ret;
 }
