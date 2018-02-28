@@ -151,7 +151,7 @@ void* process_ts(void * data) {
 		while (pool->ts_list_size > pool->ts_list_size_max && !list_empty(&pool->ts_list_all)) {
 			node = list_first_entry(&pool->ts_list_all, struct ts_node, list);
 			pool->ts_list_size -= node->size;
-			printf("Memory limit: dropping TS node %p. ts_list_size=%d\n", node, pool->ts_list_size);
+			jdebug("Memory limit: dropping TS node %p. ts_list_size=%d\n", node, pool->ts_list_size);
 			drop_ts_data(node);
 		}
 
