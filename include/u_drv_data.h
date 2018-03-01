@@ -96,6 +96,7 @@ struct big_pool_t {
 	char *generated_pat_pkt;
 	uint8_t pat_counter;
 	struct list_head ca_list; // another CA list inside each program
+	void *stored_sdt;
 
 	// SDT
 	char *sdt_pkt_array;

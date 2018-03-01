@@ -805,15 +805,29 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 	struct program_t *program = NULL;
 	struct big_pool_t *pool = (struct big_pool_t *)data;
 	dvbpsi_sdt_service_t* p_service = p_sdt->p_first_service;
+	dvbpsi_sdt_t* p_stored_sdt = (dvbpsi_sdt_t*)pool->stored_sdt;
 
 	jdebug(  "\n");
-	jdebug(  "New active SDT\n");
+	jdebug(  "New active SDT b_current_next=%d\n", p_sdt->b_current_next);
 	jdebug(  "  ts_id : %d\n",
 			p_sdt->i_extension);
 	jdebug(  "  version_number : %d\n",
 			p_sdt->i_version);
 	jdebug(  "  network_id        : %d\n",
 			p_sdt->i_network_id);
+
+	// check if we have already stored this SDT
+	// from "DVB BlueBook A038":
+	// current_next_indicator: This 1-bit indicator, when set to "1" indicates that the sub_table is the
+	// currently applicable sub_table. When the bit is set to "0", it indicates that the sub_table sent is
+	// not yet applicable and shall be the next sub_table to be valid.
+	if (p_stored_sdt) {
+		if (p_stored_sdt->i_version == p_sdt->i_version
+			|| p_stored_sdt->b_current_next > p_sdt->b_current_next) {
+			dvbpsi_sdt_delete(p_sdt);
+			return;
+		}
+	}
 
 	while(p_service)
 	{
@@ -839,7 +853,11 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 
 		p_service = p_service->p_next;
 	}
-	dvbpsi_sdt_delete(p_sdt);
+
+	if (p_stored_sdt)
+		dvbpsi_sdt_delete(p_stored_sdt);
+
+	pool->stored_sdt = (void*)p_sdt;
 }
 
 /* example from real ATSC stream (575MHz Miami, FL)
