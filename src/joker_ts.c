@@ -358,7 +358,7 @@ int generate_pat_pkt(struct big_pool_t *pool)
 	char * packet = NULL;
 	int allocated = 0;
 
-	if (!pool)
+	if (!pool || !pool->generated_pat)
 		return -EINVAL;
 
 	if (pool->generated_pat_pkt)
