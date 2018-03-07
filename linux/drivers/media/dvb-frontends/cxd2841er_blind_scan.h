@@ -565,6 +565,9 @@ sony_result_t sony_demod_dvbs_s2_blindscan_GetPSPow (struct cxd2841er_priv *priv
 		uint16_t * pPower);
 sony_result_t sony_demod_dvbs_s2_blindscan_SetCFFine (struct cxd2841er_priv *priv,
                                                       int32_t freqOffsetKHz);
+sony_result_t sony_tuner_helene_sat_AGCLevel2AGCdB (uint32_t AGCLevel,
+		int32_t * pAGCdB);
+
 int cxd2841er_blind_scan(struct dvb_frontend* fe,
 		u32 min_khz, u32 max_khz, u32 min_sr, u32 max_sr,
 		bool do_power_scan,

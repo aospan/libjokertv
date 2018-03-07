@@ -35,9 +35,6 @@
 #include "cxd2841er_priv.h"
 #include "cxd2841er_blind_scan.h"
 
-static sony_result_t sony_tuner_helene_sat_AGCLevel2AGCdB (uint32_t AGCLevel,
-		int32_t * pAGCdB);
-
 /*** utility ***/
 #define MASKUPPER(n) (((n) == 0) ? 0 : (0xFFFFFFFFU << (32 - (n))))
 #define MASKLOWER(n) (((n) == 0) ? 0 : (0xFFFFFFFFU >> (32 - (n))))
@@ -6238,7 +6235,7 @@ static sony_result_t limit_range (sony_demod_dvbs_s2_blindscan_data_storage_t * 
 /*** Algo end ***/
 
 /*** helene tuner ***/
-static sony_result_t sony_tuner_helene_sat_AGCLevel2AGCdB (uint32_t AGCLevel,
+sony_result_t sony_tuner_helene_sat_AGCLevel2AGCdB (uint32_t AGCLevel,
 		int32_t * pAGCdB)
 {
 	int32_t tempA = 0;
@@ -7065,8 +7062,10 @@ int cxd2841er_blind_scan(struct dvb_frontend* fe,
 					dev_info(&priv->i2c->dev, "%s(): AGCLevel2AGCdB failed \n", __func__); 
 					return  (result);
 				}
-				dev_dbg(&priv->i2c->dev, "%s(): AGCLevel2AGCdB=%d agcLevel=%d\n",
-						__func__, pSeq->commonParams.agcInfo.agc_x100dB, pSeq->commonParams.agcInfo.agcLevel); 
+				dev_dbg(&priv->i2c->dev, "%s(): AGCLevel2AGCdB=%d agcLevel=%d (%f)\n",
+						__func__, pSeq->commonParams.agcInfo.agc_x100dB,
+						pSeq->commonParams.agcInfo.agcLevel,
+						(-10 * (double)pSeq->commonParams.agcInfo.agc_x100dB)/1000); 
 			}
 
 			if (pSeq->commonParams.tuneReq.isRequest){

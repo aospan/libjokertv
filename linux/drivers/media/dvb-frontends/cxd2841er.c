@@ -2050,7 +2050,7 @@ u16 cxd2841er_read_agc_gain_s(struct cxd2841er_priv *priv)
 	 * <SLV-T>    A0h       20h       [7:0]     IRFAGC_GAIN[7:0]
 	 */
 	cxd2841er_read_regs(priv, I2C_SLVT, 0x1f, data, 2);
-	return ((((u16)data[0] & 0x1F) << 8) | (u16)(data[1] & 0xFF)) << 3;
+	return ((((u16)data[0] & 0x1F) << 8) | (u16)(data[1] & 0xFF));
 }
 
 static void cxd2841er_read_ber(struct dvb_frontend *fe)
@@ -2102,6 +2102,8 @@ static void cxd2841er_read_signal_strength(struct dvb_frontend *fe)
 {
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	struct cxd2841er_priv *priv = fe->demodulator_priv;
+	uint32_t agclevel;
+	int32_t agc_x100db;
 	s32 strength;
 
 	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
@@ -2138,9 +2140,11 @@ static void cxd2841er_read_signal_strength(struct dvb_frontend *fe)
 		break;
 	case SYS_DVBS:
 	case SYS_DVBS2:
-		strength = 65535 - cxd2841er_read_agc_gain_s(priv);
-		p->strength.stat[0].scale = FE_SCALE_RELATIVE;
-		p->strength.stat[0].uvalue = strength;
+		agclevel = (uint32_t)cxd2841er_read_agc_gain_s(priv);
+		if (!sony_tuner_helene_sat_AGCLevel2AGCdB(agclevel, &agc_x100db)) {
+			p->strength.stat[0].scale = FE_SCALE_DECIBEL;
+			p->strength.stat[0].uvalue = (__u64)(-10 * agc_x100db);
+		}
 		break;
 	default:
 		p->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
