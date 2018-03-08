@@ -94,11 +94,12 @@ void blind_scan_callback (void *data)
 	jdebug("%s: eventId=%d \n", __func__, res->eventId);
 	if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT) {
 		snprintf(buf, 1024,
-				"\"%d\",\"%s\",\"%s\",\"%d\",\"%s\",\"%s\",\"%s\"\n",
+				"\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\",\"%s\"\n",
 				abs(res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq),
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
 				res->tuneParam.symbolRateKSps,
+				10 * ((res->tuneParam.symbolRateKSps + 10)/10),
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
 				"QPSK" : DVBS2_Modulation[res->tuneParam.plscode.modulation],
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
@@ -333,7 +334,7 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info)
 
 		// write file header
 		fprintf(joker->blind_out_filename_fd,
-				"freq_mhz,pol,standard,symbol_rate_ksps,modulation,fec,pilot\n");
+				"freq_mhz,pol,standard,symbol_rate_ksps,symbol_rate_ksps_rounded,modulation,fec,pilot\n");
 		fflush(joker->blind_out_filename_fd);
 	}
 
