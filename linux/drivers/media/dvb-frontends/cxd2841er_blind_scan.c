@@ -6278,8 +6278,10 @@ sony_result_t sony_tuner_helene_sat_AGCLevel2AGCdB (uint32_t AGCLevel,
 			*pAGCdB = (int32_t)tempQ;
 		}
 	}
-	*pAGCdB += 9700;
-
+	// TODO: aospan: -20dB calibrated for Joker TV
+	// now resulting values is close to dBm - usefull for blind scan graphs
+	*pAGCdB += 9700 - 2000;
+ 
 	return (SONY_RESULT_OK);
 }
 
