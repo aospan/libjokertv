@@ -32,6 +32,7 @@
 #include <cat.h>
 #include <pmt.h>
 #include <tot.h>
+#include <nit.h>
 #include <dr.h>
 #include <demux.h>
 #include <sdt.h>
@@ -948,6 +949,32 @@ static void handle_atsc_VCT(void* data, dvbpsi_atsc_vct_t *p_vct)
 	dvbpsi_atsc_DeleteVCT(p_vct);
 }
 
+// dump NIT
+static void DumpTSDescriptorsNIT(dvbpsi_nit_ts_t *p_nit_ts)
+{
+	dvbpsi_nit_ts_t *p_ts = p_nit_ts;
+
+	while (p_ts)
+	{   
+		jdebug("\t  | transport id: %d\n", p_ts->i_ts_id);
+		jdebug("\t  | original network id: %d\n", p_ts->i_orig_network_id);
+		DumpDescriptors("\t  |  ]", p_nit_ts->p_first_descriptor);
+		p_ts = p_ts->p_next;
+	}
+}
+
+static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
+{
+    printf("\n");
+    jdebug("  NIT: Network Information Table\n");
+    jdebug("\tVersion number : %d\n", p_nit->i_version);
+    jdebug("\tNetwork id     : %d\n", p_nit->i_network_id);
+    jdebug("\tCurrent next   : %s\n", p_nit->b_current_next ? "yes" : "no");
+    DumpDescriptors("\t  |  ]", p_nit->p_first_descriptor);
+    DumpTSDescriptorsNIT(p_nit->p_first_ts);
+    dvbpsi_nit_delete(p_nit);
+}
+
 /*****************************************************************************
  * NewSubtable
  *****************************************************************************/
@@ -956,6 +983,11 @@ static void NewSubtable(dvbpsi_t *p_dvbpsi, uint8_t i_table_id, uint16_t i_exten
 {
 	jdebug("%s: new i_table_id=0x%x\n", __func__, i_table_id);
 	switch (i_table_id) {
+		case 0x40: // NIT
+		case 0x41: // NIT
+			if (!dvbpsi_nit_attach(p_dvbpsi, i_table_id, i_extension, DumpNIT, data))
+				fprintf(stderr, "Failed to attach NIT subdecoder\n");
+			break;
 		case 0x42: // SDT
 			if (!dvbpsi_sdt_attach(p_dvbpsi, i_table_id, i_extension, DumpSDT, data))
 				fprintf(stderr, "Failed to attach SDT subdecoder\n");
@@ -1004,7 +1036,7 @@ void atsc_hook(void *data, unsigned char *pkt)
 	dvbpsi_packet_push(pool->si_dvbpsi, pkt);
 }
 
-void tdt_hook(void *data, unsigned char *pkt)
+void si_hook(void *data, unsigned char *pkt)
 {
 	struct big_pool_t * pool = (struct big_pool_t *)data;
 	jdebug("%s:pool=%p TDT pkt=%p\n", __func__, pool, pkt);
@@ -1044,7 +1076,8 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	// install hooks
 	pool->hooks[J_TRANSPORT_PAT_PID] = &pat_hook;
 	pool->hooks[J_TRANSPORT_CAT_PID] = &cat_hook;
-	pool->hooks[J_TRANSPORT_TDT_PID] = &tdt_hook;
+	pool->hooks[J_TRANSPORT_TDT_PID] = &si_hook;
+	pool->hooks[J_TRANSPORT_NIT_PID] = &si_hook;
 
 	// check program list (PAT parse)
 	while (cnt-- > 0 && list_empty(&pool->programs_list))
