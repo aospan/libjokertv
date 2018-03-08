@@ -103,9 +103,10 @@ void blind_scan_callback(void *data)
 			// transponder
 			// convert values to satellites xml format
 			fprintf(res->joker->blind_programs_filename_fd,
-					"\t\t<transponder frequency=\"%lld\" symbol_rate=\"%d\" "
+					"\t\t<transponder frequency=\"%lld\" symbol_rate=\"%d\" symbol_rate_raw=\"%d\" "
 					"polarization=\"%d\" fec_inner=\"%d\" system=\"%d\" modulation=\"%d\">\n",
-					(long long)res->info->frequency, res->info->symbol_rate,
+					(long long)res->info->frequency, res->info->symbol_rate_rounded,
+					res->info->symbol_rate,
 					res->info->voltage == JOKER_SEC_VOLTAGE_13 ? 1 : 0,
 					res->info->coderate,
 					res->info->delivery_system == JOKER_SYS_DVBS ? 0 : 1,

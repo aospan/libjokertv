@@ -107,6 +107,7 @@ struct tune_info_t {
 	struct joker_lnb_t	lnb;
 	uint64_t	frequency; /* in HZ, 64-bit int used for freqs higher than 4GHz */
 	uint32_t	symbol_rate;
+	uint32_t	symbol_rate_rounded; /* used in blind scan */
 	uint32_t	bandwidth_hz;   /* 0 = AUTO */
 
 };

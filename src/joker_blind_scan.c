@@ -98,8 +98,8 @@ void blind_scan_callback (void *data)
 				abs(res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq),
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
-				res->tuneParam.symbolRateKSps,
 				10 * ((res->tuneParam.symbolRateKSps + 10)/10),
+				res->tuneParam.symbolRateKSps,
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
 				"QPSK" : DVBS2_Modulation[res->tuneParam.plscode.modulation],
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
@@ -114,6 +114,7 @@ void blind_scan_callback (void *data)
 		// HZ
 		info->frequency = 1000*1000*(int64_t)abs(res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq);
 		info->symbol_rate = 1000*res->tuneParam.symbolRateKSps;
+		info->symbol_rate_rounded = 1000 * 10 * ((res->tuneParam.symbolRateKSps + 10)/10);
 		info->bandwidth_hz = 0;
 
 		// "glue" values with upper level (outside of libjokertv)
@@ -334,7 +335,7 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info)
 
 		// write file header
 		fprintf(joker->blind_out_filename_fd,
-				"freq_mhz,pol,standard,symbol_rate_ksps,symbol_rate_ksps_rounded,modulation,fec,pilot\n");
+				"freq_mhz,pol,standard,symbol_rate_ksps,symbol_rate_ksps_raw,modulation,fec,pilot\n");
 		fflush(joker->blind_out_filename_fd);
 	}
 
