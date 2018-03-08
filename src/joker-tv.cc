@@ -96,6 +96,15 @@ void blind_scan_callback(void *data)
 	blind_scan_res_t * res = (blind_scan_res_t *)data;
 	struct program_t *program = NULL, *tmp = NULL;
 	struct program_es_t*es = NULL;
+	struct program_ca_t*ca = NULL;
+	struct joker_t *joker = NULL;
+	struct big_pool_t *pool;
+
+	if (!res)
+		return;
+
+	joker = res->joker;
+	pool = joker->pool;
 
 	if (res->event_id == EVENT_DETECT) {
 		// save found transponder and programs to file
@@ -124,8 +133,30 @@ void blind_scan_callback(void *data)
 								es->pid, es->type);
 					}
 				}
+				if(!list_empty(&program->ca_list)) {
+					list_for_each_entry(ca, &program->ca_list, list) {
+						fprintf(res->joker->blind_programs_filename_fd,
+						"\t\t\t\t<ca caid=\"0x%x\" pid=\"0x%x\"/>\n",
+								ca->caid, ca->pid);
+					}
+				}
 				fprintf(res->joker->blind_programs_filename_fd,
 						"\t\t\t</program>\n");
+			}
+
+			// dump CAID's from CAT
+			if (pool) {
+				if(!list_empty(&pool->ca_list)) {
+					fprintf(joker->blind_programs_filename_fd,
+						"\t\t\t<cat>\n");
+					list_for_each_entry(ca, &pool->ca_list, list) {
+						fprintf(res->joker->blind_programs_filename_fd,
+								"\t\t\t\t<ca caid=\"0x%x\" pid=\"0x%x\"/>\n",
+								ca->caid, ca->pid);
+					}
+					fprintf(joker->blind_programs_filename_fd,
+						"\t\t\t</cat>\n");
+				}
 			}
 
 			// transponder footer
