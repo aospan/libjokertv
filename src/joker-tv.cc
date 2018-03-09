@@ -251,6 +251,7 @@ void show_help() {
 	printf("	--blind-out file.csv	Write blind scan results to file. Example: blind.csv\n");
 	printf("	--blind-power file	Write power (dB) to file. Example: file\n");
 	printf("	--blind-programs file.xml	Write blind scan programs to file. Example: blind.xml\n");
+	printf("	--blind-sr-coeff coeff	Symbol rate correction coefficient. Default: %.11f\n", SR_DEFAULT_COEFF);
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
 	printf("	--cam-pcap cam.pcap	dump all CAM interaction to file. Use Wireshark to parse this file.\n");
 	exit(0);
@@ -262,6 +263,7 @@ static struct option long_options[] = {
 	{"blind",  no_argument, 0, 0},
 	{"program",  required_argument, 0, 0},
 	{"blind-out",  required_argument, 0, 0},
+	{"blind-sr-coeff",  required_argument, 0, 0},
 	{"blind-power",  required_argument, 0, 0},
 	{"blind-programs",  required_argument, 0, 0},
 	{"raw-data",  required_argument, 0, 0},
@@ -380,6 +382,10 @@ int main (int argc, char **argv)
 					len = strlen(optarg);
 					joker->blind_power_file_prefix = (char*)calloc(1, len + 1);
 					strncpy(joker->blind_power_file_prefix, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "blind-sr-coeff")) {
+					len = strlen(optarg);
+					joker->blind_sr_coeff = atof(optarg);
 				}
 				if (!strcasecmp(long_options[option_index].name, "raw-data")) {
 					len = strlen(optarg);

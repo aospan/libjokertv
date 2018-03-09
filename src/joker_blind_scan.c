@@ -80,6 +80,7 @@ void blind_scan_callback (void *data)
 	blind_scan_res_t blind_scan_res;
 	struct joker_t *joker = (struct joker_t *)res->callback_arg;
 	struct tune_info_t *info = NULL;
+	uint32_t symbol_rate_rounded = 0;
 
 	if (!joker || !joker->info)
 		return;
@@ -93,12 +94,13 @@ void blind_scan_callback (void *data)
 
 	jdebug("%s: eventId=%d \n", __func__, res->eventId);
 	if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_DETECT) {
+		symbol_rate_rounded = (uint32_t)(res->tuneParam.symbolRateKSps * joker->blind_sr_coeff);
 		snprintf(buf, 1024,
 				"\"%d\",\"%s\",\"%s\",\"%d\",\"%d\",\"%s\",\"%s\",\"%s\"\n",
 				abs(res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq),
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v V(R)" : "18v H(L)",
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? "DVB-S" : "DVB-S2",
-				10 * ((res->tuneParam.symbolRateKSps + 10)/10),
+				symbol_rate_rounded,
 				res->tuneParam.symbolRateKSps,
 				(res->tuneParam.system == SONY_DTV_SYSTEM_DVBS) ? \
 				"QPSK" : DVBS2_Modulation[res->tuneParam.plscode.modulation],
@@ -114,7 +116,7 @@ void blind_scan_callback (void *data)
 		// HZ
 		info->frequency = 1000*1000*(int64_t)abs(res->tuneParam.centerFreqKHz/1000 + info->lnb.selected_freq);
 		info->symbol_rate = 1000*res->tuneParam.symbolRateKSps;
-		info->symbol_rate_rounded = 1000 * 10 * ((res->tuneParam.symbolRateKSps + 10)/10);
+		info->symbol_rate_rounded = 1000 * symbol_rate_rounded;
 		info->bandwidth_hz = 0;
 
 		// "glue" values with upper level (outside of libjokertv)
@@ -322,6 +324,11 @@ int blind_scan(struct joker_t *joker, struct tune_info_t *info)
 {
 	sony_integ_dvbs_s2_blindscan_param_t blindscanParam;
 	struct dvb_frontend *fe = (struct dvb_frontend *)joker->fe_opaque;
+
+	// set symbol rate multiply coefficient if not set
+	if (joker->blind_sr_coeff <= 0)
+		joker->blind_sr_coeff = SR_DEFAULT_COEFF;
+	printf("\n\tBlind scan symbol rate mult. coefficient = %.11f\n", joker->blind_sr_coeff);
 
 	/* open file for blind scan results */
 	if (joker->blind_out_filename) {

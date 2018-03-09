@@ -14,6 +14,8 @@
 extern "C" {
 #endif
 
+#define SR_DEFAULT_COEFF 1.00007273257
+
 typedef enum {
 	EVENT_DETECT,    /**< Detect channel. */
 	EVENT_PROGRESS,  /**< Update progress. */
