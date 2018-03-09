@@ -43,6 +43,8 @@
 #include <atsc_stt.h>
 #include <atsc_vct.h>
 
+static void DumpDescriptors(const char* str, dvbpsi_descriptor_t* p_descriptor);
+
 static void message(dvbpsi_t *handle, const dvbpsi_msg_level_t level, const char* msg)
 {
 	switch(level)
@@ -142,6 +144,9 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 	dvbpsi_descriptor_t *p_descriptor_l = NULL;
 	int pid = 0, caid = 0;
 
+	if (!program)
+		return;
+
 	jdebug(  "\n");
 	jdebug(  "New active PMT\n");
 	jdebug(  "  program_number : %d\n",
@@ -151,6 +156,8 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 	jdebug(  "  PCR_PID        : 0x%x (%d)\n",
 			p_pmt->i_pcr_pid, p_pmt->i_pcr_pid);
 	jdebug(  "    | type @ elementary_PID\n");
+
+	program->pcr_pid = p_pmt->i_pcr_pid;
 
 	while(p_es)
 	{
@@ -168,7 +175,7 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 			continue;
 		}
 
-		es = (struct program_es_t*)malloc(sizeof(*es));
+		es = (struct program_es_t*)calloc(1, sizeof(*es));
 		if (!es)
 			break;
 
@@ -191,6 +198,21 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 		if (is_program_selected(program->joker->pool, p_pmt->i_program_number))
 			ts_filter_one(program->joker, TS_FILTER_UNBLOCK, p_es->i_pid);
 
+		// loop descriptors
+		p_descriptor_l = p_es->p_first_descriptor;
+		while(p_descriptor_l)
+		{ 
+			jdebug("%s: program=0x%x es=0x%x descr=0x%x \n", __func__,
+					p_pmt->i_program_number, p_es->i_pid, p_descriptor_l->i_tag);
+			// DumpDescriptors("	", p_descriptor_l);
+			if (p_descriptor_l->i_tag == 0x0a ||
+					p_descriptor_l->i_tag == 0x56) {
+				// language descriptors
+				memcpy(es->lang, p_descriptor_l->p_data, 3);
+			}
+			p_descriptor_l = p_descriptor_l->p_next;
+		}
+
 		jdebug("    | 0x%02x @ 0x%x (%d)\n",
 				p_es->i_type,
 				p_es->i_pid, p_es->i_pid);
@@ -201,6 +223,8 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 	p_descriptor_l = p_pmt->p_first_descriptor;
 	while(p_descriptor_l)
 	{ 
+		jdebug("%s: program=0x%x descr=0x%x \n", __func__,
+				p_pmt->i_program_number, p_descriptor_l->i_tag);
 		if (p_descriptor_l->i_tag == 0x09 /* CA */) {
 			// CA descriptor found
 			pid = ((p_descriptor_l->p_data[2]&0x1F) <<8) | p_descriptor_l->p_data[3];
@@ -534,7 +558,7 @@ static void DumpDescriptors(const char* str, dvbpsi_descriptor_t* p_descriptor)
 	// Parse according DVB Document A038 (July 2014)
 	while(p_descriptor_l)
 	{ 
-		printf("	tag=0x%02x : len=%d \n", p_descriptor_l->i_tag, p_descriptor_l->i_length );
+		jdebug("	tag=0x%02x : len=%d \n", p_descriptor_l->i_tag, p_descriptor_l->i_length );
 		hexdump(p_descriptor_l->p_data, p_descriptor_l->i_length);
 		p_descriptor_l = p_descriptor_l->p_next;
 	}
@@ -958,7 +982,7 @@ static void DumpTSDescriptorsNIT(dvbpsi_nit_ts_t *p_nit_ts)
 	{   
 		jdebug("\t  | transport id: %d\n", p_ts->i_ts_id);
 		jdebug("\t  | original network id: %d\n", p_ts->i_orig_network_id);
-		DumpDescriptors("\t  |  ]", p_nit_ts->p_first_descriptor);
+		// DumpDescriptors("\t  |  ]", p_nit_ts->p_first_descriptor);
 		p_ts = p_ts->p_next;
 	}
 }
@@ -970,7 +994,7 @@ static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
     jdebug("\tVersion number : %d\n", p_nit->i_version);
     jdebug("\tNetwork id     : %d\n", p_nit->i_network_id);
     jdebug("\tCurrent next   : %s\n", p_nit->b_current_next ? "yes" : "no");
-    DumpDescriptors("\t  |  ]", p_nit->p_first_descriptor);
+    // DumpDescriptors("\t  |  ]", p_nit->p_first_descriptor);
     DumpTSDescriptorsNIT(p_nit->p_first_ts);
     dvbpsi_nit_delete(p_nit);
 }

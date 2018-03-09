@@ -500,6 +500,31 @@ int set_lnb_voltage(struct joker_t * joker, enum joker_fe_sec_voltage voltage)
 	}
 }
 
+/* send diseqc messages
+ * len valid values are 3...6
+ * return
+ *  0 if no errors detected
+ */
+int send_diseqc_message(struct joker_t * joker, char * message, int len)
+{
+	struct dvb_frontend *fe = NULL;
+	struct dvb_diseqc_master_cmd cmd;
+	int i = 0;
+
+	if (!joker || !joker->fe_opaque || len < 3 || len > 6)
+		return -EINVAL;
+
+	fe = (struct dvb_frontend *)joker->fe_opaque;
+
+	if(fe->ops.diseqc_send_master_cmd ) {
+		for (i = 0; i < len; i++)
+			cmd.msg[i] = message[i];
+		cmd.msg_len = len;
+		if (fe->ops.diseqc_send_master_cmd(fe, &cmd))
+			return -EIO;
+	}
+	return 0;
+}
 /* tune to specified source (DVB, ATSC, etc)
  * this call is non-blocking (returns after configuring frontend)
  * return negative error code if failed

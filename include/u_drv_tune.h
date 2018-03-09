@@ -152,6 +152,13 @@ int stop_service_thread(struct joker_t * joker);
  */
 int set_lnb_voltage(struct joker_t * joker, enum joker_fe_sec_voltage voltage);
 
+/* send diseqc messages
+ * len valid values are 3...6
+ * return
+ *  0 if no errors detected
+ */
+int send_diseqc_message(struct joker_t * joker, char * message, int len);
+
 #ifdef __cplusplus
 }
 #endif

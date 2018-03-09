@@ -57,6 +57,7 @@ struct program_es_t
 {
 	uint8_t                       type;
 	uint16_t                      pid;
+	char	lang[3];
 	struct list_head list;
 };
 
@@ -73,6 +74,7 @@ struct program_t {
 	unsigned char name[SERVICE_NAME_LEN];
 	uint8_t service_type;
 	int pmt_pid;
+	int pcr_pid;
 	void * pmt_dvbpsi;
 	struct list_head es_list; // elementary streams belongs to this program
 	struct list_head ca_list; // Conditional Access descriptors info

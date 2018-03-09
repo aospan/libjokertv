@@ -74,8 +74,8 @@ void service_name_update(struct program_t *program)
 
 	if(!list_empty(&program->es_list)) {
 		list_for_each_entry(es, &program->es_list, list) {
-			printf("	ES pid=0x%x type=0x%x\n",
-					es->pid, es->type);
+			printf("	ES pid=0x%x type=0x%x lang=%s\n",
+					es->pid, es->type, es->lang);
 		}
 	}
 
@@ -124,20 +124,20 @@ void blind_scan_callback(void *data)
 			// programs belongs to this transponder
 			list_for_each_entry_safe(program, tmp, res->programs, list) {
 				fprintf(res->joker->blind_programs_filename_fd,
-						"\t\t\t<program number=\"%d\" name=\"%s\">\n",
-						program->number, program->name);
+						"\t\t\t<program number=\"%d\" name=\"%s\" pmt_pid=\"%d\" pcr_pid=\"%d\">\n",
+						program->number, program->name, program->pmt_pid, program->pcr_pid);
 				if(!list_empty(&program->es_list)) {
 					list_for_each_entry(es, &program->es_list, list) {
 						fprintf(res->joker->blind_programs_filename_fd,
-						"\t\t\t\t<pid id=\"0x%x\" type=\"0x%x\"/>\n",
-								es->pid, es->type);
+						"\t\t\t\t<pid id=\"%d\" type=\"0x%x\" lang=\"%s\"/>\n",
+								es->pid, es->type, es->lang);
 					}
 				}
 				if(!list_empty(&program->ca_list)) {
 					list_for_each_entry(ca, &program->ca_list, list) {
 						fprintf(res->joker->blind_programs_filename_fd,
-						"\t\t\t\t<ca caid=\"0x%x\" pid=\"0x%x\"/>\n",
-								ca->caid, ca->pid);
+						"\t\t\t\t<ca pid=\"%d\" caid=\"0x%x\"/>\n",
+								ca->pid, ca->caid);
 					}
 				}
 				fprintf(res->joker->blind_programs_filename_fd,
@@ -302,6 +302,8 @@ int main (int argc, char **argv)
 	char datetime[512];
 	time_t now = time(NULL);
 	struct tm *t = localtime(&now);
+	char * diseqc = NULL;
+	int diseqc_len = 0;
 
 	strftime(datetime, sizeof(datetime)-1, "%d %b %Y %H:%M", t);
 
@@ -572,6 +574,20 @@ int main (int argc, char **argv)
 			printf("Tuning error. Exit.\n");
 			return -1;
 		}
+
+#if 0
+		// Start Motor Driving East E1 31 68 40
+		diseqc_len = 4;
+		diseqc = (char*)calloc(1, diseqc_len);
+		diseqc[0] = 0xE0;
+		diseqc[1] = 0x31;
+		diseqc[2] = 0x68;
+		diseqc[3] = 0x40;
+		while (1) {
+			send_diseqc_message(joker, diseqc, diseqc_len);
+			sleep(2);
+		}
+#endif
 
 		if (joker->blind_scan) {
 			// open out file 
