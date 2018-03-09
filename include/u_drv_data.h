@@ -98,6 +98,11 @@ struct big_pool_t {
 	struct list_head ca_list; // another CA list inside each program
 	void *stored_sdt;
 
+	// NIT
+	char *network_name;
+	int network_id;
+	struct list_head nit_list; // TSID and ONID list
+
 	// SDT
 	char *sdt_pkt_array;
 	int sdt_count;

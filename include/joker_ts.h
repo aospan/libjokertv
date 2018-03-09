@@ -69,6 +69,12 @@ struct program_ca_t
 	struct list_head list;
 };
 
+typedef struct joker_nit_s {
+	uint16_t                      ts_id;                /*!< transport stream id */
+	uint16_t                      orig_network_id;      /*!< original network id */
+	struct list_head list;
+} joker_nit_t;
+
 struct program_t {
 	int number;
 	unsigned char name[SERVICE_NAME_LEN];

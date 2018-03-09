@@ -99,6 +99,7 @@ void blind_scan_callback(void *data)
 	struct program_ca_t*ca = NULL;
 	struct joker_t *joker = NULL;
 	struct big_pool_t *pool;
+	joker_nit_t * nit = NULL;
 
 	if (!res)
 		return;
@@ -158,6 +159,18 @@ void blind_scan_callback(void *data)
 						"\t\t\t</cat>\n");
 				}
 			}
+
+			// dump NIT info
+			fprintf(res->joker->blind_programs_filename_fd, "\t\t\t<nit network_name=\"%s\" network_id=\"%d\">\n",
+					pool->network_name, pool->network_id);
+			if(!list_empty(&pool->nit_list)) {
+				list_for_each_entry(nit, &pool->nit_list, list) {
+					fprintf(res->joker->blind_programs_filename_fd,
+							"\t\t\t\t<ts tsid=\"%d\" onid=\"%d\"/>\n",
+							nit->ts_id, nit->orig_network_id);
+				}
+			}
+			fprintf(res->joker->blind_programs_filename_fd, "\t\t\t</nit>\n");
 
 			// transponder footer
 			fprintf(res->joker->blind_programs_filename_fd, "\t\t</transponder>\n");

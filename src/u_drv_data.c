@@ -69,6 +69,7 @@ int pool_init(struct joker_t *joker, struct big_pool_t * pool)
 	INIT_LIST_HEAD(&pool->ts_list_all);
 	INIT_LIST_HEAD(&pool->programs_list);
 	INIT_LIST_HEAD(&pool->ca_list);
+	INIT_LIST_HEAD(&pool->nit_list);
 
 	if (!pool->selected_programs_list.next)
 		INIT_LIST_HEAD(&pool->selected_programs_list);

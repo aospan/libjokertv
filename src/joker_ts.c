@@ -973,30 +973,57 @@ static void handle_atsc_VCT(void* data, dvbpsi_atsc_vct_t *p_vct)
 	dvbpsi_atsc_DeleteVCT(p_vct);
 }
 
-// dump NIT
-static void DumpTSDescriptorsNIT(dvbpsi_nit_ts_t *p_nit_ts)
+static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
 {
-	dvbpsi_nit_ts_t *p_ts = p_nit_ts;
+	dvbpsi_descriptor_t *p_descriptor_l = p_nit->p_first_descriptor;
+	struct big_pool_t *pool = (struct big_pool_t *)p_data;
+	dvbpsi_nit_ts_t *p_ts = p_nit->p_first_ts;
+	joker_nit_t * joker_nit = NULL;
+
+	if (!pool)
+		return;
+
+	jdebug("\n");
+	jdebug("  NIT: Network Information Table\n");
+	jdebug("\tVersion number : %d\n", p_nit->i_version);
+	jdebug("\tNetwork id     : %d\n", p_nit->i_network_id);
+	jdebug("\tCurrent next   : %s\n", p_nit->b_current_next ? "yes" : "no");
+
+	pool->network_id = p_nit->i_network_id;
+
+	// Parse according DVB Document A038 (July 2014)
+	while(p_descriptor_l)
+	{ 
+		printf("%s: tag=0x%02x : len=%d \n", __func__, p_descriptor_l->i_tag, p_descriptor_l->i_length );
+		// 0x40	Network Name descr.
+		if (p_descriptor_l->i_tag == 0x40) {
+			if (pool->network_name)
+				free(pool->network_name);
+
+			pool->network_name = (char*)calloc(1, p_descriptor_l->i_length);
+			if (!pool->network_name)
+				return;
+			memcpy(pool->network_name, p_descriptor_l->p_data, p_descriptor_l->i_length);
+		}
+		p_descriptor_l = p_descriptor_l->p_next;
+	}
 
 	while (p_ts)
 	{   
 		jdebug("\t  | transport id: %d\n", p_ts->i_ts_id);
 		jdebug("\t  | original network id: %d\n", p_ts->i_orig_network_id);
-		// DumpDescriptors("\t  |  ]", p_nit_ts->p_first_descriptor);
+		joker_nit = calloc(1, sizeof(joker_nit_t));
+		if (!joker_nit)
+			return;
+
+		joker_nit->ts_id = p_ts->i_ts_id;
+		joker_nit->orig_network_id = p_ts->i_orig_network_id;
+		list_add_tail(&joker_nit->list, &pool->nit_list);
+
 		p_ts = p_ts->p_next;
 	}
-}
 
-static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
-{
-    printf("\n");
-    jdebug("  NIT: Network Information Table\n");
-    jdebug("\tVersion number : %d\n", p_nit->i_version);
-    jdebug("\tNetwork id     : %d\n", p_nit->i_network_id);
-    jdebug("\tCurrent next   : %s\n", p_nit->b_current_next ? "yes" : "no");
-    // DumpDescriptors("\t  |  ]", p_nit->p_first_descriptor);
-    DumpTSDescriptorsNIT(p_nit->p_first_ts);
-    dvbpsi_nit_delete(p_nit);
+	dvbpsi_nit_delete(p_nit);
 }
 
 /*****************************************************************************
