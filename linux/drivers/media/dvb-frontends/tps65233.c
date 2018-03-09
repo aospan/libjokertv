@@ -194,7 +194,9 @@ struct dvb_frontend *tps65233_attach(struct dvb_frontend *fe,
 	priv->i2c_address = cfg->i2c_address;
 	priv->i2c = i2c;
 	priv->config[0] = TPS65233_I2C_CONTROL | TPS65233_TONE_GATE;
-	priv->config[1] = TPS65233_LIMIT_600;
+	// aospan: dish positioner (SG6100) doesn't recognize diseqc command
+	// if setting tone "above".
+	priv->config[1] = TPS65233_TONE_BELOW | TPS65233_LIMIT_600; 
 
 	fe->sec_priv = priv;
 

@@ -77,6 +77,15 @@
 #define	TPS65233_LIMIT_750	2<<1
 #define	TPS65233_LIMIT_1000	3<<1
 
+/* TONE_POS
+ * 00: tone above Vout;
+ * 01: tone in the middle of Vout;
+ * 10: tone below Vout
+ */
+#define	TPS65233_TONE_ABOVE	0<<3
+#define	TPS65233_TONE_MIDDLE	1<<3
+#define	TPS65233_TONE_BELOW	2<<3
+
 /* Status Register 1 - Address: 0x02H */
 /* T125
  * 1: if die temperature T > 125°C;
