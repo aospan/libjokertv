@@ -90,6 +90,8 @@ int pool_init(struct joker_t *joker, struct big_pool_t * pool)
 
 	pool->initialized = BIG_POOL_MAGIC;
 
+	jdebug("%s: pool %p initialized \n", __func__, pool);
+
 	return 0;
 }
 
@@ -622,6 +624,8 @@ int read_ts_data(struct big_pool_t *pool, unsigned char *data, int size)
 
 	if (!data)
 		return -EINVAL;
+
+	jdebug("%s: pool %p \n", __func__, pool);
 
 	// sanity check
 	if (pool->initialized != BIG_POOL_MAGIC)

@@ -71,6 +71,15 @@ xmemmem(const char *hay, const size_t haysize,
  */
 int joker_clean_ts(struct joker_t *joker);
 
+/* get raw TS and save it to output file
+   reading about 18K at once
+   limit amount of bytes to save. 0 for unlimited (call is blocked !).
+
+   return saved bytes if success
+   return negative error code if failed
+   */
+int64_t save_ts(struct joker_t *joker, char *filename, int64_t limit);
+
 #ifdef __cplusplus
 }
 #endif

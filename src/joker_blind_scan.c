@@ -70,7 +70,8 @@ void blind_scan_callback (void *data)
 		(sony_integ_dvbs_s2_blindscan_result_t*) data;
 	int cnt = 0;
 	FILE *pfd = NULL;
-	char * filename = NULL;
+	char filename[1024];
+	int64_t total_len = 0;
 	char buf[1024];
 	struct program_t *program = NULL, *tmp = NULL;
 	struct list_head *programs = NULL;
@@ -193,6 +194,16 @@ void blind_scan_callback (void *data)
 		if (joker->blind_scan_cb)
 			joker->blind_scan_cb (&blind_scan_res);
 
+		// Save TS if selected
+		if (joker->blind_ts_file_prefix) {
+			snprintf(filename, 1024, "%s-%d-%s.ts",
+					joker->blind_ts_file_prefix,
+					(int32_t)(info->frequency/1000),
+					(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v");
+			total_len = save_ts(joker, filename, 2*1024*1024 /* 2MB */);
+			printf ("%s: %lld bytes saved \n", __func__, total_len);
+		}
+
 		// Stop TS
 		if((ret = stop_ts(joker, &pool))) {
 			printf("stop_ts failed. err=%d \n", ret);
@@ -204,9 +215,6 @@ void blind_scan_callback (void *data)
 			return;
 
 		// save power
-		filename = calloc(1, 1024);
-		if(!filename)
-			return;
 		snprintf(filename, 1024, "%s-%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
 				res->prefix,
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v",
@@ -227,15 +235,11 @@ void blind_scan_callback (void *data)
 		}
 		fclose(pfd);
 		printf("power list (size %d) dumped to %s\n", cnt, filename);
-		free(filename);
 	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_CAND) {
 		if (!joker->blind_power_file_prefix)
 			return;
 
 		// save candidates
-		filename = calloc(1, 1024);
-		if(!filename)
-			return;
 		snprintf(filename, 1024, "cand-%s-%s-%s-lnb_%d.csv", joker->blind_power_file_prefix,
 				res->prefix,
 				(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v",
@@ -259,7 +263,6 @@ void blind_scan_callback (void *data)
 		}
 		fclose(pfd);
 		printf("cand list (size %d) dumped to %s\n", cnt, filename);
-		free(filename);
 	} else if (res->eventId == SONY_INTEG_DVBS_S2_BLINDSCAN_EVENT_PROGRESS) {
 		blind_scan_res.programs = programs;
 		blind_scan_res.event_id = EVENT_PROGRESS;
