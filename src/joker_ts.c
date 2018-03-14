@@ -994,7 +994,7 @@ static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
 	// Parse according DVB Document A038 (July 2014)
 	while(p_descriptor_l)
 	{ 
-		printf("%s: tag=0x%02x : len=%d \n", __func__, p_descriptor_l->i_tag, p_descriptor_l->i_length );
+		jdebug("%s: tag=0x%02x : len=%d \n", __func__, p_descriptor_l->i_tag, p_descriptor_l->i_length );
 		// 0x40	Network Name descr.
 		if (p_descriptor_l->i_tag == 0x40) {
 			if (pool->network_name)
