@@ -265,6 +265,7 @@ void show_help() {
 	printf("	--blind-out file.csv	Write blind scan results to file. Example: blind.csv\n");
 	printf("	--blind-power file	Write power (dB) to file. Example: file\n");
 	printf("	--blind-save-ts	prefix	Write TS to file. 2MB limit. Default: disabled\n");
+	printf("	--blind-save-ts-size MB Write TS to file limit. Default: 2 MBytes\n");
 	printf("	--blind-programs file.xml	Write blind scan programs to file. Example: blind.xml\n");
 	printf("	--blind-sr-coeff coeff	Symbol rate correction coefficient. Default: %.11f\n", SR_DEFAULT_COEFF);
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
@@ -281,6 +282,7 @@ static struct option long_options[] = {
 	{"blind-sr-coeff",  required_argument, 0, 0},
 	{"blind-power",  required_argument, 0, 0},
 	{"blind-save-ts",  required_argument, 0, 0},
+	{"blind-save-ts-size",  required_argument, 0, 0},
 	{"blind-programs",  required_argument, 0, 0},
 	{"raw-data",  required_argument, 0, 0},
 	{"cam-pcap",  required_argument, 0, 0},
@@ -402,6 +404,10 @@ int main (int argc, char **argv)
 					len = strlen(optarg);
 					joker->blind_ts_file_prefix = (char*)calloc(1, len + 1);
 					strncpy(joker->blind_ts_file_prefix, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "blind-save-ts-size")) {
+					len = strlen(optarg);
+					joker->blind_ts_file_size = atoi(optarg) * 1024 * 1024;
 				}
 				if (!strcasecmp(long_options[option_index].name, "blind-sr-coeff")) {
 					len = strlen(optarg);

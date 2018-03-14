@@ -159,6 +159,7 @@ struct joker_t {
 	FILE *blind_programs_filename_fd;
 	char *blind_power_file_prefix;
 	char *blind_ts_file_prefix;
+	int64_t blind_ts_file_size;
 	blind_scan_callback_t blind_scan_cb;
 	double blind_sr_coeff;
 
