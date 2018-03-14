@@ -1136,7 +1136,7 @@ struct list_head * get_programs(struct big_pool_t *pool)
 
 	// check ES streams (PMT parse)
 	jdebug("is PMT done ? \n");
-	cnt = 20;
+	cnt = 40;
 	while (cnt-- > 0 ) {	
 		// we are ready when all programs PMT parsed
 		notready = 0;
