@@ -1112,11 +1112,18 @@ struct list_head * get_programs(struct big_pool_t *pool)
 	if (!dvbpsi_pat_attach(pool->pat_dvbpsi, DumpPAT, pool))
 		goto out;
 
-	// Attach SI demux (for SDT, TOT/TDT, ATSC )
+	// Attach SI demux (for TOT/TDT, ATSC )
 	pool->si_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
 	if (pool->si_dvbpsi == NULL)
 		goto out;
 	if (!dvbpsi_AttachDemux(pool->si_dvbpsi, NewSubtable, pool))
+		goto out;
+
+	// Attach SDT demux 
+	pool->sdt_dvbpsi = dvbpsi_new(&message, DVBPSI_MSG_NONE);
+	if (pool->sdt_dvbpsi == NULL)
+		goto out;
+	if (!dvbpsi_AttachDemux(pool->sdt_dvbpsi, NewSubtable, pool))
 		goto out;
 
 	// Attach CAT
@@ -1176,6 +1183,12 @@ out:
 	{
 		dvbpsi_DetachDemux(pool->si_dvbpsi);
 		dvbpsi_delete(pool->si_dvbpsi);
+	}
+
+	if (pool->sdt_dvbpsi)
+	{
+		dvbpsi_DetachDemux(pool->sdt_dvbpsi);
+		dvbpsi_delete(pool->sdt_dvbpsi);
 	}
 
 	return NULL;
