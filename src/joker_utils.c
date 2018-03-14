@@ -150,6 +150,60 @@ int validate_ts(struct joker_t * joker, int timeout, int min_count, int max_err)
 	return ret;
 }
 
+/* get raw TS and save it to output file
+   reading about 18K at once
+   limit amount of bytes to save. 0 for unlimited (call is blocked !).
+
+   return saved bytes if success
+   return negative error code if failed
+   */
+int64_t save_ts(struct joker_t *joker, char *filename, int64_t limit)
+{
+	FILE * out = NULL;
+	struct big_pool_t *pool;
+	unsigned char *res = NULL;
+	int res_len = 0, read_once = 0;
+	int64_t total_len = 0;
+
+	if (!joker || !joker->pool || !filename )
+		return -EINVAL;
+
+	pool = joker->pool;
+
+	out = fopen((char*)filename, "w+b");
+	if (!out){
+		printf("Can't open out file '%s' error=%s (%d)\n",
+				filename, errno, strerror(errno));
+		return -EIO;
+	} else {
+		printf("TS outfile:%s \n", filename);
+	}
+
+	/* get raw TS and save it to output file */
+	/* reading about 18K at once */
+	read_once = TS_SIZE * 100;
+	res = (unsigned char*)malloc(read_once);
+	if (!res) {
+		printf("Can't alloc mem for TS \n");
+		return -1;
+	}
+
+	while( limit == 0 || (limit > 0 && total_len < limit) ) {
+		res_len = read_ts_data(pool, res, read_once);
+		jdebug("%s: %d bytes read \n", __func__, res_len);
+
+		/* save to output file */
+		if (res_len > 0)
+			fwrite(res, res_len, 1, out);
+		else
+			usleep(1000); // TODO: rework this (condwait ?)
+
+		total_len += res_len;
+	}
+	fclose(out);
+
+	return total_len;
+}
 
 /* clean TS FIFO inside FPGA
  * return 0 if success

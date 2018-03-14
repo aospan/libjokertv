@@ -32,6 +32,7 @@
 #include "joker_en50221.h"
 #include "joker_spi.h"
 #include "joker_ts.h"
+#include "joker_utils.h"
 #include "joker_ts_filter.h"
 #include "joker_xml.h"
 #include "u_drv_tune.h"
@@ -263,6 +264,7 @@ void show_help() {
 	printf("	--blind		Do blind scan (DVB-S/S2 only). Default: disabled\n");
 	printf("	--blind-out file.csv	Write blind scan results to file. Example: blind.csv\n");
 	printf("	--blind-power file	Write power (dB) to file. Example: file\n");
+	printf("	--blind-save-ts	prefix	Write TS to file. 2MB limit. Default: disabled\n");
 	printf("	--blind-programs file.xml	Write blind scan programs to file. Example: blind.xml\n");
 	printf("	--blind-sr-coeff coeff	Symbol rate correction coefficient. Default: %.11f\n", SR_DEFAULT_COEFF);
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
@@ -278,6 +280,7 @@ static struct option long_options[] = {
 	{"blind-out",  required_argument, 0, 0},
 	{"blind-sr-coeff",  required_argument, 0, 0},
 	{"blind-power",  required_argument, 0, 0},
+	{"blind-save-ts",  required_argument, 0, 0},
 	{"blind-programs",  required_argument, 0, 0},
 	{"raw-data",  required_argument, 0, 0},
 	{"cam-pcap",  required_argument, 0, 0},
@@ -304,11 +307,10 @@ int main (int argc, char **argv)
 	int disable_data = 0;
 	struct ts_node * node = NULL;
 	unsigned char *res = NULL;
-	int res_len = 0, read_once = 0;
+	int64_t total_len = 0, limit = 0;
 	struct list_head *programs = NULL;
 	struct program_t *program = NULL, *tmp = NULL;
 	bool decode_program = false;
-	int64_t total_len = 0, limit = 0;
 	int voltage = 0, tone = 1;
 	int ci_server_port = 7777;
 	int len = 0;
@@ -395,6 +397,11 @@ int main (int argc, char **argv)
 					len = strlen(optarg);
 					joker->blind_power_file_prefix = (char*)calloc(1, len + 1);
 					strncpy(joker->blind_power_file_prefix, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "blind-save-ts")) {
+					len = strlen(optarg);
+					joker->blind_ts_file_prefix = (char*)calloc(1, len + 1);
+					strncpy(joker->blind_ts_file_prefix, optarg, len);
 				}
 				if (!strcasecmp(long_options[option_index].name, "blind-sr-coeff")) {
 					len = strlen(optarg);
@@ -493,15 +500,6 @@ int main (int argc, char **argv)
 			!joker->xml_in_filename 
 			&& !joker->blind_scan)
 		show_help();
-
-	out = fopen((char*)filename, "w+b");
-	if (!out){
-		printf("Can't open out file '%s' \n", filename);
-		perror("");
-		exit(-1);
-	} else {
-		printf("TS outfile:%s \n", filename);
-	}
 
 	/* open Joker TV on USB bus */
 	if ((ret = joker_open(joker))) {
@@ -670,27 +668,8 @@ int main (int argc, char **argv)
 			printf("Program number=%d \n", program->number);
 	}
 
-	/* get raw TS and save it to output file */
-	/* reading about 18K at once */
-	read_once = TS_SIZE * 100;
-	res = (unsigned char*)malloc(read_once);
-	if (!res) {
-		printf("Can't alloc mem for TS \n");
-		return -1;
-	}
-
-	while( limit == 0 || (limit > 0 && total_len < limit) ) {
-		res_len = read_ts_data(&pool, res, read_once);
-
-		/* save to output file */
-		if (res_len > 0)
-			fwrite(res, res_len, 1, out);
-		else
-			usleep(1000); // TODO: rework this (condwait ?)
-
-		total_len += res_len;
-	}
-	printf("Stopping TS ... \n");
+	total_len = save_ts(joker, filename, limit);
+	printf("saved %lld bytes. Stopping TS ... \n", (long long)total_len);
 	stop_ts(joker, &pool);
 
 	printf("Closing device ... \n");
