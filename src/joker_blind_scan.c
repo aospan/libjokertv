@@ -200,7 +200,7 @@ void blind_scan_callback (void *data)
 					joker->blind_ts_file_prefix,
 					(int32_t)(info->frequency/1000),
 					(info->voltage == JOKER_SEC_VOLTAGE_13) ? "13v" : "18v");
-			total_len = save_ts(joker, filename, 2*1024*1024 /* 2MB */);
+			total_len = save_ts(joker, filename, (int64_t)2*1024*1024 /* 2MB */);
 			printf ("%s: %lld bytes saved \n", __func__, total_len);
 		}
 
