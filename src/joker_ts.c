@@ -1077,7 +1077,7 @@ void sdt_hook(void *data, unsigned char *pkt)
 {
 	struct big_pool_t * pool = (struct big_pool_t *)data;
 	jdebug("%s:pool=%p pkt=%p\n", __func__, pool, pkt);
-	dvbpsi_packet_push(pool->si_dvbpsi, pkt);
+	dvbpsi_packet_push(pool->sdt_dvbpsi, pkt);
 }
 
 void atsc_hook(void *data, unsigned char *pkt)
