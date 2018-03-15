@@ -110,7 +110,7 @@ void blind_scan_callback(void *data)
 
 	if (res->event_id == EVENT_DETECT) {
 		// save found transponder and programs to file
-		if (res->joker->blind_programs_filename_fd > 0) {
+		if (res->joker->blind_programs_filename_fd) {
 			// transponder
 			// convert values to satellites xml format
 			fprintf(res->joker->blind_programs_filename_fd,
@@ -616,7 +616,7 @@ int main (int argc, char **argv)
 			// open out file 
 			if (joker->blind_programs_filename) {
 				joker->blind_programs_filename_fd = fopen(joker->blind_programs_filename, "w+b");
-				if (joker->blind_programs_filename_fd < 0) {
+				if (!joker->blind_programs_filename_fd) {
 					printf("Can't open blind scan resulting file %s. Error=%d (%s)\n",
 							joker->blind_programs_filename, errno, strerror(errno));
 					joker->blind_programs_filename_fd = NULL;
@@ -634,7 +634,7 @@ int main (int argc, char **argv)
 			blind_scan(joker, &info);
 
 			// write footer
-			if (joker->blind_programs_filename_fd > 0) {
+			if (joker->blind_programs_filename_fd) {
 				fprintf(joker->blind_programs_filename_fd, "\t</sat>\n</satellites>\n");
 				fclose(joker->blind_programs_filename_fd);
 				joker->blind_programs_filename_fd = NULL;
