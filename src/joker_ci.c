@@ -23,6 +23,12 @@
 #include <joker_fpga.h>
 #include <joker_utils.h>
 
+// fix link under win32 mingw
+#ifdef __WIN32__
+#include <windows.h>
+#endif
+
+
 int joker_ci_wait_status(struct joker_t * joker, uint8_t waitfor, int timeout);
 int joker_ci_rw(struct joker_t * joker, int command, uint16_t offset, unsigned char *buf, int size);
 
