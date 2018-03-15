@@ -264,13 +264,13 @@ int cxd2841er_read_regs(struct cxd2841er_priv *priv,
 	return 0;
 }
 
-static int cxd2841er_read_reg(struct cxd2841er_priv *priv,
+int cxd2841er_read_reg(struct cxd2841er_priv *priv,
 			      u8 addr, u8 reg, u8 *val)
 {
 	return cxd2841er_read_regs(priv, addr, reg, val, 1);
 }
 
-static int cxd2841er_set_reg_bits(struct cxd2841er_priv *priv,
+int cxd2841er_set_reg_bits(struct cxd2841er_priv *priv,
 				  u8 addr, u8 reg, u8 data, u8 mask)
 {
 	int res;
