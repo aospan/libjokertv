@@ -747,10 +747,12 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 
 			jdebug("service_type=%d \n", service_type );
 
+			memset(program->provider_name, 0, SERVICE_NAME_LEN);
 			if (service_provider_name_length)
 				convert_dvb_line(service_provider_name_ptr, service_provider_name_length,
 						program->provider_name, SERVICE_NAME_LEN);
 
+			memset(program->name, 0, SERVICE_NAME_LEN);
 			if (service_name_length)
 				convert_dvb_line(service_name_ptr, service_name_length,
 						program->name, SERVICE_NAME_LEN);
