@@ -28,7 +28,7 @@ uint64_t getus() {
 
 void hexdump(unsigned char * buf, int size)
 {
-	int i = 0, printed = 0;
+	int i = 0, printed = 0, padding = 0;
 	unsigned char txt[512] = { 0 };
 	unsigned char * ptr = txt;
 
@@ -46,7 +46,8 @@ void hexdump(unsigned char * buf, int size)
 		if (printed > 0)
 			ptr += printed;
 	}
-	printf("  %s\n", txt);
+	padding = (i%16) ? (3 * (16 - i%16) + 6) : 3;
+	printf("%*s %s\n", padding, " ", txt);
 
 	printf("\n");
 }
