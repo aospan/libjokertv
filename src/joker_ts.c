@@ -842,6 +842,7 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 {
 	struct program_t *program = NULL;
 	struct big_pool_t *pool = (struct big_pool_t *)data;
+	joker_nit_t * joker_nit = NULL;
 	dvbpsi_sdt_service_t* p_service = p_sdt->p_first_service;
 	dvbpsi_sdt_t* p_stored_sdt = (dvbpsi_sdt_t*)pool->stored_sdt;
 
@@ -866,6 +867,10 @@ static void DumpSDT(void* data, dvbpsi_sdt_t* p_sdt)
 			return;
 		}
 	}
+
+	// save TS ID and Network ID 
+	pool->network_id = p_sdt->i_network_id;
+	pool->ts_id = p_sdt->i_extension;
 
 	while(p_service)
 	{
@@ -1002,7 +1007,7 @@ static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
 	jdebug("\tNetwork id     : %d\n", p_nit->i_network_id);
 	jdebug("\tCurrent next   : %s\n", p_nit->b_current_next ? "yes" : "no");
 
-	pool->network_id = p_nit->i_network_id;
+	pool->nit_network_id = p_nit->i_network_id;
 
 	// Parse according DVB Document A038 (July 2014)
 	while(p_descriptor_l)

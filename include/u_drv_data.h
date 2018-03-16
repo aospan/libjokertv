@@ -101,7 +101,9 @@ struct big_pool_t {
 
 	// NIT
 	char *network_name;
-	int network_id;
+	int nit_network_id; // from NIT table
+	int network_id; // from SDT table
+	int ts_id; // from SDT table
 	struct list_head nit_list; // TSID and ONID list
 
 	// SDT

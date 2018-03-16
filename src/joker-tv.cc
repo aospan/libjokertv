@@ -124,6 +124,10 @@ void blind_scan_callback(void *data)
 					res->info->delivery_system == JOKER_SYS_DVBS ? 0 : 1,
 					res->info->modulation);
 
+			fprintf(res->joker->blind_programs_filename_fd,
+					"\t\t\t<sdt network_id=\"%d\" ts_id=\"%d\"/>\n",
+						pool->network_id, pool->ts_id);
+
 			// programs belongs to this transponder
 			list_for_each_entry_safe(program, tmp, res->programs, list) {
 				fprintf(res->joker->blind_programs_filename_fd,
@@ -166,7 +170,7 @@ void blind_scan_callback(void *data)
 
 			// dump NIT info
 			fprintf(res->joker->blind_programs_filename_fd, "\t\t\t<nit network_name=\"%s\" network_id=\"%d\">\n",
-					pool->network_name, pool->network_id);
+					pool->network_name, pool->nit_network_id);
 			if(!list_empty(&pool->nit_list)) {
 				list_for_each_entry(nit, &pool->nit_list, list) {
 					fprintf(res->joker->blind_programs_filename_fd,
