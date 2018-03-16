@@ -268,6 +268,7 @@ void show_help() {
 	printf("	--blind-save-ts-size MB Write TS to file limit. Default: 2 MBytes\n");
 	printf("	--blind-programs file.xml	Write blind scan programs to file. Example: blind.xml\n");
 	printf("	--blind-sr-coeff coeff	Symbol rate correction coefficient. Default: %.11f\n", SR_DEFAULT_COEFF);
+	printf("	--diseqc diseqc.txt	File with Diseqc commands. One command per line. Scripting supported.\n");
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
 	printf("	--cam-pcap cam.pcap	dump all CAM interaction to file. Use Wireshark to parse this file.\n");
 	exit(0);
@@ -278,6 +279,7 @@ static struct option long_options[] = {
 	{"out",  required_argument, 0, 0},
 	{"blind",  no_argument, 0, 0},
 	{"program",  required_argument, 0, 0},
+	{"diseqc",  required_argument, 0, 0},
 	{"blind-out",  required_argument, 0, 0},
 	{"blind-sr-coeff",  required_argument, 0, 0},
 	{"blind-power",  required_argument, 0, 0},
@@ -301,6 +303,8 @@ int main (int argc, char **argv)
 	int delsys = 0, mod = 0, sr = 0, bw = 0;
 	uint64_t freq = 0;
 	FILE * out = NULL;
+	FILE * fd = NULL;
+	long size = 0;
 	char filename[FNAME_LEN] = "out.ts";
 	char fwfilename[FNAME_LEN] = "";
 	char infilename[FNAME_LEN] = "";
@@ -384,6 +388,31 @@ int main (int argc, char **argv)
 				if (!strcasecmp(long_options[option_index].name, "blind")) {
 					joker->blind_scan = 1;
 					delsys = JOKER_SYS_DVBS;
+				}
+				if (!strcasecmp(long_options[option_index].name, "diseqc")) {
+					fd = fopen(optarg, "r+b");
+					if (fd <= 0) {
+						printf("Can't open diseqc script %s error=%s (%d)\n",
+								optarg, strerror(errno), errno);
+						return -1;
+					}
+
+					/* get file size */
+					fseek(fd, 0L, SEEK_END);
+					size = ftell(fd);
+					fseek(fd, 0L, SEEK_SET);
+					if (size > 512*1024) {
+						size = 512*1024; // read only 512KB
+					}
+
+					joker->diseqc_script = (char*)calloc(1, size);
+					if (!joker->diseqc_script)
+						return -1;
+
+					joker->diseqc_script_len = fread(joker->diseqc_script, 1, size, fd);
+					printf("%d bytes diseqc script read \n", joker->diseqc_script_len);
+					fclose(fd);
+					fd = NULL;
 				}
 				if (!strcasecmp(long_options[option_index].name, "blind-out")) {
 					len = strlen(optarg);

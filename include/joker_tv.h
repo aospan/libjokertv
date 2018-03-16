@@ -163,6 +163,10 @@ struct joker_t {
 	blind_scan_callback_t blind_scan_cb;
 	double blind_sr_coeff;
 
+	/* Diseqc */
+	char *diseqc_script;
+	int diseqc_script_len;
+
 	/* Raw data from usb */
 	char *raw_data_filename;
 	FILE *raw_data_filename_fd;

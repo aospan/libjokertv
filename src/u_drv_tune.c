@@ -520,11 +520,90 @@ int send_diseqc_message(struct joker_t * joker, char * message, int len)
 		for (i = 0; i < len; i++)
 			cmd.msg[i] = message[i];
 		cmd.msg_len = len;
+		printf("%s: sending %d bytes diseqc message \n", __func__, len);
 		if (fe->ops.diseqc_send_master_cmd(fe, &cmd))
 			return -EIO;
 	}
 	return 0;
 }
+
+// process one line of diseqc script
+int diseqc_do_line(struct joker_t * joker, char * ptr, int len)
+{
+	int maxlen = 0, timeout = 0, diseqc_len = 0;
+	char diseqc[6];
+	char *start = NULL, *nptr = NULL;
+
+	if (ptr[0] == '#' || ptr[0] == '\n')
+		return 0;
+
+	// convert line to null terminated string
+	nptr = calloc(1, len + 1);
+	if (!nptr)
+		return nptr;
+	memcpy(nptr, ptr, len);
+
+	jdebug("%s: line=%s\n", __func__, nptr);
+
+	if (len > strlen("sleep"))  {
+		if (!strncmp(nptr, "sleep", strlen("sleep"))) {
+			// process sleep keyword
+			timeout = atoi(nptr + strlen("sleep"));
+			printf("%s: sleeping %d sec\n", __func__, timeout);
+			sleep(timeout);
+			free(nptr);
+			return 0;
+		}
+	}
+
+	start = nptr;
+	while ((nptr = strchr(nptr, ' ')) && diseqc_len < 6) {
+		diseqc[diseqc_len] = strtol(start, NULL, 16);
+		diseqc_len++;
+		nptr++;
+		start = nptr;
+	}
+	// parse tail too
+	diseqc[diseqc_len] = strtol(start, NULL, 16);
+	diseqc_len++;
+
+	hexdump(diseqc, diseqc_len);
+	send_diseqc_message(joker, diseqc, diseqc_len);
+
+	free(nptr);
+
+	return 0;
+}
+
+/* Process simple diseqc script 
+ * one diseqc command per line
+ * lines started with # ignored (comments)
+ *
+ * allowed keywords:
+ *	sleep X  - sleep X seconds before next command processing
+ * */
+int diseqc_process(struct joker_t * joker)
+{
+	char * ptr = NULL, * start_ptr = NULL;
+	char * cur_line = NULL;
+	int i = 0;
+	int st_exit = 0;
+
+	if (!joker || !joker->diseqc_script_len || !joker->diseqc_script)
+		return -EINVAL;		
+
+	ptr = joker->diseqc_script;
+	start_ptr = joker->diseqc_script;
+
+	// process script line by line
+	while ( (ptr = strchr(ptr, '\n')) ) {
+		diseqc_do_line(joker, start_ptr, ptr - start_ptr);
+		ptr++;
+		start_ptr = ptr;
+	}
+	printf("diseqc parse done \n");
+}
+
 /* tune to specified source (DVB, ATSC, etc)
  * this call is non-blocking (returns after configuring frontend)
  * return negative error code if failed
@@ -545,11 +624,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	unsigned char buf[BUF_LEN];
 	int input = 0, need_lnb = 0, rc = 0;
 	int cnt = 5; /* 5 times try to set LNB voltage */
-
-	struct dvb_diseqc_master_cmd dcmd = {
-		.msg = {0xFF},
-		.msg_len = 6
-	};
 
 	i2c = (struct i2c_adapter *)malloc(sizeof(struct i2c_adapter));
 	if (!i2c)
@@ -702,6 +776,10 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 			return -1;
 		}
 
+		// do Diseqc here
+		fe->ops.set_voltage(fe, info->voltage);
+		diseqc_process(joker);
+
 		// do not make actual tune when blind scanning
 		if (joker->blind_scan)
 			return 0;
@@ -738,15 +816,6 @@ int tune(struct joker_t *joker, struct tune_info_t *info)
 	joker->stat.refresh_enable = 1;
 	pthread_cond_signal(&joker->service_threading->cond);
 	pthread_mutex_unlock(&joker->service_threading->mux);
-
-	/* TODO */
-#if 0
-	/* DISEQC */
-	/* send diseqc message */
-	fe->ops.diseqc_send_master_cmd(fe, &dcmd);
-	/* set 22khz tone */
-	fe->ops.set_tone(fe, SEC_TONE_ON);
-#endif
 
 	return 0;
 }

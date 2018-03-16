@@ -91,3 +91,18 @@ following command:
 ```
 ./i2c-scan
 ```
+
+## Diseqc
+Execute diseqc.txt script before tuning to satellite:
+```
+joker-tv -d 5 -f 12033000000 -s 8200000 -y 18 -p -z 10600,10600,11600 --diseqc diseqc.txt
+```
+script example:
+```
+# Start Motor Driving East and wait 4 seconds
+0xE0 0x31 0x68 0x40
+sleep 4
+
+# Stop motor
+0xE0 0x31 0x60
+```
