@@ -78,6 +78,7 @@ typedef struct joker_nit_s {
 struct program_t {
 	int number;
 	unsigned char name[SERVICE_NAME_LEN];
+	unsigned char provider_name[SERVICE_NAME_LEN];
 	uint8_t service_type;
 	int pmt_pid;
 	int pcr_pid;

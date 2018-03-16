@@ -655,6 +655,8 @@ int to_utf(char * buf, size_t insize, char * _outbuf, int maxlen, char *charset)
 	memset(_outbuf, 0, maxlen);
 	memcpy(_outbuf, outbuf, maxlen - avail);
 	iconv_close (cd);
+
+	return 0;
 }
 
 /* convert name to utf-8
@@ -680,16 +682,50 @@ int dvb_to_utf(char * buf, size_t insize, char * _outbuf, int maxlen)
 	return to_utf(final_inbuf, insize, _outbuf, maxlen, charset);
 }
 
-static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_descriptor)
-{ 
-	int i = 0, off = 0, service_provider_name_length = 0, service_name_length = 0;
-	unsigned char *service_name_ptr = NULL;
+int convert_dvb_line (unsigned char *ptr, int len, unsigned char *dst, int maxlen)
+{
+	int i = 0, off = 0, ret = 0;
 	uint8_t codepage = 0;
 	unsigned char charset[SERVICE_NAME_LEN];
 
-	memset(&program->name, 0, SERVICE_NAME_LEN);
+	memset(dst, 0, SERVICE_NAME_LEN);
 	memset(&charset[0], 0, SERVICE_NAME_LEN);
-	
+
+	// Text fields can optionally start with non-spacing,
+	// non-displayed data which specifies the
+	// alternative character table to be used for the
+	// remainder of the text item.
+	// If the first byte of the text field has a value in the range "0x20" to "0xFF"
+	// then this and all subsequent bytes in the text
+	// item are coded using the default character coding table (table 00 - Latin alphabet) of figure A.1. 
+	if (ptr[0] >= 0x20 && ptr[0] <= 0xFF)
+		codepage = 0x0; // ISO8859-1
+	else
+		codepage = ptr[0];
+
+	for (i = isprint(ptr[0])?0:1; i < len; i++) {
+		// special chars. ignore it
+		if (ptr[i] >= 0x80 && ptr[i] <= 0x8B)
+			continue;
+
+		dst[off] = ptr[i];
+		off++;
+	}
+
+	jdebug("%s: ptr=%s length=%d (%d) codepage=0x%x\n", __func__, ptr, len, off, codepage);
+	// convert name to utf-8
+	if (!get_charset_name(codepage, &charset[0]))
+		ret = to_utf(dst, off, dst, SERVICE_NAME_LEN, charset);
+
+	return ret;
+}
+
+static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_descriptor)
+{ 
+	int service_provider_name_length = 0, service_name_length = 0;
+	unsigned char *service_name_ptr = NULL;
+	unsigned char *service_provider_name_ptr = NULL;
+
 	// Parse according DVB Document A038 (July 2014)
 	// Specification for Service Information (SI)
 	// in DVB systems)
@@ -705,42 +741,19 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 			//		0 ... N - service_name
 			program->service_type = p_descriptor->p_data[0];
 			service_provider_name_length = p_descriptor->p_data[1];
+			service_provider_name_ptr = p_descriptor->p_data + 2;
 			service_name_length = p_descriptor->p_data[service_provider_name_length + 2];
 			service_name_ptr = p_descriptor->p_data + service_provider_name_length + 3;
 
 			jdebug("service_type=%d \n", service_type );
 
-			// sanity check
-			if (!service_name_length)
-				return;
+			if (service_provider_name_length)
+				convert_dvb_line(service_provider_name_ptr, service_provider_name_length,
+						program->provider_name, SERVICE_NAME_LEN);
 
-			// Text fields can optionally start with non-spacing,
-			// non-displayed data which specifies the
-			// alternative character table to be used for the
-			// remainder of the text item.
-			// If the first byte of the text field has a value in the range "0x20" to "0xFF"
-			// then this and all subsequent bytes in the text
-			// item are coded using the default character coding table (table 00 - Latin alphabet) of figure A.1. 
-			if (service_name_ptr[0] >= 0x20 && service_name_ptr[0] <= 0xFF)
-				codepage = 0x0; // ISO8859-1
-			else
-				codepage = service_name_ptr[0];
-
-			jdebug("provider_len=%d service_name_length=%d service_name_ptr=%d codepage=0x%x\n",
-					service_provider_name_length, service_name_length, service_provider_name_length + 3, codepage);
-			for (i = isprint(service_name_ptr[0])?0:1; i < service_name_length; i++) {
-				// special chars. ignore it
-				if (service_name_ptr[i] >= 0x80 && service_name_ptr[i] <= 0x8B)
-					continue;
-
-				program->name[off] = service_name_ptr[i];
-				off++;
-			}
-			jdebug("program=%d new name=%s \n", program->number, program->name);
-
-			// convert name to utf-8
-			if (!get_charset_name(codepage, &charset[0]))
-				to_utf(program->name, off, program->name, SERVICE_NAME_LEN, charset);
+			if (service_name_length)
+				convert_dvb_line(service_name_ptr, service_name_length,
+						program->name, SERVICE_NAME_LEN);
 		}
 		p_descriptor = p_descriptor->p_next;
 	}

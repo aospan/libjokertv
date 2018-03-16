@@ -68,8 +68,9 @@ void service_name_update(struct program_t *program)
 {
 	struct program_es_t *es = NULL;
 	struct program_ca_t *ca = NULL;
-	printf("callback:%s program number=%d name=%s type=0x%x. video:%s audio:%s\n",
-			__func__, program->number, program->name, program->service_type,
+	printf("callback:%s program number=%d name=%s provider=%s type=0x%x. video:%s audio:%s\n",
+			__func__, program->number, program->name, 
+			program->provider_name, program->service_type,
 			program->has_video ? "yes" : "",
 			program->has_audio ? "yes" : "");
 
@@ -126,8 +127,10 @@ void blind_scan_callback(void *data)
 			// programs belongs to this transponder
 			list_for_each_entry_safe(program, tmp, res->programs, list) {
 				fprintf(res->joker->blind_programs_filename_fd,
-						"\t\t\t<program number=\"%d\" name=\"%s\" pmt_pid=\"%d\" pcr_pid=\"%d\">\n",
-						program->number, program->name, program->pmt_pid, program->pcr_pid);
+						"\t\t\t<program number=\"%d\" name=\"%s\" "
+						"provider=\"%s\" pmt_pid=\"%d\" pcr_pid=\"%d\">\n",
+						program->number, program->name, program->provider_name,
+						program->pmt_pid, program->pcr_pid);
 				if(!list_empty(&program->es_list)) {
 					list_for_each_entry(es, &program->es_list, list) {
 						fprintf(res->joker->blind_programs_filename_fd,
