@@ -692,7 +692,10 @@ int convert_dvb_line (unsigned char *ptr, int len, unsigned char *dst, int maxle
 	uint8_t codepage = 0;
 	unsigned char charset[SERVICE_NAME_LEN];
 
-	memset(dst, 0, SERVICE_NAME_LEN);
+	if (!ptr || !dst)
+		return -EINVAL;
+
+	memset(dst, 0, maxlen);
 	memset(&charset[0], 0, SERVICE_NAME_LEN);
 
 	// Text fields can optionally start with non-spacing,
@@ -1020,16 +1023,18 @@ static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
 	// Parse according DVB Document A038 (July 2014)
 	while(p_descriptor_l)
 	{ 
-		jdebug("%s: tag=0x%02x : len=%d \n", __func__, p_descriptor_l->i_tag, p_descriptor_l->i_length );
 		// 0x40	Network Name descr.
 		if (p_descriptor_l->i_tag == 0x40) {
 			if (pool->network_name)
 				free(pool->network_name);
 
-			pool->network_name = (char*)calloc(1, p_descriptor_l->i_length + 1);
+			pool->network_name = (char*)calloc(1, SERVICE_NAME_LEN);
 			if (!pool->network_name)
 				return;
-			memcpy(pool->network_name, p_descriptor_l->p_data, p_descriptor_l->i_length);
+			convert_dvb_line(p_descriptor_l->p_data, p_descriptor_l->i_length,
+					pool->network_name, SERVICE_NAME_LEN);
+			jdebug("%s: network name=%s len=%d\n", __func__,
+					pool->network_name, strlen(pool->network_name));
 		}
 		p_descriptor_l = p_descriptor_l->p_next;
 	}
