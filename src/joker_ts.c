@@ -208,9 +208,9 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 			// DumpDescriptors("	", p_descriptor_l);
 			if (p_descriptor_l->i_tag == 0x0a ||
 					p_descriptor_l->i_tag == 0x56) {
-				if (p_descriptor_l->i_length <= 4) {
+				if (p_descriptor_l->i_length >= 3) {
 					// language descriptors
-					memcpy(es->lang, p_descriptor_l->p_data, p_descriptor_l->i_length);
+					memcpy(es->lang, p_descriptor_l->p_data, 3);
 				}
 			}
 			p_descriptor_l = p_descriptor_l->p_next;
