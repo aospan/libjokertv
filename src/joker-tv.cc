@@ -134,7 +134,7 @@ void blind_scan_callback(void *data)
 			// programs belongs to this transponder
 			list_for_each_entry_safe(program, tmp, res->programs, list) {
 				name_esc = xmlEncodeEntitiesReentrant (NULL, program->name);
-				provider_name_esc = xmlEncodeEntitiesReentrant (NULL, program->name);
+				provider_name_esc = xmlEncodeEntitiesReentrant (NULL, program->provider_name);
 				fprintf(res->joker->blind_programs_filename_fd,
 						"\t\t\t<program number=\"%d\" name=\"%s\" "
 						"provider=\"%s\" pmt_pid=\"%d\" pcr_pid=\"%d\">\n",
