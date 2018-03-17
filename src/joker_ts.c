@@ -454,6 +454,7 @@ static void DumpPAT(void* data, dvbpsi_pat_t* p_pat)
 
 		program->joker = pool->joker;
 		memset(&program->name, 0, SERVICE_NAME_LEN);
+		memset(&program->provider_name, 0, SERVICE_NAME_LEN);
 		program->number = p_program->i_number;
 		INIT_LIST_HEAD(&program->es_list);
 		INIT_LIST_HEAD(&program->ca_list);
