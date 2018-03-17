@@ -1020,7 +1020,7 @@ static void DumpNIT(void* p_data, dvbpsi_nit_t* p_nit)
 			if (pool->network_name)
 				free(pool->network_name);
 
-			pool->network_name = (char*)calloc(1, p_descriptor_l->i_length);
+			pool->network_name = (char*)calloc(1, p_descriptor_l->i_length + 1);
 			if (!pool->network_name)
 				return;
 			memcpy(pool->network_name, p_descriptor_l->p_data, p_descriptor_l->i_length);
