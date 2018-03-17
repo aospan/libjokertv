@@ -611,9 +611,10 @@ int get_charset_name(uint8_t codepage, char * charset)
 			strncpy(charset, "ISO8859-15", SERVICE_NAME_LEN); break;
 		case 0x11:
 		case 0x14: // Big5 subset of ISO/IEC 10646 [16] Traditional Chinese
-		case 0x15: // UTF-8 encoding of ISO/IEC 10646 [16] Basic Multilingual Plane (BMP)
 			// Basic Multilingual Plane (BMP)
 			strncpy(charset, "ISO-10646", SERVICE_NAME_LEN); break;
+		case 0x15: // UTF-8 encoding of ISO/IEC 10646 [16] Basic Multilingual Plane (BMP)
+			strncpy(charset, "UTF-8", SERVICE_NAME_LEN); break;
 		case 0x13:
 			// Simplified Chinese Character
 			strncpy(charset, "GB2312", SERVICE_NAME_LEN); break;
@@ -647,7 +648,6 @@ int to_utf(char * buf, size_t insize, char * _outbuf, int maxlen, char *charset)
 		printf("can't open iconv for charset conversion\n");
 		return -EIO;
 	}
-
 
 	nconv = iconv (cd, &inbuf, &insize, &outptr, &avail);
 	if (nconv == -1)
@@ -708,8 +708,10 @@ int convert_dvb_line (unsigned char *ptr, int len, unsigned char *dst, int maxle
 		codepage = ptr[0];
 
 	for (i = isprint(ptr[0])?0:1; i < len; i++) {
-		// special chars. ignore it
-		if (ptr[i] >= 0x80 && ptr[i] <= 0x8B)
+		// special chars. ignore it in one byte charset
+		// 0x11 - 0x15 multibyte charsets (utf-8, etc)
+		if (ptr[i] >= 0x80 && ptr[i] <= 0x8B
+				&& (codepage < 0x11 || codepage > 0x15))
 			continue;
 
 		dst[off] = ptr[i];
