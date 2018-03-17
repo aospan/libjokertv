@@ -35,6 +35,7 @@
 #include "joker_utils.h"
 #include "joker_ts_filter.h"
 #include "joker_xml.h"
+#include <libxml/xmlreader.h>
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
 #include "joker_blind_scan.h"
@@ -101,6 +102,8 @@ void blind_scan_callback(void *data)
 	struct program_ca_t*ca = NULL;
 	struct joker_t *joker = NULL;
 	struct big_pool_t *pool;
+	unsigned char * name_esc = NULL;
+	unsigned char * provider_name_esc = NULL;
 	joker_nit_t * nit = NULL;
 
 	if (!res)
@@ -130,11 +133,18 @@ void blind_scan_callback(void *data)
 
 			// programs belongs to this transponder
 			list_for_each_entry_safe(program, tmp, res->programs, list) {
+				name_esc = xmlEncodeEntitiesReentrant (NULL, program->name);
+				provider_name_esc = xmlEncodeEntitiesReentrant (NULL, program->name);
+				printf("name_esc=%s \n", name_esc);
 				fprintf(res->joker->blind_programs_filename_fd,
 						"\t\t\t<program number=\"%d\" name=\"%s\" "
 						"provider=\"%s\" pmt_pid=\"%d\" pcr_pid=\"%d\">\n",
-						program->number, program->name, program->provider_name,
+						program->number,
+						name_esc,
+						provider_name_esc,
 						program->pmt_pid, program->pcr_pid);
+				xmlFree(name_esc);
+				xmlFree(provider_name_esc);
 				if(!list_empty(&program->es_list)) {
 					list_for_each_entry(es, &program->es_list, list) {
 						fprintf(res->joker->blind_programs_filename_fd,
