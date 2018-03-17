@@ -57,7 +57,7 @@ struct program_es_t
 {
 	uint8_t                       type;
 	uint16_t                      pid;
-	char	lang[3];
+	char	lang[4];
 	struct list_head list;
 };
 

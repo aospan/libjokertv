@@ -202,13 +202,16 @@ static void DumpPMT(void* data, dvbpsi_pmt_t* p_pmt)
 		p_descriptor_l = p_es->p_first_descriptor;
 		while(p_descriptor_l)
 		{ 
-			jdebug("%s: program=0x%x es=0x%x descr=0x%x \n", __func__,
-					p_pmt->i_program_number, p_es->i_pid, p_descriptor_l->i_tag);
+			jdebug("%s: program=0x%x es=0x%x descr=0x%x i_length=%d\n", __func__,
+					p_pmt->i_program_number, p_es->i_pid,
+					p_descriptor_l->i_tag, p_descriptor_l->i_length);
 			// DumpDescriptors("	", p_descriptor_l);
 			if (p_descriptor_l->i_tag == 0x0a ||
 					p_descriptor_l->i_tag == 0x56) {
-				// language descriptors
-				memcpy(es->lang, p_descriptor_l->p_data, 3);
+				if (p_descriptor_l->i_length <= 4) {
+					// language descriptors
+					memcpy(es->lang, p_descriptor_l->p_data, p_descriptor_l->i_length);
+				}
 			}
 			p_descriptor_l = p_descriptor_l->p_next;
 		}
