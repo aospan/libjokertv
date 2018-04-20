@@ -95,6 +95,11 @@ enum joker_fe_sec_tone_mode {
 	JOKER_SEC_TONE_OFF
 };
 
+enum joker_fe_sec_mini_cmd {
+	JOKER_SEC_MINI_A,
+	JOKER_SEC_MINI_B
+};
+
 /* frontend parameters (standard, freq, etc)
  * copy from Linux: drivers/media/dvb-core/dvb_frontend.h
  */

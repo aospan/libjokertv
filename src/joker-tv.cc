@@ -643,20 +643,6 @@ int main (int argc, char **argv)
 			return -1;
 		}
 
-#if 0
-		// Start Motor Driving East E1 31 68 40
-		diseqc_len = 4;
-		diseqc = (char*)calloc(1, diseqc_len);
-		diseqc[0] = 0xE0;
-		diseqc[1] = 0x31;
-		diseqc[2] = 0x68;
-		diseqc[3] = 0x40;
-		while (1) {
-			send_diseqc_message(joker, diseqc, diseqc_len);
-			sleep(2);
-		}
-#endif
-
 		if (joker->blind_scan) {
 			// open out file 
 			if (joker->blind_programs_filename) {

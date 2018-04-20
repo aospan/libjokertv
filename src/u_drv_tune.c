@@ -527,12 +527,30 @@ int send_diseqc_message(struct joker_t * joker, char * message, int len)
 	return 0;
 }
 
+int send_burst(struct joker_t * joker, enum joker_fe_sec_mini_cmd burst)
+{
+	struct dvb_frontend *fe = NULL;
+
+	if (!joker || !joker->fe_opaque)
+		return -EINVAL;
+
+	fe = (struct dvb_frontend *)joker->fe_opaque;
+
+	if(fe->ops.diseqc_send_burst) {
+		printf("%s: sending burst %d\n", __func__, burst);
+		if (fe->ops.diseqc_send_burst(fe, burst))
+			return -EIO;
+	}
+	return 0;
+}
+
 // process one line of diseqc script
 int diseqc_do_line(struct joker_t * joker, char * ptr, int len)
 {
 	int maxlen = 0, timeout = 0, diseqc_len = 0;
 	char diseqc[6];
 	char *start = NULL, *nptr = NULL;
+	enum joker_fe_sec_mini_cmd burst;
 
 	if (ptr[0] == '#' || ptr[0] == '\n')
 		return 0;
@@ -545,12 +563,25 @@ int diseqc_do_line(struct joker_t * joker, char * ptr, int len)
 
 	jdebug("%s: line=%s\n", __func__, nptr);
 
-	if (len > strlen("sleep"))  {
-		if (!strncmp(nptr, "sleep", strlen("sleep"))) {
+	if (len > strlen("msleep"))  {
+		if (!strncmp(nptr, "msleep", strlen("msleep"))) {
 			// process sleep keyword
-			timeout = atoi(nptr + strlen("sleep"));
-			printf("%s: sleeping %d sec\n", __func__, timeout);
-			sleep(timeout);
+			timeout = atoi(nptr + strlen("msleep"));
+			printf("%s: sleeping %d msec\n", __func__, timeout);
+			msleep(timeout);
+			free(nptr);
+			return 0;
+		}
+	}
+
+	if (len > strlen("burst"))  {
+		if (!strncmp(nptr, "burst", strlen("burst"))) {
+			// process burst keyword
+			if(!(strncmp(nptr + strlen("burst") + 1, "A", 1)))
+				burst = JOKER_SEC_MINI_A;
+			else if(!(strncmp(nptr + strlen("burst") + 1, "B", 1)))
+				burst = JOKER_SEC_MINI_B;
+			send_burst(joker, burst);
 			free(nptr);
 			return 0;
 		}
@@ -588,12 +619,20 @@ int diseqc_process(struct joker_t * joker)
 	char * cur_line = NULL;
 	int i = 0;
 	int st_exit = 0;
+	struct dvb_frontend *fe = NULL;
 
-	if (!joker || !joker->diseqc_script_len || !joker->diseqc_script)
+	if (!joker || !joker->fe_opaque ||
+			!joker->diseqc_script_len ||
+			!joker->diseqc_script)
 		return -EINVAL;		
+
+	fe = (struct dvb_frontend *)joker->fe_opaque;
 
 	ptr = joker->diseqc_script;
 	start_ptr = joker->diseqc_script;
+
+	fe->ops.set_tone(fe, JOKER_SEC_TONE_OFF);
+	msleep(10);
 
 	// process script line by line
 	while ( (ptr = strchr(ptr, '\n')) ) {
@@ -602,6 +641,10 @@ int diseqc_process(struct joker_t * joker)
 		start_ptr = ptr;
 	}
 	printf("diseqc parse done \n");
+
+	fe->ops.set_tone(fe, JOKER_SEC_TONE_ON);
+
+	return 0;
 }
 
 /* tune to specified source (DVB, ATSC, etc)
