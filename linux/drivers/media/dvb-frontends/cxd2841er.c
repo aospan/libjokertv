@@ -3761,7 +3761,8 @@ static int cxd2841er_shutdown_tc(struct dvb_frontend *fe)
 static int cxd2841er_send_burst(struct dvb_frontend *fe,
 				enum fe_sec_mini_cmd burst)
 {
-	u8 data;
+	u8 data[1];
+	int i;
 	struct cxd2841er_priv *priv  = fe->demodulator_priv;
 
 	dev_dbg(&priv->i2c->dev, "%s(): burst mode %s\n", __func__,
@@ -3772,11 +3773,32 @@ static int cxd2841er_send_burst(struct dvb_frontend *fe,
 			__func__, priv->state);
 		return -EINVAL;
 	}
-	data = (burst == SEC_MINI_A ? 0 : 1);
+
+	/* Diseqc disable */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x33, 0x00);
+
+	data[0] = (burst == SEC_MINI_A ? 0 : 1);
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x00, 0xbb);
 	cxd2841er_write_reg(priv, I2C_SLVT, 0x34, 0x01);
-	cxd2841er_write_reg(priv, I2C_SLVT, 0x35, data);
-	return 0;
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x35, data[0]);
+
+	/* start transmit */
+	cxd2841er_write_reg(priv, I2C_SLVT, 0x32, 0x01);
+
+	/* wait for 1 sec timeout */
+	for (i = 0; i < 50; i++) {
+		cxd2841er_read_reg(priv, I2C_SLVT, 0x10, data);
+		if (!data[0]) {
+			dev_dbg(&priv->i2c->dev,
+				"%s(): tone burst has been sent\n", __func__);
+			return 0;
+		}
+		msleep(20);
+	}
+	dev_err(&priv->i2c->dev,
+		"%s(): tone burst transmit timeout\n", __func__);
+
+	return -ETIMEDOUT;
 }
 
 static int cxd2841er_set_tone(struct dvb_frontend *fe,
