@@ -35,6 +35,7 @@
 #include "joker_utils.h"
 #include "joker_ts_filter.h"
 #include "joker_xml.h"
+#include <uchar.h>
 #include <libxml/xmlreader.h>
 #include "u_drv_tune.h"
 #include "u_drv_data.h"
