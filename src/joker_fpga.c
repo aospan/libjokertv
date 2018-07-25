@@ -168,6 +168,46 @@ int joker_close(struct joker_t * joker) {
 	printf("%s: done\n", __func__);
 }
 
+/* print available USB devices */
+int joker_devices_print(struct joker_t *joker)
+{
+	struct libusb_context *ctx = NULL;
+	struct libusb_device **usb_list = NULL;
+	struct libusb_device_handle *devh = NULL;
+	struct libusb_device_descriptor desc;
+	int usb_devs, i, r, ret, transferred;
+
+	if (!joker)
+		return -EINVAL;
+
+	ret = libusb_init(NULL);
+	if (ret < 0) {
+		fprintf(stderr, "libusb_init failed\n");
+		return -ENODEV;
+	}
+
+	libusb_set_debug(NULL, joker->libusb_verbose);
+
+	usb_devs = libusb_get_device_list(ctx, &usb_list);
+	for(i = 0 ; i < usb_devs ; ++i) {
+		r = libusb_get_device_descriptor(usb_list[i], &desc);
+		if(r < 0) {
+			fprintf(stderr, "couldn't get usb descriptor for dev #%d!\n", i);
+			fprintf(stderr, "desc.idVendor=0x%x desc.idProduct=0x%x\n",
+					desc.idVendor, desc.idProduct);
+		}
+
+		if (desc.idVendor == NETUP_VID && desc.idProduct == JOKER_TV_PID)
+		{
+			printf("  * Joker TV device found. usb bus_id=%d port_id=%d \n", 
+					libusb_get_bus_number(usb_list[i]),
+					libusb_get_port_number(usb_list[i]));
+		}
+	}
+
+	return 0;
+}
+
 /* exchange with FPGA over USB
  * EP2 OUT EP used as joker commands (jcmd) source
  * EP1 IN EP used as command reply storage

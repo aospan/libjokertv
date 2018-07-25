@@ -288,6 +288,8 @@ void show_help() {
 	printf("	--diseqc diseqc.txt	File with Diseqc commands. One command per line. Scripting supported.\n");
 	printf("	--raw-data raw.bin	output raw data received from USB\n");
 	printf("	--cam-pcap cam.pcap	dump all CAM interaction to file. Use Wireshark to parse this file.\n");
+	printf("	--list  List available USB devices\n");
+	printf("	--device id   Use specified USB device\n");
 	exit(0);
 }
 
@@ -305,6 +307,8 @@ static struct option long_options[] = {
 	{"blind-programs",  required_argument, 0, 0},
 	{"raw-data",  required_argument, 0, 0},
 	{"cam-pcap",  required_argument, 0, 0},
+	{"list",  no_argument, 0, 0},
+	{"device",  required_argument, 0, 0},
 	{ 0, 0, 0, 0}
 };
 
@@ -468,6 +472,10 @@ int main (int argc, char **argv)
 					len = strlen(optarg);
 					joker->cam_pcap_filename = (char*)calloc(1, len + 1);
 					strncpy(joker->cam_pcap_filename, optarg, len);
+				}
+				if (!strcasecmp(long_options[option_index].name, "list")) {
+					joker_devices_print(joker);
+					return 0;
 				}
 				break;
 			case 'd':

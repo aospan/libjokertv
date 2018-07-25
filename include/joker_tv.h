@@ -199,6 +199,9 @@ int joker_open(struct joker_t *joker);
 /* release Joker TV device */
 int joker_close(struct joker_t *joker);
 
+/* print available USB devices */
+int joker_devices_print(struct joker_t *joker);
+
 #ifdef __cplusplus
 }
 #endif
