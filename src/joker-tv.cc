@@ -346,7 +346,7 @@ int main (int argc, char **argv)
 	char datetime[512];
 	time_t now = time(NULL);
 	struct tm *t = localtime(&now);
-	char * diseqc = NULL;
+	char * diseqc = NULL, *pt = NULL;
 	int diseqc_len = 0;
 
 	strftime(datetime, sizeof(datetime)-1, "%d %b %Y %H:%M", t);
@@ -476,6 +476,17 @@ int main (int argc, char **argv)
 				if (!strcasecmp(long_options[option_index].name, "list")) {
 					joker_devices_print(joker);
 					return 0;
+				}
+				if (!strcasecmp(long_options[option_index].name, "device")) {
+					joker->force_device_selection = 1;
+					pt = strtok (optarg,":");
+					if (pt != NULL) {
+						joker->usb_bus_id = atoi(pt);
+						pt = strtok (NULL, ":");
+						if (pt != NULL)
+							joker->usb_port_id = atoi(pt);
+					}
+					printf("Searching USB device %d:%d ...\n", joker->usb_bus_id, joker->usb_port_id);
 				}
 				break;
 			case 'd':

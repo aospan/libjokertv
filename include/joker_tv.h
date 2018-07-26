@@ -109,6 +109,11 @@ struct joker_t {
 	void *io_mux_opaq;
 	uint16_t fw_ver; // firmware version
 
+	// desired USB device bus:port
+	int force_device_selection;
+	int usb_bus_id; // bus enumeration starts from 1
+	int usb_port_id;
+
 	int libusb_verbose;
 	/* hold chip list that should be in reset state */
 	int reset;

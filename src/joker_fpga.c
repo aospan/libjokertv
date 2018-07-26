@@ -59,11 +59,22 @@ int joker_open(struct joker_t *joker)
 					desc.idVendor, desc.idProduct);
 		}
 
+		jdebug("usb %x:%x %d:%d\n", desc.idVendor, desc.idProduct,
+				libusb_get_bus_number(usb_list[i]),
+				libusb_get_port_number(usb_list[i]));
 		if (desc.idVendor == NETUP_VID && desc.idProduct == JOKER_TV_PID)
 		{
+			if (joker->force_device_selection && 
+					(joker->usb_bus_id != libusb_get_bus_number(usb_list[i]) ||
+					joker->usb_port_id != libusb_get_port_number(usb_list[i]))) {
+				printf("Skipping USB device %d:%d \n",
+						libusb_get_bus_number(usb_list[i]),
+						libusb_get_port_number(usb_list[i]));
+				continue;
+			}
 			r = libusb_open(usb_list[i], &devh);
 			if (r)
-				libusb_error_name(r);
+				printf("usb error=%s \n", libusb_error_name(r));
 			joker->fw_ver = desc.bcdDevice;
 			break; // open first available Joker TV
 		}
@@ -199,7 +210,7 @@ int joker_devices_print(struct joker_t *joker)
 
 		if (desc.idVendor == NETUP_VID && desc.idProduct == JOKER_TV_PID)
 		{
-			printf("  * Joker TV device found. usb bus_id=%d port_id=%d \n", 
+			printf("  * Joker TV device found. id = %d:%d \n", 
 					libusb_get_bus_number(usb_list[i]),
 					libusb_get_port_number(usb_list[i]));
 		}
