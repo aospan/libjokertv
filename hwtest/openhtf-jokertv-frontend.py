@@ -102,7 +102,7 @@ def jokertv_sat(test):
     os.system('killall joker-tv')
     raise
 
-  if volt < 18.0:
+  if volt < 17.5:
     test.logger.info('Sat: voltage not in range !')
     os.system('killall joker-tv')
     raise
@@ -134,7 +134,7 @@ def jokertv_ter(test):
   time.sleep(10)
   size = os.stat("out.ts").st_size
   test.logger.info('Ter: TS file size %s' % size)
-  if size < (24.0 * 1024 * 1024):
+  if size < (20.0 * 1024 * 1024):
     test.logger.info('Ter: TS file size too small')
     os.system('killall joker-tv')
     return
