@@ -105,7 +105,9 @@ void blind_scan_callback(void *data)
 	struct big_pool_t *pool;
 	unsigned char * name_esc = NULL;
 	unsigned char * provider_name_esc = NULL;
+	struct stat_t stat;
 	joker_nit_t * nit = NULL;
+	int ret = 0;
 
 	if (!res)
 		return;
@@ -116,17 +118,19 @@ void blind_scan_callback(void *data)
 	if (res->event_id == EVENT_DETECT) {
 		// save found transponder and programs to file
 		if (res->joker->blind_programs_filename_fd) {
+			ret = read_signal_stat(joker, &stat);
 			// transponder
 			// convert values to satellites xml format
 			fprintf(res->joker->blind_programs_filename_fd,
 					"\t\t<transponder frequency=\"%lld\" symbol_rate=\"%d\" symbol_rate_raw=\"%d\" "
-					"polarization=\"%d\" fec_inner=\"%d\" system=\"%d\" modulation=\"%d\">\n",
+					"polarization=\"%d\" fec_inner=\"%d\" system=\"%d\" modulation=\"%d\" snr_db=\"%.3f\" rflevel_dbm=\"%.3f\">\n",
 					(long long)res->info->frequency, res->info->symbol_rate_rounded,
 					res->info->symbol_rate,
 					res->info->voltage == JOKER_SEC_VOLTAGE_13 ? 1 : 0,
 					res->info->coderate,
 					res->info->delivery_system == JOKER_SYS_DVBS ? 0 : 1,
-					res->info->modulation);
+					res->info->modulation,
+					(double)stat.snr/1000, (double)stat.rf_level/1000);
 
 			fprintf(res->joker->blind_programs_filename_fd,
 					"\t\t\t<sdt network_id=\"%d\" ts_id=\"%d\"/>\n",
