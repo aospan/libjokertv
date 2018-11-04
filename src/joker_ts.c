@@ -754,7 +754,7 @@ static void get_service_name(struct program_t *program, dvbpsi_descriptor_t* p_d
 			service_name_length = p_descriptor->p_data[service_provider_name_length + 2];
 			service_name_ptr = p_descriptor->p_data + service_provider_name_length + 3;
 
-			jdebug("service_type=%d \n", service_type );
+			jdebug("service_type=%d \n", program->service_type );
 
 			memset(program->provider_name, 0, SERVICE_NAME_LEN);
 			if (service_provider_name_length)
